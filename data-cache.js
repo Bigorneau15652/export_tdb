@@ -25,5 +25,11 @@
     version += 1;
   }
 
-  window.exportTdbData = { ensure, clear, tables: () => cache, version: () => version };
+  // Forgets one table, so that the next request loads it again.
+  function drop(name) {
+    cache.delete(name);
+    version += 1;
+  }
+
+  window.exportTdbData = { ensure, clear, drop, tables: () => cache, version: () => version };
 })();

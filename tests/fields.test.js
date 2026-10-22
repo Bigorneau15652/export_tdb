@@ -28,11 +28,12 @@ test(`the choices hold the columns and one level of references`, () => {
   assert.deepEqual(F.fieldChoices(schema, `Missing`), []);
 });
 
-test(`the tables needed follow the references and their labels`, () => {
-  assert.deepEqual(F.tablesForPaths(schema, `Rooms`, [`Number`]), []);
-  assert.deepEqual(F.tablesForPaths(schema, `Rooms`, [`Building`]).sort(), [`Buildings`]);
-  assert.deepEqual(F.tablesForPaths(schema, `Rooms`, [`Building.Site.Name`]).sort(), [`Buildings`, `Sites`]);
-  assert.deepEqual(F.tablesForPaths(schema, `Rooms`, [`Nope.x`]), []);
+test(`the tables needed are the table of the row, the tables crossed and the tables of the labels`, () => {
+  assert.deepEqual(F.tablesForPaths(schema, `Rooms`, []), []);
+  assert.deepEqual(F.tablesForPaths(schema, `Rooms`, [`Number`]), [`Rooms`]);
+  assert.deepEqual(F.tablesForPaths(schema, `Rooms`, [`Building`]).sort(), [`Buildings`, `Rooms`]);
+  assert.deepEqual(F.tablesForPaths(schema, `Rooms`, [`Building.Site.Name`]).sort(), [`Buildings`, `Rooms`, `Sites`]);
+  assert.deepEqual(F.tablesForPaths(schema, `Rooms`, [`Nope.x`]), [`Rooms`]);
 });
 
 test(`own columns come from the record and are written the French way`, () => {
@@ -44,6 +45,27 @@ test(`own columns come from the record and are written the French way`, () => {
   assert.deepEqual(field(`Buildings`, 3, `Inspected`), { ok: true, text: `` });
   assert.deepEqual(field(`Usages`, 1, `Counts`), { ok: true, text: `Oui` });
   assert.deepEqual(field(`Usages`, 2, `Counts`), { ok: true, text: `Non` });
+});
+
+test(`a record that Grist fills badly is completed from the loaded table`, () => {
+  const only = (table, id, extra = {}) => ({ id, ...extra });
+  const read = (table, id, path, extra) => F.resolveField(dataset, schema, table, only(table, id, extra), path, WORDS);
+  assert.deepEqual(read(`Rooms`, 2, `Number`), { ok: true, text: `A-002` });
+  assert.deepEqual(read(`Rooms`, 2, `Building.Name`), { ok: true, text: `Building A` });
+  assert.deepEqual(read(`Rooms`, 5, `Building.Site.Name`), { ok: true, text: `South campus` });
+  assert.deepEqual(read(`Rooms`, 2, `Area`), { ok: true, text: `35` });
+  assert.deepEqual(read(`Buildings`, 1, `Inspected`, { Inspected: { an: `object` } }), { ok: true, text: `08/01/2025` });
+  assert.deepEqual(read(`Rooms`, 2, `Building`, { Building: `Building A` }), { ok: true, text: `Building A` });
+  assert.deepEqual(read(`Rooms`, 2, `Building.Name`, { Building: `Building A` }), { ok: true, text: `Building A` });
+  assert.deepEqual(read(`Rooms`, 2, `Number`, { Number: 12 }), { ok: true, text: `A-002` });
+});
+
+test(`a fresh live value wins over the loaded table, and an unloaded row is reported`, () => {
+  assert.deepEqual(F.resolveField(dataset, schema, `Rooms`, { id: 2, Number: `NEW` }, `Number`, WORDS), { ok: true, text: `NEW` });
+  const empty = require(`../dataset.js`).createDataset(schema, {});
+  assert.deepEqual(F.resolveField(empty, schema, `Rooms`, { id: 2 }, `Number`, WORDS), { ok: false, reason: `notloaded` });
+  assert.deepEqual(F.resolveField(empty, schema, `Rooms`, { id: 2, Number: `live` }, `Number`, WORDS), { ok: true, text: `live` });
+  assert.deepEqual(F.resolveField(dataset, schema, `Rooms`, { id: 999 }, `Number`, WORDS), { ok: false, reason: `notloaded` });
 });
 
 test(`references show their label and lists their items`, () => {

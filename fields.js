@@ -50,10 +50,12 @@
     }
   }
 
-  // Names of the tables that are needed to write the fields `paths` for a row of `tableId`: the tables
-  // crossed by the paths and the tables that give the labels of references.
+  // Names of the tables that are needed to write the fields `paths` for a row of `tableId`: the table
+  // itself (the row is read there when Grist does not give its values), the tables crossed by the
+  // paths and the tables that give the labels of references.
   function tablesForPaths(schema, tableId, paths) {
     const found = new Set();
+    if (paths.length && schema.tables.has(tableId)) found.add(tableId);
     for (const path of paths) {
       let currentId = tableId;
       for (const part of path.split(`.`)) {
@@ -88,15 +90,37 @@
     return values.toText(raw);
   }
 
+  // The type of JavaScript value that a live value of a plain column must have to be trusted.
+  const LIVE_TYPES = { Text: `string`, Choice: `string`, Numeric: `number`, Int: `number`, Bool: `boolean` };
+
+  // The raw value of a column of the selected row. The value that Grist gives with the selected row
+  // (the `record`) is used when it has the expected type, because it is always up to date. Otherwise
+  // (a column that Grist did not send, a reference sent as a label, a date sent as an object) the
+  // value is read in the loaded table, which holds the raw values. Returns { found, raw }; `found` is
+  // false when the table of the row is not loaded and the live value cannot be trusted.
+  function rawValue(dataset, table, record, column) {
+    const live = record[column.id];
+    if (column.kind === `plain` && LIVE_TYPES[column.base] && typeof live === LIVE_TYPES[column.base]) return { found: true, raw: live };
+    const loaded = dataset.table(table.id);
+    const index = loaded ? loaded.rowOfId(record.id) : -1;
+    if (index >= 0 && loaded.column(column.id)) {
+      const stored = loaded.column(column.id)[index];
+      return { found: true, raw: stored === undefined ? null : stored };
+    }
+    return { found: false, raw: null };
+  }
+
   // The text of one field for the selected row `record` of the table `tableId`. The first column is
-  // read in the record itself (always up to date), the following ones in the loaded tables. Returns
+  // read in the record or in the loaded table (see rawValue), the following ones in the loaded tables. Returns
   // { ok: true, text } or { ok: false, reason } (`unknown` column, `notloaded` table, `norow`).
   function resolveField(dataset, schema, tableId, record, path, words) {
     const parts = String(path).split(`.`);
     const table = schema.tables.get(tableId);
     const column = table ? table.columns.find((c) => c.id === parts[0]) : null;
     if (!column || !record) return { ok: false, reason: `unknown` };
-    const raw = record[column.id];
+    const cell = rawValue(dataset, table, record, column);
+    if (!cell.found) return { ok: false, reason: `notloaded` };
+    const raw = cell.raw;
     if (parts.length === 1) return { ok: true, text: formatValue(column, raw, dataset, words) };
     if (column.kind !== `ref`) return { ok: false, reason: `unknown` };
     if (!raw) return { ok: true, text: `` };
