@@ -130,7 +130,9 @@
   }
 
   // Puts every block on a valid place: blocks keep their place when it is free, otherwise they go to
-  // the first free place, and pages are added when needed. Blocks are handled in reading order but keep
+  // the first free place. When a block fits nowhere (a smaller format, a saved model that does not fit) a
+  // page is added so that no block is lost: this is the only case where pages are added by the program.
+  // Blocks are handled in reading order but keep
   // their order in the list.
   function reflow(model) {
     const grid = gridOf(model.page);
@@ -161,12 +163,6 @@
     placed.sort((a, b) => order.get(a.id) - order.get(b.id));
     const last = placed.reduce((most, block) => Math.max(most, block.page), 0);
     return { ...model, pages: Math.max(pages, last + 1), blocks: placed };
-  }
-
-  // Removes the empty pages at the end, but keeps at least one page.
-  function trimPages(model) {
-    const last = model.blocks.reduce((most, block) => Math.max(most, block.page), 0);
-    return { ...model, pages: Math.min(model.pages, Math.max(1, last + 1)) };
   }
 
   // Cleans a model that comes from outside. Returns { model, warnings, locked }. `warnings` holds codes
@@ -203,7 +199,7 @@
       });
     }
     const pages = whole(raw.pages, 1, MAX_PAGES, 1);
-    const model = trimPages(reflow({ version: FORMAT_VERSION, page, pages, blocks }));
+    const model = reflow({ version: FORMAT_VERSION, page, pages, blocks });
     return { model, warnings: [...new Set(warnings)], locked: false };
   }
 
@@ -212,28 +208,33 @@
     return model.blocks.find((block) => block.id === id);
   }
 
-  // Adds a block of a type at the first free place, with a new page when there is no room. Returns
-  // { model, id } (id is null when the limits are reached).
+  // Adds a block of a type at the first free place of the existing pages. No page is added: when there
+  // is no room the user adds a page. Returns { model, id, reason } (id is null and reason is `full` when
+  // no page has room, `limit` when the number of blocks is reached, `type` for an unknown type).
   function addBlock(model, type) {
-    if (!TYPES.includes(type) || model.blocks.length >= MAX_BLOCKS) return { model, id: null };
+    if (!TYPES.includes(type)) return { model, id: null, reason: `type` };
+    if (model.blocks.length >= MAX_BLOCKS) return { model, id: null, reason: `limit` };
     const grid = gridOf(model.page);
     const size = clampSize(DEFAULT_SIZES[type], grid);
-    let pages = model.pages;
-    let spot = findFreeSpot(model.blocks, size, pages, grid);
-    if (!spot) {
-      if (pages >= MAX_PAGES) return { model, id: null };
-      pages += 1;
-      spot = { page: pages - 1, x: 0, y: 0 };
-    }
+    const spot = findFreeSpot(model.blocks, size, model.pages, grid);
+    if (!spot) return { model, id: null, reason: `full` };
     const id = newId(model.blocks);
     const block = { id, type, title: ``, ...spot, ...size, config: cleanConfig(type, {}) };
-    return { model: { ...model, pages, blocks: [...model.blocks, block] }, id };
+    return { model: { ...model, blocks: [...model.blocks, block] }, id, reason: `` };
   }
 
   // Adds an empty page at the end.
   function addPage(model) {
     if (model.pages >= MAX_PAGES) return model;
     return { ...model, pages: model.pages + 1 };
+  }
+
+  // Removes the last page when it is empty. Returns { model, reason }: the reason is empty when the page
+  // was removed, `only` when it is the only page and `notempty` when it still holds blocks.
+  function removeLastPage(model) {
+    if (model.pages <= 1) return { model, reason: `only` };
+    if (model.blocks.some((block) => block.page === model.pages - 1)) return { model, reason: `notempty` };
+    return { model: { ...model, pages: model.pages - 1 }, reason: `` };
   }
 
   // Changes the title, the type or the settings of a block. A new type starts with default settings.
@@ -257,7 +258,7 @@
     if (!block || wanted.page < 0 || wanted.page >= model.pages) return model;
     const spot = resolveMove(model.blocks, block, wanted, gridOf(model.page));
     if (!spot) return model;
-    return trimPages({ ...model, blocks: model.blocks.map((item) => (item.id === id ? { ...item, ...spot } : item)) });
+    return { ...model, blocks: model.blocks.map((item) => (item.id === id ? { ...item, ...spot } : item)) };
   }
 
   // Resizes a block towards a wanted size { w, h }: it gets the valid size closest to it.
@@ -268,17 +269,17 @@
     return { ...model, blocks: model.blocks.map((item) => (item.id === id ? { ...item, ...size } : item)) };
   }
 
-  // Removes a block and the empty pages at the end.
+  // Removes a block. The pages stay as they are, even when one becomes empty.
   function deleteBlock(model, id) {
-    return trimPages({ ...model, blocks: model.blocks.filter((block) => block.id !== id) });
+    return { ...model, blocks: model.blocks.filter((block) => block.id !== id) };
   }
 
   // Changes the page settings (format, orientation, margin) and puts the blocks back in place.
   function setPage(model, changes) {
-    return trimPages(reflow({ ...model, page: cleanPage({ ...model.page, ...changes }) }));
+    return reflow({ ...model, page: cleanPage({ ...model.page, ...changes }) });
   }
 
-  const api = { FORMAT_VERSION, MAX_BLOCKS, MAX_TITLE, MAX_FIXED_TEXT, MAX_COLUMNS, MAX_FILTERS, MAX_GROUPS, TABLE_MODES, FUNCTIONS, OPERATORS, SORT_BYS, TYPES, TEXT_SOURCES, TEXT_SIZES, TEXT_ALIGNS, FILLS, DEFAULT_SIZES, emptyModel, cleanConfig, validateModel, reflow, trimPages, findBlock, addBlock, addPage, updateBlock, moveBlock, resizeBlock, deleteBlock, setPage };
+  const api = { FORMAT_VERSION, MAX_BLOCKS, MAX_TITLE, MAX_FIXED_TEXT, MAX_COLUMNS, MAX_FILTERS, MAX_GROUPS, TABLE_MODES, FUNCTIONS, OPERATORS, SORT_BYS, TYPES, TEXT_SOURCES, TEXT_SIZES, TEXT_ALIGNS, FILLS, DEFAULT_SIZES, emptyModel, cleanConfig, validateModel, reflow, findBlock, addBlock, addPage, removeLastPage, updateBlock, moveBlock, resizeBlock, deleteBlock, setPage };
   if (typeof module !== `undefined` && module.exports) module.exports = api;
   else root.exportTdbModel = api;
 })(typeof window !== `undefined` ? window : globalThis);

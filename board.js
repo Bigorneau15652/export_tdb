@@ -41,7 +41,7 @@
   const $ = (id) => document.getElementById(id);
   const el = {
     panel: $(`panelBoard`), notice: $(`boardNotice`), edit: $(`boardEdit`), tools: $(`boardTools`), help: $(`boardHelp`),
-    addType: $(`boardAddType`), add: $(`boardAdd`), addPage: $(`boardAddPage`), format: $(`boardFormat`),
+    addType: $(`boardAddType`), add: $(`boardAdd`), addPage: $(`boardAddPage`), removePage: $(`boardRemovePage`), format: $(`boardFormat`),
     orientation: $(`boardOrientation`), margin: $(`boardMargin`), zoomOut: $(`boardZoomOut`), zoomFit: $(`boardZoomFit`),
     zoomIn: $(`boardZoomIn`), saveState: $(`boardSaveState`), confirm: $(`boardConfirm`), confirmText: $(`boardConfirmText`),
     confirmYes: $(`boardConfirmYes`), confirmNo: $(`boardConfirmNo`), scroll: $(`boardScroll`), canvas: $(`boardCanvas`),
@@ -87,14 +87,25 @@
   // The text shown for the title of a block: its title or a grey placeholder.
   const blockTitle = (block) => block.title || tr(`boardNoTitle`);
 
-  // Fills a select element with [value, label] pairs and selects `value`.
+  // Fills a select element with [value, label] pairs (a third item names a group of options) and selects `value`.
   function fillSelect(select, items, value) {
     select.textContent = ``;
-    for (const [optionValue, label] of items) {
+    const groups = new Map();
+    for (const [optionValue, label, group] of items) {
       const option = document.createElement(`option`);
       option.value = String(optionValue);
       option.textContent = label;
-      select.appendChild(option);
+      if (group) {
+        if (!groups.has(group)) {
+          const element = document.createElement(`optgroup`);
+          element.label = group;
+          groups.set(group, element);
+          select.appendChild(element);
+        }
+        groups.get(group).appendChild(option);
+      } else {
+        select.appendChild(option);
+      }
     }
     select.value = String(value);
   }
@@ -517,16 +528,31 @@
     if (select.value !== String(value)) select.value = String(value);
   }
 
-  // The sentence that names a way to choose the rows of a table (see Query.listChoices).
+  // The path of columns that leads from the selected row to the starting item of a choice: `Etage > Batiment`.
+  const startPath = (choice) => choice.startSteps.map((step) => step.column).join(` > `);
+
+  // The short name of a way to choose the rows of a table, for the menu (see Query.listChoices): for
+  // example `Même Batiment que la ligne sélectionnée`.
   function choiceLabel(choice) {
+    if (choice.kind === `all`) return tr(`labAllRows`);
+    if (choice.kind === `self`) return choice.startSteps.length ? tr(`boardRowsOnly`, { item: startPath(choice) }) : tr(`labSelfRow`);
+    if (choice.advanced) return choiceDetail(choice);
+    const column = choice.steps[0].column;
+    if (!choice.startSteps.length) return tr(`boardRowsSelected`, { column });
+    const last = choice.startSteps[choice.startSteps.length - 1].column;
+    return last === column && choice.startSteps.length === 1 ? tr(`boardRowsSame`, { column }) : tr(`boardRowsEqual`, { column, item: startPath(choice) });
+  }
+
+  // The full sentence about a choice of rows, shown under the menu.
+  function choiceDetail(choice) {
     const linked = context().linked;
     const chain = choice.startSteps.map((step) => `${step.from}.${step.column}`).join(` > `);
     const where = choice.startSteps.length ? tr(`boardWhereItem`, { table: choice.startTable, chain }) : tr(`boardWhereSelected`, { table: linked });
     if (choice.kind === `all`) return tr(`labAllRows`);
-    if (choice.kind === `self`) return choice.startSteps.length ? tr(`boardRowsOnly`, { where }) : tr(`labSelfRow`);
+    if (choice.kind === `self`) return choice.startSteps.length ? tr(`boardDetailOnly`, { where }) : tr(`labSelfRow`);
     const note = QUALITY_KEYS[choice.quality] ? ` ${tr(QUALITY_KEYS[choice.quality])}` : ``;
-    if (choice.steps.length === 1) return tr(`boardRowsPointing`, { column: `${choice.steps[0].from}.${choice.steps[0].column}`, where }) + note;
-    return tr(`boardRowsLinked`, { chain: choice.steps.map(describeStep).join(` ; `), where }) + note;
+    if (choice.steps.length === 1) return tr(`boardDetailPointing`, { column: `${choice.steps[0].from}.${choice.steps[0].column}`, where }) + note;
+    return tr(`boardDetailLinked`, { chain: choice.steps.map(describeStep).join(` ; `), where }) + note;
   }
 
   // The structure for which the filters and the column lines were built.
@@ -650,8 +676,10 @@
     setOptions(el.tableSel, [[``, tr(`boardColumnNone`)], ...tables], config.table);
     const rowChoices = config.table && schema.tables.has(config.table) ? Query.listChoices(schema, state.linked, config.table) : [];
     const chosen = rowChoices.find((item) => item.start === config.start && item.link === config.link);
-    setOptions(el.link, [[``, tr(`boardColumnNone`)], ...rowChoices.map((item) => [item.value, choiceLabel(item)])], chosen ? chosen.value : ``);
-    el.linkInfo.textContent = chosen ? choiceLabel(chosen) : ``;
+    const main = rowChoices.filter((item) => !item.advanced).map((item) => [item.value, choiceLabel(item)]);
+    const advanced = rowChoices.filter((item) => item.advanced).map((item) => [item.value, choiceDetail(item), tr(`boardAdvancedLinks`)]);
+    setOptions(el.link, [[``, tr(`boardColumnNone`)], ...main, ...advanced], chosen ? chosen.value : ``);
+    el.linkInfo.textContent = chosen ? choiceDetail(chosen) : ``;
     el.groupRow.hidden = config.mode !== `group`;
     setOptions(el.group1, columnItems, config.groupBy[0] || ``);
     setOptions(el.group2, columnItems, config.groupBy[1] || ``);
@@ -925,7 +953,7 @@
   function addBlock() {
     const result = Model.addBlock(model, el.addType.value);
     if (!result.id) {
-      el.notice.textContent = tr(`boardLimit`);
+      el.notice.textContent = tr(result.reason === `full` ? `boardFull` : `boardLimit`);
       el.notice.hidden = false;
       return;
     }
@@ -973,6 +1001,16 @@
     }
     el.notice.hidden = true;
     commit(next);
+  });
+  el.removePage.addEventListener(`click`, () => {
+    const result = Model.removeLastPage(model);
+    if (result.reason) {
+      el.notice.textContent = tr(result.reason === `only` ? `boardOnlyPage` : `boardPageNotEmpty`);
+      el.notice.hidden = false;
+      return;
+    }
+    el.notice.hidden = true;
+    commit(result.model);
   });
   const pageChange = () => commit(Model.setPage(model, { format: el.format.value, orientation: el.orientation.value, margin: Number(el.margin.value) }));
   el.format.addEventListener(`change`, pageChange);

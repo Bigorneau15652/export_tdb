@@ -81,7 +81,7 @@ test(`too many blocks are cut with a warning`, () => {
   assertValid(model);
 });
 
-test(`a new block takes the first free place and a page is added when there is no room`, () => {
+test(`a new block takes the first free place and is refused when no page has room`, () => {
   let model = M.emptyModel();
   const first = M.addBlock(model, `text`);
   model = first.model;
@@ -89,23 +89,61 @@ test(`a new block takes the first free place and a page is added when there is n
   const second = M.addBlock(model, `text`);
   assert.deepEqual([second.model.blocks[1].x, second.model.blocks[1].y], [model.blocks[0].w, 0]);
   model = second.model;
-  for (let i = 0; i < 30; i += 1) model = M.addBlock(model, `table`).model;
+  let refused = null;
+  for (let i = 0; i < 30 && !refused; i += 1) {
+    const result = M.addBlock(model, `table`);
+    if (!result.id) refused = result;
+    else model = result.model;
+  }
+  assert.ok(refused, `the page never got full`);
+  assert.equal(refused.reason, `full`);
+  assert.equal(refused.model, model);
+  assert.equal(model.pages, 1);
   assertValid(model);
-  assert.ok(model.pages > 1);
+  const withPage = M.addPage(model);
+  const placed = M.addBlock(withPage, `table`);
+  assert.ok(placed.id);
+  assert.equal(M.findBlock(placed.model, placed.id).page, 1);
+  assert.equal(placed.model.pages, 2);
 });
 
 test(`an unknown type adds nothing`, () => {
   const model = M.emptyModel();
-  assert.equal(M.addBlock(model, `video`).id, null);
+  const result = M.addBlock(model, `video`);
+  assert.equal(result.id, null);
+  assert.equal(result.reason, `type`);
 });
 
-test(`deleting the last block of the last page removes the empty page but keeps one page`, () => {
+test(`pages are added and removed by hand only, and only an empty last page can be removed`, () => {
   let model = M.addPage(M.addPage(M.emptyModel()));
   assert.equal(model.pages, 3);
   const added = M.addBlock(model, `text`);
   model = M.deleteBlock(added.model, added.id);
-  assert.equal(model.pages, 1);
+  assert.equal(model.pages, 3);
   assert.deepEqual(M.deleteBlock(M.emptyModel(), `nothing`).blocks, []);
+  let removed = M.removeLastPage(model);
+  assert.equal(removed.reason, ``);
+  assert.equal(removed.model.pages, 2);
+  removed = M.removeLastPage(removed.model);
+  assert.equal(removed.model.pages, 1);
+  assert.equal(M.removeLastPage(removed.model).reason, `only`);
+  assert.equal(M.removeLastPage(removed.model).model.pages, 1);
+  const withBlock = M.addBlock(M.addPage(M.emptyModel()), `text`);
+  const moved = M.moveBlock(withBlock.model, withBlock.id, { page: 1, x: 0, y: 0 });
+  assert.equal(M.findBlock(moved, withBlock.id).page, 1);
+  const refused = M.removeLastPage(moved);
+  assert.equal(refused.reason, `notempty`);
+  assert.equal(refused.model, moved);
+});
+
+test(`moving a block or deleting one never changes the number of pages`, () => {
+  let model = M.addPage(M.emptyModel());
+  const a = M.addBlock(model, `text`);
+  model = M.moveBlock(a.model, a.id, { page: 1, x: 2, y: 2 });
+  assert.equal(model.pages, 2);
+  model = M.moveBlock(model, a.id, { page: 0, x: 0, y: 0 });
+  assert.equal(model.pages, 2);
+  assert.equal(M.deleteBlock(model, a.id).pages, 2);
 });
 
 test(`moving a block towards another block goes to a valid place, and may change page`, () => {
@@ -122,7 +160,9 @@ test(`moving a block towards another block goes to a valid place, and may change
 
 test(`changing the format puts the blocks back in place without overlap`, () => {
   let model = M.emptyModel();
+  for (let i = 0; i < 5; i += 1) model = M.addPage(model);
   for (let i = 0; i < 6; i += 1) model = M.addBlock(model, i % 2 ? `chart` : `table`).model;
+  assert.equal(model.blocks.length, 6);
   for (const changes of [{ format: `a5`, orientation: `portrait` }, { format: `a3`, orientation: `landscape` }, { format: `square`, margin: 20 }, { format: `screen`, margin: 0 }]) {
     model = M.setPage(model, changes);
     assertValid(model);
@@ -241,7 +281,7 @@ test(`random sequences of changes always leave a valid model`, () => {
       else if (roll < 0.4) model = M.moveBlock(model, pick, { page: Math.floor(next() * model.pages), x: Math.floor(next() * 60) - 5, y: Math.floor(next() * 40) - 5 });
       else if (roll < 0.55) model = M.resizeBlock(model, pick, { w: Math.floor(next() * 60), h: Math.floor(next() * 40) }, next() < 0.5);
       else if (roll < 0.65) model = M.deleteBlock(model, pick);
-      else if (roll < 0.72) model = M.addPage(model);
+      else if (roll < 0.72) model = next() < 0.6 ? M.addPage(model) : M.removeLastPage(model).model;
       else if (roll < 0.82) model = M.setPage(model, { format: Object.keys(L.FORMATS)[Math.floor(next() * 5)], orientation: L.ORIENTATIONS[Math.floor(next() * 2)], margin: L.MARGINS[Math.floor(next() * 5)] });
       else model = M.validateModel(JSON.parse(JSON.stringify(model))).model;
       assertValid(model);
