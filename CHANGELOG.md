@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.2
+
+- Pages by hand. The program no longer adds a page when a new block does not fit and no longer removes an empty page. A new block that does not fit is refused with the message "No room left on the pages: add a page with Add a page, then add the block". The "Add a page" button adds a page at the end, and the new "Remove the last page" button removes it, only when it is empty (otherwise a message asks to move or delete its blocks first; the only page cannot be removed). Moving or deleting a block never changes the number of pages. The only case where pages are added by the program is a change of format or a saved model whose blocks no longer fit: pages are then added so that no block is lost.
+- The "Rows to keep" menu of a table block is shorter and in plain words. The same link reached by a long way and a short way is offered once, with short sentences such as "Same Batiment as the selected row", "Etage = Etage of the selected row" or "Only Etage of the selected row". The links that cross several tables, use a list or a summary table go to an "Advanced links" group at the end of the menu with their full sentence, and the full sentence of the chosen link is repeated under the menu.
+- Simpler help texts for the table settings, with an example (areas per floor), shorter explanations in the help badges of the grouping, filter and total, and a note in the help of the block that a page must be added first when there is no room.
+
 ## 0.5.1
 
 - Table block: the choice of the rows is simpler. The "Starting row" menu is gone. The table menu now lists every table of the document (the ordinary tables first, the summary tables last), and the "Rows to keep" menu gives sentences such as "The rows whose BDD_Etages.Batiment is BDD_Batiments of the selected row (via BDD_Salles.Batiment)", the best choices first and "All the rows of the table" last. The chosen sentence is repeated under the menu. A line of help at the top of the table settings says what to choose in which order. The table that holds the figures (for example the floors for areas per floor) can now be found even when it does not descend from the selected row.

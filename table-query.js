@@ -61,28 +61,38 @@
   // row or to an item that it points to (a building, a site...), and all the rows. Each choice holds
   // `value` (`start|link`, to keep in a menu), `start` and `link` (the settings of the block), `kind`
   // (`self`, `link` or `all`), `quality`, `startTable`, `startSteps` (from the selected row to the
-  // starting item) and `steps` (from the table to the starting item). The best choices come first.
+  // starting item), `steps` (from the table to the starting item) and `advanced` (true for a link that
+  // crosses several tables, a list or a summary table). When the same link can be reached from the
+  // selected row by a short and by a longer way, only the shortest way is kept. The best choices come
+  // first and `all` is last.
   function listChoices(schema, linked, tableId) {
     const rank = { direct: 0, summary: 1, list: 2 };
     const found = [];
     for (const start of listStarts(schema, linked)) {
       if (start.table === tableId) {
-        found.push({ value: `${start.key}|self`, start: start.key, link: `self`, kind: `self`, quality: `direct`, startTable: start.table, startSteps: start.steps, steps: [] });
+        found.push({ value: `${start.key}|self`, start: start.key, link: `self`, kind: `self`, quality: `direct`, startTable: start.table, startSteps: start.steps, steps: [], advanced: false });
       }
       for (const link of listLinks(schema, start.table, tableId)) {
         if (link.key === `self` || link.key === `all`) continue;
-        found.push({ value: `${start.key}|${link.key}`, start: start.key, link: link.key, kind: `link`, quality: link.quality, startTable: start.table, startSteps: start.steps, steps: link.steps });
+        found.push({ value: `${start.key}|${link.key}`, start: start.key, link: link.key, kind: `link`, quality: link.quality, startTable: start.table, startSteps: start.steps, steps: link.steps, advanced: link.steps.length > 1 || link.quality !== `direct` });
       }
     }
-    const order = (choice) => [choice.kind === `self` ? 0 : 1, rank[choice.quality] === undefined ? 3 : rank[choice.quality], choice.steps.length, choice.startSteps.length];
-    found.sort((a, b) => {
+    const meaning = (choice) => `${choice.kind}|${choice.link}|${choice.startTable}`;
+    const shortest = new Map();
+    for (const choice of found) {
+      const known = shortest.get(meaning(choice));
+      if (known === undefined || choice.startSteps.length < known) shortest.set(meaning(choice), choice.startSteps.length);
+    }
+    const kept = found.filter((choice) => choice.startSteps.length === shortest.get(meaning(choice)));
+    const order = (choice) => [choice.advanced ? 1 : 0, choice.kind === `self` ? 0 : 1, rank[choice.quality] === undefined ? 3 : rank[choice.quality], choice.steps.length, choice.startSteps.length];
+    kept.sort((a, b) => {
       const x = order(a);
       const y = order(b);
       for (let index = 0; index < x.length; index += 1) if (x[index] !== y[index]) return x[index] - y[index];
       return 0;
     });
-    found.push({ value: `|all`, start: ``, link: `all`, kind: `all`, quality: `all`, startTable: linked, startSteps: [], steps: [] });
-    return found;
+    kept.push({ value: `|all`, start: ``, link: `all`, kind: `all`, quality: `all`, startTable: linked, startSteps: [], steps: [], advanced: false });
+    return kept;
   }
 
   // Names of the tables that a block needs: the table of the row, the tables of the starting row and of

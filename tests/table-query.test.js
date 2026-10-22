@@ -56,6 +56,18 @@ test(`the choices of rows of a table name the starting item and the link, the be
   assert.deepEqual(Q.listChoices(schema, `Sites`, `Notes`).map((c) => c.value), [`|all`]);
 });
 
+test(`the same link reached by a longer way is not offered twice and the complicated links are marked advanced`, () => {
+  const floors = Q.listChoices(schema, `Rooms`, `Floors`);
+  assert.equal(floors.filter((c) => c.link === `Floors.Building`).length, 1);
+  assert.equal(floors.find((c) => c.link === `Floors.Building`).advanced, false);
+  assert.equal(floors.find((c) => c.kind === `all`).advanced, false);
+  const advanced = floors.filter((c) => c.advanced);
+  assert.ok(advanced.every((c) => c.steps.length > 1 || c.quality !== `direct`));
+  const rooms = Q.listChoices(schema, `Sites`, `Rooms`);
+  assert.ok(rooms.some((c) => c.advanced));
+  assert.ok(rooms.filter((c) => !c.advanced).map((c) => c.value).includes(`|Rooms.Site`));
+});
+
 test(`a choice gives the same rows as the starting item and the link it names`, () => {
   const choice = Q.listChoices(schema, `Rooms`, `Floors`).find((c) => c.value === `Building|Floors.Building`);
   const result = run(`Rooms`, 1, { table: `Floors`, start: choice.start, link: choice.link, columns: [{ path: `Label` }] });

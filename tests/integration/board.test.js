@@ -85,12 +85,31 @@ test(`adding blocks places them one after the other and saves the model`, async 
   assert.deepEqual(w.errors, []);
 });
 
-test(`a page is added when there is no room`, async () => {
+test(`a block that does not fit is refused until a page is added by hand, and the last page is removed only when empty`, async () => {
   const w = await openBoard();
   await edit(w);
-  for (let i = 0; i < 12; i += 1) await addBlock(w, `table`);
-  assert.ok((await model(w.page)).pages >= 2);
-  assert.equal(await w.page.locator(`.page`).count(), (await model(w.page)).pages);
+  for (let i = 0; i < 4; i += 1) await addBlock(w, `table`);
+  assert.equal((await model(w.page)).pages, 1);
+  assert.match(await w.page.locator(`#boardNotice`).innerText(), /Plus de place|No room left/);
+  assert.equal(await w.page.locator(`.page`).count(), 1);
+  await w.page.click(`#boardAddPage`);
+  assert.equal(await w.page.locator(`.page`).count(), 2);
+  await addBlock(w, `table`);
+  assert.equal((await model(w.page)).blocks.find((b) => b.page === 1) !== undefined, true);
+  await w.page.click(`#boardRemovePage`);
+  assert.equal((await model(w.page)).pages, 2);
+  assert.match(await w.page.locator(`#boardNotice`).innerText(), /contient des blocs|holds blocks/);
+  const moved = (await model(w.page)).blocks.find((b) => b.page === 1);
+  await w.page.click(`.block[data-id="${moved.id}"]`, { position: { x: 20, y: 20 } });
+  await w.page.keyboard.press(`Delete`);
+  await w.page.click(`#boardConfirmYes`);
+  assert.equal((await model(w.page)).pages, 2);
+  await w.page.click(`#boardRemovePage`);
+  assert.equal((await model(w.page)).pages, 1);
+  assert.equal(await w.page.locator(`.page`).count(), 1);
+  await w.page.click(`#boardRemovePage`);
+  assert.match(await w.page.locator(`#boardNotice`).innerText(), /au moins une page|At least one page/);
+  assert.equal((await model(w.page)).pages, 1);
   assert.deepEqual(w.errors, []);
 });
 
@@ -546,9 +565,12 @@ test(`the table menu lists every table and the rows menu says in a sentence whic
   const rows = await w.page.$$eval(`#boardLink option`, (list) => list.map((o) => [o.value, o.textContent]));
   const building = rows.find(([value]) => value === `Building|Floors.Building`);
   assert.ok(building, JSON.stringify(rows));
-  assert.match(building[1], /Floors\.Building/);
-  assert.match(building[1], /Buildings/);
-  assert.equal(rows[rows.length - 1][0], `|all`);
+  assert.match(building[1], /Same Building as the selected row|Même Building que la ligne sélectionnée/);
+  assert.ok(rows.length < 8, `the menu must stay short: ${rows.length}`);
+  const values = rows.map(([value]) => value);
+  assert.ok(values.indexOf(`|all`) > values.indexOf(`Building|Floors.Building`));
+  assert.ok(values.indexOf(`|all`) < values.indexOf(`Site|Floors.Building>Buildings.Site`));
+  assert.deepEqual(await w.page.$$eval(`#boardLink optgroup`, (list) => list.map((g) => g.label)).then((labels) => labels.length), 1);
   await w.page.selectOption(`#boardLink`, `Building|Floors.Building`);
   assert.match(await w.page.locator(`#boardLinkInfo`).innerText(), /Floors\.Building/);
   await w.page.click(`.block[data-id="tb1"]`);
