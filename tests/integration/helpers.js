@@ -59,6 +59,17 @@ function apply(tableId, rowId, fields) {
 window.grist = {
   ready(settings) { window.__ready = settings; },
   onRecord(callback) { window.__onRecord = callback; },
+  onOptions(callback) {
+    window.__onOptions = callback;
+    setTimeout(() => callback(options.savedOptions || null, {}), 0);
+  },
+  setOption: async (key, value) => {
+    if (options.failOnSave) throw new Error(\`save refused\`);
+    window.__saved = window.__saved || [];
+    window.__saved.push({ [key]: JSON.parse(JSON.stringify(value)) });
+    window.__options = { [key]: value };
+    setTimeout(() => window.__onOptions && window.__onOptions(window.__options, {}), 0);
+  },
   selectedTable: { getTableId: async () => options.linked || \`Sites\` },
   docApi: {
     fetchTable: async (name) => {
@@ -89,6 +100,7 @@ async function openExplorer(browser, baseUrl, options = {}) {
   });
   await page.goto(`${baseUrl}/index.html`);
   await page.waitForFunction(() => typeof window.__onRecord === `function`);
+  if (options.tab !== `board`) await page.click(`#tabExplorer`);
   // Gives the explorer the row `id` of the linked table, as Grist does when the selection changes.
   const selectRow = (id) => page.evaluate((rowId) => {
     const name = window.__linkedName;

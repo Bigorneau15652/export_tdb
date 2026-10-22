@@ -26,7 +26,7 @@
 
   const $ = (id) => document.getElementById(id);
   const el = {
-    tabExplorer: $(`tabExplorer`), tabLab: $(`tabLab`), panelExplorer: $(`panelExplorer`), panelLab: $(`panelLab`),
+    panelLab: $(`panelLab`),
     message: $(`labMessage`), form: $(`labForm`), start: $(`labStart`), startInfo: $(`labStartInfo`), table: $(`labTable`),
     path: $(`labPath`), group: $(`labGroup`), group2: $(`labGroup2`), merge: $(`labMerge`), fn: $(`labFn`),
     columns: $(`labColumns`), sort: $(`labSort`), run: $(`labRun`), refresh: $(`labRefresh`), auto: $(`labAuto`),
@@ -53,18 +53,6 @@
     badge.title = t(key);
     badge.setAttribute(`aria-label`, t(key));
     return badge;
-  }
-
-  // ------------------------------------------------------------------ Tabs
-
-  // Shows the explorer or the lab.
-  function showTab(name) {
-    const lab = name === `lab`;
-    el.panelExplorer.hidden = lab;
-    el.panelLab.hidden = !lab;
-    el.tabExplorer.setAttribute(`aria-selected`, String(!lab));
-    el.tabLab.setAttribute(`aria-selected`, String(lab));
-    if (lab) prepare();
   }
 
   // ------------------------------------------------------------------ Form
@@ -399,8 +387,10 @@
 
   // ------------------------------------------------------------------ Start
 
-  el.tabExplorer.addEventListener(`click`, () => showTab(`explorer`));
-  el.tabLab.addEventListener(`click`, () => showTab(`lab`));
+  // The form is prepared each time the lab tab is shown.
+  window.addEventListener(`exporttdb:tabchanged`, (event) => {
+    if (event.detail === `lab`) prepare();
+  });
   el.start.addEventListener(`change`, () => {
     fillForStart();
     hasRun = false;
