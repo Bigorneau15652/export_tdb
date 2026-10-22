@@ -488,7 +488,7 @@ test(`a table is built from the settings panel`, async () => {
   assert.equal(await w.page.locator(`#boardTable`).inputValue(), ``);
   assert.match(await w.page.locator(`.block[data-type="table"]`).innerText(), /table|Table/);
   await w.page.selectOption(`#boardTable`, `Rooms`);
-  await w.page.selectOption(`#boardLink`, { label: `Rooms.Site -> Sites` });
+  await w.page.selectOption(`#boardLink`, `|Rooms.Site`);
   await w.page.click(`#boardAddColumn`);
   await w.page.selectOption(`.colrow .colPath`, `Number`);
   await w.page.click(`#boardAddColumn`);
@@ -533,4 +533,36 @@ test(`the table settings fit a 340 pixel dark panel without overflow and the tab
   await w.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 20, y: 20 } });
   assert.equal(await w.page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth), false);
   assert.equal(await w.page.locator(`#boardTable`).inputValue(), `Rooms`);
+});
+
+test(`the table menu lists every table and the rows menu says in a sentence which rows are kept`, async () => {
+  const w = await openWithRow({ linked: `Rooms`, savedOptions: { model: { version: 1, page: { format: `screen`, orientation: `landscape`, margin: 10 }, pages: 1, blocks: [{ id: `tb1`, type: `table`, title: ``, page: 0, x: 0, y: 0, w: 40, h: 14, config: {} }] } } }, 1);
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 20, y: 20 } });
+  const tables = await w.page.$$eval(`#boardTable option`, (list) => list.map((o) => o.value));
+  assert.ok(tables.includes(`Floors`) && tables.includes(`Buildings`) && tables.includes(`Rooms`) && tables.includes(`Sites`));
+  assert.ok(tables.indexOf(`Rooms_summary_Usage`) > tables.indexOf(`Sites`));
+  await w.page.selectOption(`#boardTable`, `Floors`);
+  const rows = await w.page.$$eval(`#boardLink option`, (list) => list.map((o) => [o.value, o.textContent]));
+  const building = rows.find(([value]) => value === `Building|Floors.Building`);
+  assert.ok(building, JSON.stringify(rows));
+  assert.match(building[1], /Floors\.Building/);
+  assert.match(building[1], /Buildings/);
+  assert.equal(rows[rows.length - 1][0], `|all`);
+  await w.page.selectOption(`#boardLink`, `Building|Floors.Building`);
+  assert.match(await w.page.locator(`#boardLinkInfo`).innerText(), /Floors\.Building/);
+  await w.page.click(`.block[data-id="tb1"]`);
+  assert.deepEqual(w.errors, []);
+});
+
+test(`a help badge shows one bubble only: no native title next to the drawn one`, async () => {
+  const w = await openBoard();
+  await edit(w);
+  const badges = await w.page.$$eval(`#panelBoard .help`, (list) => list.map((b) => [b.hasAttribute(`title`), Boolean(b.dataset.tip)]));
+  assert.ok(badges.length > 5);
+  assert.ok(badges.every(([hasTitle, hasTip]) => !hasTitle && hasTip));
+  await w.page.click(`.block, #boardAdd`).catch(() => {});
+  const lab = await openBoard();
+  await lab.page.click(`#tabLab`);
+  assert.equal(await lab.page.$$eval(`#panelLab .help[title]`, (list) => list.length), 0);
 });

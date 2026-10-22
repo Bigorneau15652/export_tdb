@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.1
+
+- Table block: the choice of the rows is simpler. The "Starting row" menu is gone. The table menu now lists every table of the document (the ordinary tables first, the summary tables last), and the "Rows to keep" menu gives sentences such as "The rows whose BDD_Etages.Batiment is BDD_Batiments of the selected row (via BDD_Salles.Batiment)", the best choices first and "All the rows of the table" last. The chosen sentence is repeated under the menu. A line of help at the top of the table settings says what to choose in which order. The table that holds the figures (for example the floors for areas per floor) can now be found even when it does not descend from the selected row.
+- The help badges showed two bubbles one over the other (the drawn one and the native one of the browser). Only the drawn one is kept.
+
 ## 0.5.0
 
 - Table block, lists and groupings. In the settings panel, the same menus as the query lab (starting row, table, link, grouping by one or two columns, calculation per column, filters, sort), laid out more tightly: pairs of menus on one line, one line per column with its calculation and heading, and the filters, sort, decimals and total in a folded section.

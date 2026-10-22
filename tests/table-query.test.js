@@ -32,6 +32,37 @@ test(`the tables and the links come with the best link first and all rows last`,
   assert.deepEqual(Q.listLinks(schema, `Sites`, `Sites`).map((l) => l.key), [`self`, `all`]);
 });
 
+test(`every table can be chosen, the ordinary tables first`, () => {
+  const tables = Q.listAllTables(schema);
+  assert.equal(tables.length, schema.order.length);
+  const names = tables.map((t) => t.table);
+  assert.ok(names.indexOf(`Rooms_summary_Usage`) > names.indexOf(`Usages`));
+  assert.deepEqual(names.slice(0, 3), [`Buildings`, `Contacts`, `Floors`]);
+  assert.equal(tables.find((t) => t.table === `Rooms_summary_Usage`).summary, true);
+});
+
+test(`the choices of rows of a table name the starting item and the link, the best first, all rows last`, () => {
+  const floors = Q.listChoices(schema, `Rooms`, `Floors`);
+  const values = floors.map((c) => c.value);
+  assert.ok(values.includes(`Building|Floors.Building`));
+  assert.equal(values[values.length - 1], `|all`);
+  assert.equal(floors[0].value, `Floor|self`);
+  assert.deepEqual(floors.find((c) => c.value === `Building|Floors.Building`).steps.map((s) => s.column), [`Building`]);
+  const rooms = Q.listChoices(schema, `Rooms`, `Rooms`);
+  assert.equal(rooms[0].value, `|self`);
+  assert.ok(rooms.some((c) => c.value === `Building|Rooms.Building`));
+  const buildings = Q.listChoices(schema, `Rooms`, `Buildings`);
+  assert.ok(buildings.some((c) => c.value === `Building|self`));
+  assert.deepEqual(Q.listChoices(schema, `Sites`, `Notes`).map((c) => c.value), [`|all`]);
+});
+
+test(`a choice gives the same rows as the starting item and the link it names`, () => {
+  const choice = Q.listChoices(schema, `Rooms`, `Floors`).find((c) => c.value === `Building|Floors.Building`);
+  const result = run(`Rooms`, 1, { table: `Floors`, start: choice.start, link: choice.link, columns: [{ path: `Label` }] });
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.rows, [[`Ground`], [`Level 1`]]);
+});
+
 test(`nothing chosen gives a request to choose, and a missing table is reported`, () => {
   assert.deepEqual(run(`Sites`, 1, {}), { ok: false, reason: `choose` });
   assert.deepEqual(run(`Sites`, 1, { table: `Rooms` }), { ok: false, reason: `choose` });
