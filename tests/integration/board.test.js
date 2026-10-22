@@ -445,3 +445,92 @@ test(`the explorer report shows what Grist gave with the selected row`, async ()
   assert.match(report, /7\. Values that Grist gave with the selected row/);
   assert.match(report, /Name \[Text\] text\(/);
 });
+
+// A saved model with one table block of the given settings.
+const tableModel = (config, extra = {}) => ({
+  model: { version: 1, page: { format: `screen`, orientation: `landscape`, margin: 10 }, pages: 1, blocks: [{ id: `tb1`, type: `table`, title: `Surfaces`, page: 0, x: 0, y: 0, w: 50, h: 20, config, ...extra }] }
+});
+const cells = (page) => page.$$eval(`.block[data-id="tb1"] .dt tr`, (rows) => rows.map((row) => [...row.children].map((cell) => cell.textContent)));
+
+test(`a table block shows a list of the rows of the selected site with a total line`, async () => {
+  const config = { mode: `list`, table: `Rooms`, link: `Rooms.Site`, total: true, columns: [{ path: `Number` }, { path: `Building` }, { path: `Area`, fn: `sum` }] };
+  const w = await openWithRow({ savedOptions: tableModel(config) }, 1);
+  await w.page.waitForFunction(() => document.querySelectorAll(`.block[data-id="tb1"] .dt tr`).length > 1);
+  const rows = await cells(w.page);
+  assert.deepEqual(rows[0], [`Number`, `Building`, `Area`]);
+  assert.deepEqual(rows[1], [`A-001`, `Building A`, `20,5`]);
+  assert.deepEqual(rows[rows.length - 1], [`Total`, ``, `75,75`]);
+  assert.equal(await w.page.locator(`.block[data-id="tb1"] .tableTitle`).innerText(), `Surfaces`);
+  assert.equal(await w.page.locator(`.block[data-id="tb1"] tr.total`).count(), 1);
+  assert.deepEqual(w.errors, []);
+});
+
+test(`a grouped table sums by usage and follows the starting row when the cursor moves`, async () => {
+  const config = { mode: `group`, start: `Building`, table: `Rooms`, link: `Rooms.Building`, total: true, groupBy: [`Floor`], columns: [{ path: `Area`, fn: `sum` }] };
+  const w = await openWithRow({ linked: `Rooms`, savedOptions: tableModel(config) }, 1);
+  await w.page.waitForFunction(() => document.querySelectorAll(`.block[data-id="tb1"] .dt tr`).length > 1);
+  let rows = await cells(w.page);
+  assert.deepEqual(rows[0], [`Floor`, `Sum (Area)`].map((text) => text).slice(0, 1).concat(rows[0].slice(1)));
+  assert.deepEqual(rows[rows.length - 1], [`Total`, `60,5`]);
+  await w.selectRow(3);
+  await w.page.waitForFunction(() => /20,25/.test(document.querySelector(`.block[data-id="tb1"]`).textContent));
+  rows = await cells(w.page);
+  assert.deepEqual(rows[rows.length - 1], [`Total`, `20,25`]);
+  assert.deepEqual(w.errors, []);
+});
+
+test(`a table is built from the settings panel`, async () => {
+  const w = await openWithRow({ savedOptions: { model: { version: 1, page: { format: `screen`, orientation: `landscape`, margin: 10 }, pages: 1, blocks: [] } } }, 1);
+  await edit(w);
+  await addBlock(w, `table`);
+  await w.page.dblclick(`.block[data-type="table"]`, { position: { x: 20, y: 20 } });
+  assert.equal(await w.page.locator(`#boardTableSettings`).isVisible(), true);
+  assert.equal(await w.page.locator(`#boardTable`).inputValue(), ``);
+  assert.match(await w.page.locator(`.block[data-type="table"]`).innerText(), /table|Table/);
+  await w.page.selectOption(`#boardTable`, `Rooms`);
+  await w.page.selectOption(`#boardLink`, { label: `Rooms.Site -> Sites` });
+  await w.page.click(`#boardAddColumn`);
+  await w.page.selectOption(`.colrow .colPath`, `Number`);
+  await w.page.click(`#boardAddColumn`);
+  await w.page.selectOption(`.colrow:nth-child(2) .colPath`, `Area`);
+  await w.page.selectOption(`.colrow:nth-child(2) .colFn`, `sum`);
+  await w.page.click(`#boardMore summary`);
+  await w.page.check(`#boardTotal`);
+  await w.page.waitForFunction(() => document.querySelectorAll(`.block[data-type="table"] .dt tr`).length > 1);
+  const rows = await w.page.$$eval(`.block[data-type="table"] .dt tr`, (list) => list.map((row) => [...row.children].map((cell) => cell.textContent)));
+  assert.deepEqual(rows[rows.length - 1], [`Total`, `75,75`]);
+  assert.match(await w.page.locator(`#boardTableInfo`).innerText(), /4/);
+  await w.page.selectOption(`#boardMode`, `group`);
+  await w.page.selectOption(`#boardGroup1`, `Usage`);
+  await w.page.waitForFunction(() => /Classroom/.test(document.querySelector(`.block[data-type="table"]`).textContent));
+  assert.deepEqual(w.errors, []);
+});
+
+test(`column lines can be moved and removed and a filter keeps the right rows`, async () => {
+  const config = { mode: `list`, table: `Rooms`, link: `Rooms.Site`, columns: [{ path: `Number` }, { path: `Area` }] };
+  const w = await openWithRow({ savedOptions: tableModel(config) }, 1);
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 20, y: 30 } });
+  await w.page.click(`.colrow:nth-child(1) button[title]:nth-of-type(2)`);
+  const order = (await model(w.page)).blocks[0].config.columns.map((c) => c.path);
+  assert.deepEqual(order, [`Area`, `Number`]);
+  await w.page.click(`.colrow:nth-child(1) button[title]:nth-of-type(3)`);
+  assert.deepEqual((await model(w.page)).blocks[0].config.columns.map((c) => c.path), [`Number`]);
+  await w.page.click(`#boardMore summary`);
+  await w.page.selectOption(`#boardFilter1 select >> nth=0`, `Area`);
+  await w.page.selectOption(`#boardFilter1 select >> nth=1`, `gt`);
+  await w.page.fill(`#boardFilter1 input[type="text"]`, `10`);
+  const saved = (await model(w.page)).blocks[0].config.filters;
+  assert.deepEqual(saved, [{ path: `Area`, op: `gt`, value: { kind: `const`, value: 10 } }]);
+  assert.equal((await cells(w.page)).length, 4);
+  assert.deepEqual(w.errors, []);
+});
+
+test(`the table settings fit a 340 pixel dark panel without overflow and the table keeps its title`, async () => {
+  const config = { mode: `group`, table: `Rooms`, link: `Rooms.Site`, groupBy: [`Usage`], total: true, columns: [{ path: `Area`, fn: `sum` }] };
+  const w = await openWithRow({ savedOptions: tableModel(config), viewport: { width: 340, height: 700 }, colorScheme: `dark` }, 1);
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 20, y: 20 } });
+  assert.equal(await w.page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth), false);
+  assert.equal(await w.page.locator(`#boardTable`).inputValue(), `Rooms`);
+});

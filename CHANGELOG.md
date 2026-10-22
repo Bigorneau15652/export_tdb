@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.0
+
+- Table block, lists and groupings. In the settings panel, the same menus as the query lab (starting row, table, link, grouping by one or two columns, calculation per column, filters, sort), laid out more tightly: pairs of menus on one line, one line per column with its calculation and heading, and the filters, sort, decimals and total in a folded section.
+- Two kinds of table. List: one line per row, with columns chosen in order (also through references, such as `Building > Name`), an optional sort by a column, and a total line with a function chosen for each column. Grouped: one line per group with sums, averages, minimums, maximums or counts, sorted by label or by value, and a total line.
+- Numbers of Numeric columns are written the French way with an optional number of decimals, dates as day/month/year, references by their label. The total line is separated by a thicker rule. The title of the block is shown above the table.
+- The table follows the selected row, and the starting row can be the selected row or an item it points to, as in the lab. The data of the tables are loaded once (the "Refresh the data" button loads them again).
+- A table longer than its block is marked in the editing mode (long tables over several pages come in a later version).
+- The version is written under the title of the widget, and a test checks that the page, the package and the changelog carry the same version, so that a stale page is easy to recognise.
+- The filter controls are now shared by the lab and the tables (`filter-ui.js`) and the help badge has its own file (`help.js`). New pure module `table-query.js` with unit tests (including random configurations).
+- The settings of a table block are saved in the model under `config` and cleaned when read.
+
 ## 0.4.2
 
 - The fields of a text no longer depend on what Grist sends with the selected row. The value of a column is taken from the selected row when it has the expected type (text, number, yes or no), and otherwise from the loaded table, which holds the raw values (row numbers of references, encoded dates). The table of the row is loaded again, once, when the selected row is not in it yet.

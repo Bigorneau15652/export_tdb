@@ -169,6 +169,36 @@ test(`changing the settings keeps the others, and a new type starts with default
   assert.equal(M.findBlock(model, id).config.text, ``);
 });
 
+test(`the settings of a table block are cleaned`, () => {
+  const config = M.cleanConfig(`table`, {
+    mode: `group`, start: `Building`, table: `Rooms`, link: `Rooms.Site>Sites.Parent`, groupBy: [`Usage`, `bad path`, `x`], merge: true,
+    columns: [{ path: `Area`, fn: `sum`, label: `L`.repeat(100) }, { path: `bad path`, fn: `nope` }, `text`, null],
+    filters: [{ path: `Area`, op: `gt`, value: { kind: `const`, value: 10 } }, { path: `Area`, op: `evil` }, { path: `A`, op: `eq`, value: { kind: `field`, path: `B.C` } }, { path: `A`, op: `empty` }, { path: `A`, op: `eq` }],
+    sort: { by: `value`, column: `Area`, dir: `desc` }, total: true, decimals: 2, extra: 1
+  });
+  assert.deepEqual(Object.keys(config).sort(), [`columns`, `decimals`, `filters`, `groupBy`, `link`, `merge`, `mode`, `sort`, `start`, `table`, `total`]);
+  assert.equal(config.mode, `group`);
+  assert.deepEqual(config.groupBy, [`Usage`, ``]);
+  assert.equal(config.columns.length, 2);
+  assert.equal(config.columns[0].label.length, 60);
+  assert.deepEqual(config.columns[1], { path: ``, fn: ``, label: `` });
+  assert.equal(config.filters.length, 2);
+  assert.deepEqual(config.filters[0], { path: `Area`, op: `gt`, value: { kind: `const`, value: 10 } });
+  assert.deepEqual(config.filters[1].value, { kind: `field`, path: `B.C` });
+  assert.equal(config.link, `Rooms.Site>Sites.Parent`);
+  assert.deepEqual(config.sort, { by: `value`, column: `Area`, dir: `desc` });
+  assert.equal(config.decimals, 2);
+  assert.equal(M.cleanConfig(`table`, { link: `<x>` }).link, ``);
+  assert.equal(M.cleanConfig(`table`, { link: `all` }).link, `all`);
+  assert.equal(M.cleanConfig(`table`, { decimals: 99 }).decimals, -1);
+});
+
+test(`a new table block has the default settings`, () => {
+  const model = M.addBlock(M.emptyModel(), `table`).model;
+  assert.deepEqual(model.blocks[0].config, M.cleanConfig(`table`, {}));
+  assert.equal(M.validateModel(JSON.parse(JSON.stringify(model))).model.blocks[0].config.mode, `list`);
+});
+
 test(`the functions do not change the model they receive`, () => {
   const model = M.addBlock(M.emptyModel(), `table`).model;
   const copy = JSON.stringify(model);
