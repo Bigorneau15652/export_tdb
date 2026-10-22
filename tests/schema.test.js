@@ -86,3 +86,39 @@ test(`findDescendants stops at three references`, () => {
   );
   assert.deepEqual(findDescendants(chain, `A`).map((e) => e.table), [`B`, `C`, `D`]);
 });
+
+const { findAncestors, pathQuality, rankDescendants } = require(`../schema.js`);
+
+test(`findAncestors lists the tables that a row points to, shortest chains first`, () => {
+  const found = findAncestors(schema, `Rooms`);
+  assert.deepEqual(found.slice(0, 4).map((e) => e.steps.length), [1, 1, 1, 1]);
+  assert.ok(found[4].steps.length === 2);
+  const building = found.find((e) => e.table === `Buildings` && e.steps.length === 1);
+  assert.deepEqual(building.steps, [{ from: `Rooms`, column: `Building`, to: `Buildings` }]);
+  const site = found.filter((e) => e.table === `Sites`).map((e) => e.steps.map((s) => s.column).join(`.`));
+  assert.ok(site.includes(`Site`) && site.includes(`Building.Site`));
+});
+
+test(`findAncestors does not loop on a reference to the same table and ignores lists`, () => {
+  const found = findAncestors(schema, `Buildings`);
+  assert.ok(!found.some((e) => e.table === `Buildings`));
+  assert.ok(!found.some((e) => e.table === `Contacts`));
+  assert.deepEqual(findAncestors(schema, `Notes`), []);
+  assert.deepEqual(findAncestors(schema, `Missing`), []);
+});
+
+test(`pathQuality tells direct, summary and list chains`, () => {
+  const direct = findDescendants(schema, `Sites`).find((e) => e.table === `Rooms`).paths[0];
+  assert.equal(pathQuality(schema, direct), `direct`);
+  const list = findDescendants(schema, `Contacts`).find((e) => e.table === `Buildings`).paths[0];
+  assert.equal(pathQuality(schema, list), `list`);
+  const summary = findDescendants(schema, `Usages`).find((e) => e.table === `Rooms_summary_Usage`).paths[0];
+  assert.equal(pathQuality(schema, summary), `summary`);
+});
+
+test(`rankDescendants puts the direct tables first, then summaries, then lists`, () => {
+  const ranked = rankDescendants(schema, findDescendants(schema, `Usages`));
+  assert.deepEqual(ranked.map((e) => [e.table, e.quality]), [[`Rooms`, `direct`], [`Rooms_summary_Usage`, `summary`]]);
+  const fromContacts = rankDescendants(schema, findDescendants(schema, `Contacts`));
+  assert.ok(fromContacts.every((e) => e.quality === `list`));
+});

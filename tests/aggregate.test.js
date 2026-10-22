@@ -88,6 +88,14 @@ test(`two rows that have the same label stay two groups`, () => {
   assert.equal(cross.grandTotal, 6);
 });
 
+test(`equal labels can be merged into one group on request`, () => {
+  const merged = groupRows(dataset, `Rooms`, rooms, { groupBy: [{ path: `Building`, merge: true }], measures: [{ fn: `sum`, path: `Area` }] });
+  assert.deepEqual(merged.rows.map((r) => [r.keys[0], r.values[0]]), [[`Building A`, 100.5], [`Building B`, 20.25]]);
+  const cross = crossTable(dataset, `Rooms`, rooms, { rowPath: `Building`, rowMerge: true, colPath: `Usage`, measure: { fn: `count` }, emptyLabel: `(none)` });
+  assert.deepEqual(cross.rowKeys, [`Building A`, `Building B`]);
+  assert.equal(cross.grandTotal, 6);
+});
+
 test(`an unreadable path is reported`, () => {
   assert.match(groupRows(dataset, `Rooms`, rooms, by(`Nope`)).error, /Nope/);
   assert.match(groupRows(dataset, `Rooms`, rooms, { groupBy: [], measures: [{ fn: `sum`, path: `Nope` }] }).error, /Nope/);

@@ -31,7 +31,8 @@
   // Key of a row for a grouping: { id, label }. The text of the column is its label; a reference is
   // told apart by the number of its row, so that two rows with the same label stay two groups. A date
   // can be reduced to its year or its month.
-  function keyOf(dataset, resolved, row, bucket) {
+  // With `merge` true the rows that have the same label make one group even when they are different rows.
+  function keyOf(dataset, resolved, row, bucket, merge) {
     if (bucket === `year` || bucket === `month`) {
       const seconds = values.toSeconds(dataset.valueAt(resolved, row));
       if (seconds === null) return { id: ``, label: `` };
@@ -41,7 +42,7 @@
       return { id: label, label };
     }
     const label = dataset.textAt(resolved, row);
-    if (resolved.column.kind === `ref`) {
+    if (resolved.column.kind === `ref` && !merge) {
       const raw = dataset.valueAt(resolved, row);
       return { id: raw ? `#${raw}` : ``, label };
     }
@@ -86,7 +87,7 @@
   }
 
   // Groups rows by one or two keys and computes the measures of each group.
-  //   spec.groupBy: [{ path, bucket }]  (bucket: year or month for a date)
+  //   spec.groupBy: [{ path, bucket, merge }]  (bucket: year or month for a date; merge: one group for equal labels)
   //   spec.measures: [{ fn, path }]      (fn: sum, avg, min, max, count, distinct)
   //   spec.sort: { by: `key` | `value`, measure: 0, dir: `asc` | `desc`, order: [labels...] }
   //   spec.top: { count, otherLabel }    (keeps the best groups, the others become one group)
@@ -100,7 +101,7 @@
     const buckets = new Map();
     for (const row of rows) {
       const parts = groups.list.map((resolved, i) => {
-        const key = keyOf(dataset, resolved, row, spec.groupBy[i].bucket);
+        const key = keyOf(dataset, resolved, row, spec.groupBy[i].bucket, spec.groupBy[i].merge);
         return { id: key.id, label: key.label || (spec.emptyLabel || ``) };
       });
       const id = JSON.stringify(parts.map((p) => p.id));
@@ -143,7 +144,7 @@
     const kept = groups.slice(0, spec.top.count);
     const keptIds = new Set(kept.map((g) => g.id));
     const others = rows.filter((row) => {
-      const id = JSON.stringify(resolvedGroups.list.map((r, i) => keyOf(dataset, r, row, spec.groupBy[i].bucket).id));
+      const id = JSON.stringify(resolvedGroups.list.map((r, i) => keyOf(dataset, r, row, spec.groupBy[i].bucket, spec.groupBy[i].merge).id));
       return !keptIds.has(id);
     });
     if (!others.length) return kept;
@@ -172,8 +173,8 @@
       map.get(id).rows.push(row);
     };
     for (const row of rows) {
-      const rowKey = keyOf(dataset, resolved.list[0], row, spec.rowBucket);
-      const colKey = keyOf(dataset, resolved.list[1], row, spec.colBucket);
+      const rowKey = keyOf(dataset, resolved.list[0], row, spec.rowBucket, spec.rowMerge);
+      const colKey = keyOf(dataset, resolved.list[1], row, spec.colBucket, spec.colMerge);
       push(cellRows, JSON.stringify([rowKey.id, colKey.id]), ``, row);
       push(rowRows, rowKey.id, rowKey.label || empty, row);
       push(colRows, colKey.id, colKey.label || empty, row);

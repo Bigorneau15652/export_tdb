@@ -92,7 +92,50 @@
       .sort((a, b) => a.paths[0].length - b.paths[0].length || a.table.localeCompare(b.table));
   }
 
-  const api = { parseType, buildSchema, findDescendants, describeStep, MAX_DEPTH };
+
+  // Tables that the rows of `startId` point to through references (single references only), up to
+  // `MAX_DEPTH` links away, with the chain of references to follow. Used to start from a parent of the
+  // selected row (for example the building of a selected room). Returns [{ table, steps }] where a step
+  // is { from, column, to }; the shortest chains come first.
+  function findAncestors(schema, startId, maxDepth = 2) {
+    const out = [];
+    // Follows the single references of `currentId`; `trail` holds the tables already on the chain.
+    function walk(currentId, trail, steps) {
+      if (steps.length >= maxDepth) return;
+      const table = schema.tables.get(currentId);
+      if (!table) return;
+      for (const column of table.columns) {
+        if (column.kind !== `ref` || !schema.tables.has(column.target) || trail.includes(column.target)) continue;
+        const next = [...steps, { from: currentId, column: column.id, to: column.target }];
+        if (out.length < MAX_PATHS * 4) out.push({ table: column.target, steps: next });
+        walk(column.target, [...trail, column.target], next);
+      }
+    }
+    walk(startId, [startId], []);
+    return out.sort((a, b) => a.steps.length - b.steps.length || a.table.localeCompare(b.table));
+  }
+
+  // How a chain of references can be trusted: `list` when it goes through a list of references, `summary`
+  // when it goes through a summary table made by Grist, `direct` otherwise.
+  function pathQuality(schema, path) {
+    if (path.some((step) => step.list)) return `list`;
+    if (path.some((step) => schema.tables.get(step.from) && schema.tables.get(step.from).summary)) return `summary`;
+    return `direct`;
+  }
+
+  // Sorts the result of findDescendants so that the useful tables come first: those that have a direct
+  // chain of single references, then the summary tables, then the tables reached only through lists.
+  // Each entry gets a `quality` and its paths are sorted the same way. Returns a new list.
+  function rankDescendants(schema, descendants) {
+    const order = { direct: 0, summary: 1, list: 2 };
+    const ranked = descendants.map((entry) => {
+      const paths = entry.paths.slice().sort((a, b) => order[pathQuality(schema, a)] - order[pathQuality(schema, b)] || a.length - b.length);
+      return { ...entry, paths, quality: pathQuality(schema, paths[0]) };
+    });
+    return ranked.sort((a, b) => order[a.quality] - order[b.quality] || a.paths[0].length - b.paths[0].length || a.table.localeCompare(b.table));
+  }
+
+  const api = { parseType, buildSchema, findDescendants, findAncestors, pathQuality, rankDescendants, describeStep, MAX_DEPTH };
   if (typeof module !== `undefined` && module.exports) module.exports = api;
   else root.exportTdbSchema = api;
 })(typeof window !== `undefined` ? window : globalThis);
