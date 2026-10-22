@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.2
+
+- Query lab: several columns can be calculated at once (list of check boxes, one calculation for all of them, one result column each with its total).
+- The table and the link start empty and the lab asks to choose them, instead of guessing.
+- A "?" badge before every menu shows an explanation on hover, focus or click.
+
 ## 0.2.1
 
 - Query lab: the starting row can be the selected row or a parent of it (for example the building of a selected room); the table to calculate on and the link are chosen from it, with the best link first (summary tables and chains through lists come last and are labelled); the result is calculated again when the selected row changes; a switch merges rows that have the same label; a help text explains the principle.
