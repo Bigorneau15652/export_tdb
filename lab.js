@@ -1,4 +1,4 @@
-// Query lab (version 0.2): lets the maintainer try the calculations of the future widget on the real
+// Query lab (version 0.2.2): lets the maintainer try the calculations of the future widget on the real
 // data of the document. The user chooses a starting row (the selected row, or a parent of it such
 // as the building of a selected room), a table that belongs to that row, and a calculation. The result
 // follows the selected row. Nothing is written in the document. The calculations are done by the pure
@@ -29,7 +29,7 @@
     tabExplorer: $(`tabExplorer`), tabLab: $(`tabLab`), panelExplorer: $(`panelExplorer`), panelLab: $(`panelLab`),
     message: $(`labMessage`), form: $(`labForm`), start: $(`labStart`), startInfo: $(`labStartInfo`), table: $(`labTable`),
     path: $(`labPath`), group: $(`labGroup`), group2: $(`labGroup2`), merge: $(`labMerge`), fn: $(`labFn`),
-    column: $(`labColumn`), sort: $(`labSort`), run: $(`labRun`), refresh: $(`labRefresh`), auto: $(`labAuto`),
+    columns: $(`labColumns`), sort: $(`labSort`), run: $(`labRun`), refresh: $(`labRefresh`), auto: $(`labAuto`),
     info: $(`labInfo`), warnings: $(`labWarnings`), result: $(`labResult`), copy: $(`labCopy`)
   };
   const filters = [{ box: $(`labFilter1`) }, { box: $(`labFilter2`) }];
@@ -41,6 +41,19 @@
   let descendants = [];
 
   const state = () => window.exportTdbContext.state;
+
+  // Builds the small "?" badge that shows an explanation on hover, focus or click.
+  function makeHelp(key) {
+    const badge = document.createElement(`span`);
+    badge.className = `help`;
+    badge.tabIndex = 0;
+    badge.setAttribute(`role`, `img`);
+    badge.textContent = `?`;
+    badge.dataset.tip = t(key);
+    badge.title = t(key);
+    badge.setAttribute(`aria-label`, t(key));
+    return badge;
+  }
 
   // ------------------------------------------------------------------ Tabs
 
@@ -83,6 +96,7 @@
     const schema = state().schema;
     const table = schema.tables.get(tableId);
     const out = [];
+    if (!table) return out;
     for (const column of table.columns) {
       out.push({ path: column.id, label: `${column.id}`, numeric: /^(Numeric|Int)$/.test(column.base) });
       if (column.kind === `ref` && schema.tables.has(column.target)) {
@@ -120,7 +134,7 @@
     descendants = rankDescendants(s.schema, findDescendants(s.schema, start.table));
     const suffix = (entry) => (QUALITY_KEYS[entry.quality] ? ` ${t(QUALITY_KEYS[entry.quality])}` : ``);
     const previous = el.table.value;
-    fillSelect(el.table, [[start.table, t(`labTableStart`, { table: start.table })], ...descendants.map((d) => [d.table, `${d.table}${suffix(d)}`])], false);
+    fillSelect(el.table, [[``, t(`labChoose`)], [start.table, t(`labTableStart`, { table: start.table })], ...descendants.map((d) => [d.table, `${d.table}${suffix(d)}`])], false);
     if ([...el.table.options].some((o) => o.value === previous)) el.table.value = previous;
     fillForTable();
   }
@@ -132,12 +146,35 @@
     const tableId = el.table.value;
     const entry = descendants.find((d) => d.table === tableId);
     const paths = entry ? entry.paths.map((path, index) => [String(index), pathLabel(s.schema, path)]) : [[`self`, t(`labSelfRow`)]];
-    fillSelect(el.path, [...paths, [`all`, t(`labAllRows`)]], false);
+    fillSelect(el.path, [[``, t(`labChoose`)], ...paths, [`all`, t(`labAllRows`)]], false);
     const choices = columnChoices(tableId);
     fillSelect(el.group, [[``, t(`labNone`)], ...choices.map((c) => [c.path, c.label])], false);
     fillSelect(el.group2, [[``, t(`labNone`)], ...choices.map((c) => [c.path, c.label])], false);
-    fillSelect(el.column, [[``, t(`labNone`)], ...choices.filter((c) => c.numeric).map((c) => [c.path, c.label]), ...choices.filter((c) => !c.numeric).map((c) => [c.path, c.label])], false);
+    fillColumns([...choices.filter((c) => c.numeric), ...choices.filter((c) => !c.numeric)]);
     for (const filter of filters) fillFilter(filter, choices, columnChoices(start.table));
+  }
+
+  // Builds the list of check boxes of the columns to calculate, keeping the ticks that still apply.
+  function fillColumns(choices) {
+    const ticked = new Set(selectedColumns());
+    el.columns.textContent = ``;
+    for (const choice of choices) {
+      const label = document.createElement(`label`);
+      label.className = `check`;
+      const box = document.createElement(`input`);
+      box.type = `checkbox`;
+      box.value = choice.path;
+      box.checked = ticked.has(choice.path);
+      const text = document.createElement(`span`);
+      text.textContent = choice.label;
+      label.append(box, text);
+      el.columns.appendChild(label);
+    }
+  }
+
+  // Paths of the columns ticked in the list.
+  function selectedColumns() {
+    return [...el.columns.querySelectorAll(`input:checked`)].map((box) => box.value);
   }
 
   // Builds the controls of one filter: column, operator, source and value.
@@ -146,6 +183,7 @@
     box.textContent = ``;
     const legend = document.createElement(`legend`);
     legend.textContent = t(`labFilter`);
+    legend.appendChild(makeHelp(`tipFilter`));
     box.appendChild(legend);
     const make = (tag) => box.appendChild(document.createElement(tag));
     filter.column = make(`select`);
@@ -251,16 +289,16 @@
     el.result.textContent = ``;
     const lines = [];
     const head = document.createElement(`tr`);
-    const names = [...labels.keys, labels.measure];
+    const names = [...labels.keys, ...labels.measures];
     names.forEach((name, index) => {
       const cell = document.createElement(`th`);
       cell.textContent = name;
-      if (index === names.length - 1) cell.className = `num`;
+      if (index >= labels.keys.length) cell.className = `num`;
       head.appendChild(cell);
     });
     el.result.appendChild(head);
     lines.push(names.join(`\t`));
-    const add = (keys, value, total) => {
+    const add = (keys, values, total) => {
       const row = document.createElement(`tr`);
       if (total) row.className = `total`;
       keys.forEach((text) => {
@@ -268,15 +306,17 @@
         cell.textContent = text;
         row.appendChild(cell);
       });
-      const cell = document.createElement(`td`);
-      cell.className = `num`;
-      cell.textContent = formatNumber(value);
-      row.appendChild(cell);
+      for (const value of values) {
+        const cell = document.createElement(`td`);
+        cell.className = `num`;
+        cell.textContent = formatNumber(value);
+        row.appendChild(cell);
+      }
       el.result.appendChild(row);
-      lines.push([...keys, formatNumber(value)].join(`\t`));
+      lines.push([...keys, ...values.map((value) => formatNumber(value))].join(`\t`));
     };
-    for (const row of result.rows) add(row.keys, row.values[0], false);
-    add([t(`labTotal`), ...spec.groupBy.slice(1).map(() => ``)], result.totals[0], true);
+    for (const row of result.rows) add(row.keys, row.values, false);
+    add([t(`labTotal`), ...spec.groupBy.slice(1).map(() => ``)], result.totals, true);
     lastText = lines.join(`\n`);
     el.copy.hidden = false;
   }
@@ -303,6 +343,12 @@
     try {
       const start = currentStart();
       const tableId = el.table.value;
+      if (!tableId || !el.path.value) {
+        el.result.textContent = ``;
+        el.copy.hidden = true;
+        el.info.textContent = t(`labChooseFirst`);
+        return;
+      }
       const entry = descendants.find((d) => d.table === tableId);
       const choice = el.path.value;
       const chain = choice !== `all` && choice !== `self` && entry ? entry.paths[Number(choice)] : null;
@@ -323,12 +369,13 @@
       const problems = filtered.errors.map((reason) => t(`labFilterIgnored`, { reason }));
       const merge = el.merge.checked;
       const groupBy = [el.group.value, el.group2.value].filter(Boolean).map((path) => ({ path, merge }));
-      const measure = { fn: el.fn.value, path: el.column.value || undefined };
-      const spec = { groupBy, measures: [measure], sort: { by: el.sort.value, dir: el.sort.value === `value` ? `desc` : `asc` }, emptyLabel: `(vide)` };
+      const paths = selectedColumns();
+      const measures = (paths.length ? paths : [undefined]).map((path) => ({ fn: el.fn.value, path }));
+      const spec = { groupBy, measures, sort: { by: el.sort.value, dir: el.sort.value === `value` ? `desc` : `asc` }, emptyLabel: `(vide)` };
       const result = groupRows(dataset, tableId, rows, spec);
       if (result.error) throw new Error(result.error);
-      const fnLabel = t(FUNCTIONS.find(([value]) => value === measure.fn)[1]);
-      renderResult(spec, result, { keys: groupBy.map((g) => g.path), measure: `${fnLabel}${measure.path ? ` (${measure.path})` : ``}` });
+      const fnLabel = t(FUNCTIONS.find(([value]) => value === el.fn.value)[1]);
+      renderResult(spec, result, { keys: groupBy.map((g) => g.path), measures: measures.map((m) => `${fnLabel}${m.path ? ` (${m.path})` : ``}`) });
       el.info.textContent = `${t(`labResultRows`, { kept: rows.length, total })} ${t(`labLoaded`, { ms: Math.round(loadedInfo.ms), count: loadedInfo.loaded })} ${t(`labComputed`, { ms: Math.round(performance.now() - started) })}`;
       if (problems.length) {
         el.warnings.textContent = problems.join(` `);

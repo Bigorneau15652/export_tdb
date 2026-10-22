@@ -26,7 +26,20 @@
       labGroupBy2: `Puis par`,
       labNone: `(aucun)`,
       labFunction: `Calcul`,
-      labColumn: `Colonne`,
+      labColumn: `Colonnes à calculer`,
+      labChoose: `(à choisir)`,
+      labChooseFirst: `Choisissez la table à calculer et son lien avec la ligne de départ, puis cliquez sur Calculer.`,
+      tipStart: `Ligne dont on part. Choisissez la ligne sélectionnée dans Grist, ou l'élément auquel elle est rattachée (par exemple le bâtiment d'une salle sélectionnée). Tous les calculs portent sur ce qui appartient à cette ligne.`,
+      tipTable: `Table dont on additionne ou compte les lignes. Par exemple, pour des surfaces par étage dans un bâtiment, choisissez la table des salles ou des niveaux qui porte les surfaces.`,
+      tipPath: `Colonne de référence qui rattache les lignes de la table choisie à la ligne de départ. Par exemple Salles.Bâtiment relie chaque salle à son bâtiment. Toutes les lignes de la table : aucun lien, on prend tout.`,
+      tipGroup: `Colonne qui forme les lignes du résultat. Par exemple Étage donne une ligne par étage.`,
+      tipGroup2: `Seconde colonne facultative : le résultat est alors détaillé pour chaque valeur de la première (par exemple par étage puis par usage).`,
+      tipMerge: `Deux lignes différentes peuvent porter le même nom (deux bâtiments appelés A sur des sites différents). Cochez pour les regrouper sous un seul libellé. Sinon elles restent séparées.`,
+      tipFn: `Calcul appliqué à chaque colonne cochée : somme, moyenne, minimum, maximum, nombre de lignes ou nombre de valeurs différentes. Le même calcul s'applique à toutes les colonnes cochées.`,
+      tipColumns: `Cochez une ou plusieurs colonnes à calculer (par exemple SUN, SUB, SDP, SHOB, SCE). Chacune devient une colonne du résultat. Sans case cochée, seul le nombre de lignes est calculé.`,
+      tipFilter: `Garde seulement les lignes qui respectent une condition. Choisissez une colonne, une comparaison puis une valeur, la valeur d'une colonne de la ligne de départ ou le numéro de cette ligne.`,
+      tipSort: `Ordre des lignes du résultat : par libellé (ordre alphabétique) ou par valeur décroissante de la première colonne calculée.`,
+      tipAuto: `Si la case est cochée, le résultat est recalculé chaque fois que vous changez de ligne dans Grist.`,
       labFilter: `Filtre`,
       labSort: `Tri`,
       labSortKey: `Par libellé`,
@@ -121,7 +134,20 @@
       labGroupBy2: `Then by`,
       labNone: `(none)`,
       labFunction: `Calculation`,
-      labColumn: `Column`,
+      labColumn: `Columns to calculate`,
+      labChoose: `(to be chosen)`,
+      labChooseFirst: `Choose the table to calculate and its link with the starting row, then click Calculate.`,
+      tipStart: `The row to start from. Choose the row selected in Grist, or the item it belongs to (for example the building of a selected room). Every calculation covers what belongs to that row.`,
+      tipTable: `Table whose rows are added up or counted. For example, for areas per floor in a building, choose the table of rooms or levels that holds the areas.`,
+      tipPath: `Reference column that attaches the rows of the chosen table to the starting row. For example Rooms.Building links each room to its building. All the rows of the table: no link, everything is taken.`,
+      tipGroup: `Column that makes the rows of the result. For example Floor gives one row per floor.`,
+      tipGroup2: `Optional second column: the result is then detailed for each value of the first one (for example by floor then by usage).`,
+      tipMerge: `Two different rows can have the same name (two buildings called A on different sites). Tick to gather them under one label. Otherwise they stay apart.`,
+      tipFn: `Calculation applied to each ticked column: sum, average, minimum, maximum, number of rows or number of different values. The same calculation applies to all ticked columns.`,
+      tipColumns: `Tick one or several columns to calculate (for example SUN, SUB, SDP, SHOB, SCE). Each becomes a column of the result. With no tick, only the number of rows is calculated.`,
+      tipFilter: `Keeps only the rows that meet a condition. Choose a column, a comparison and then a value, the value of a column of the starting row or the number of that row.`,
+      tipSort: `Order of the rows of the result: by label (alphabetical) or by decreasing value of the first calculated column.`,
+      tipAuto: `When ticked, the result is calculated again each time you change row in Grist.`,
       labFilter: `Filter`,
       labSort: `Sort`,
       labSortKey: `By label`,
@@ -207,6 +233,12 @@
     document.documentElement.lang = lang;
     root.querySelectorAll(`[data-i18n]`).forEach((el) => {
       el.textContent = t(el.dataset.i18n);
+    });
+    root.querySelectorAll(`[data-i18n-tip]`).forEach((el) => {
+      const text = t(el.dataset.i18nTip);
+      el.dataset.tip = text;
+      el.title = text;
+      el.setAttribute(`aria-label`, text);
     });
   }
 

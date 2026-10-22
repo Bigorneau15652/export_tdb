@@ -91,3 +91,11 @@ input[type="text"] {
 #labResult th, #labResult td { padding: 4px 8px; border-bottom: 1px solid #cbd2d9; text-align: left; }
 #labResult td.num, #labResult th.num { text-align: right; white-space: nowrap; }
 #labResult tr.total td { font-weight: 700; border-top: 2px solid #1f2933; }
+
+/* Help badge: a small "?" that shows an explanation on hover, focus or click. */
+.help { position: relative; display: inline-block; width: 18px; height: 18px; line-height: 18px; margin-right: 4px; text-align: center; font-size: 12px; font-weight: 700; color: #ffffff; background: #3e4c59; border-radius: 50%; cursor: help; vertical-align: middle; }
+.help:hover::after, .help:focus::after { content: attr(data-tip); position: absolute; z-index: 10; left: 0; top: 24px; width: min(280px, 80vw); padding: 8px 10px; text-align: left; font-size: 13px; font-weight: 400; line-height: 1.4; white-space: normal; color: #ffffff; background: #1f2933; border: 1px solid #9aa5b1; border-radius: 6px; }
+.columns { max-height: 220px; overflow: auto; padding: 2px 8px; border: 1px solid #9aa5b1; border-radius: 6px; }
+.columns .check { margin: 4px 0; font-weight: 400; }
+p.label { margin: 10px 0 2px; font-weight: 600; }
+fieldset.filter legend .help { margin-left: 6px; }
