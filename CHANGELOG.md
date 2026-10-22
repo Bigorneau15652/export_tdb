@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.3
+
+- Query lab: a warning appears when a sum or an average is calculated on a column read through a reference (its value is counted once per row that points to it, which inflates the total).
+
 ## 0.2.2
 
 - Query lab: several columns can be calculated at once (list of check boxes, one calculation for all of them, one result column each with its total).
