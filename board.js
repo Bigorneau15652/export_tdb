@@ -38,8 +38,7 @@
     orientation: $(`boardOrientation`), margin: $(`boardMargin`), zoomOut: $(`boardZoomOut`), zoomFit: $(`boardZoomFit`),
     zoomIn: $(`boardZoomIn`), saveState: $(`boardSaveState`), confirm: $(`boardConfirm`), confirmText: $(`boardConfirmText`),
     confirmYes: $(`boardConfirmYes`), confirmNo: $(`boardConfirmNo`), scroll: $(`boardScroll`), canvas: $(`boardCanvas`),
-    side: $(`boardPanel`), title: $(`boardTitle`), type: $(`boardType`), page: $(`boardPage`), x: $(`boardX`), y: $(`boardY`),
-    w: $(`boardW`), h: $(`boardH`), remove: $(`boardDelete`), close: $(`boardClose`), refresh: $(`boardRefresh`),
+    side: $(`boardPanel`), titleRow: $(`boardTitleRow`), title: $(`boardTitle`), type: $(`boardType`), remove: $(`boardDelete`), close: $(`boardClose`), refresh: $(`boardRefresh`),
     textBox: $(`boardTextSettings`), source: $(`boardSource`), columnRow: $(`boardColumnRow`), column: $(`boardColumn`),
     text: $(`boardText`), field: $(`boardField`), size: $(`boardSize`), align: $(`boardAlign`), fill: $(`boardFill`),
     textInfo: $(`boardTextInfo`), cellState: $(`boardCellState`)
@@ -424,12 +423,7 @@
     if (!block) return;
     setValue(el.title, block.title);
     el.type.value = block.type;
-    setValue(el.page, String(block.page + 1));
-    el.page.max = String(model.pages);
-    setValue(el.x, String(block.x * STEP_MM));
-    setValue(el.y, String(block.y * STEP_MM));
-    setValue(el.w, String(block.w * STEP_MM));
-    setValue(el.h, String(block.h * STEP_MM));
+    el.titleRow.hidden = block.type === `text`;
     el.textBox.hidden = block.type !== `text`;
     if (block.type === `text`) fillTextSettings(block);
   }
@@ -443,22 +437,6 @@
     const before = el.scroll.clientWidth;
     syncTools();
     if (el.scroll.clientWidth !== before) render();
-  }
-
-  // Reads a number from a field of the panel in millimetres and returns it in grid steps.
-  const steps = (input) => Math.round(Number(input.value) / STEP_MM);
-
-  // Applies the geometry fields of the panel to the selected block.
-  function applyGeometry() {
-    const block = selectedBlock();
-    if (!block) return;
-    const wanted = { page: Math.round(Number(el.page.value)) - 1, x: steps(el.x), y: steps(el.y), w: steps(el.w), h: steps(el.h) };
-    if (![wanted.page, wanted.x, wanted.y, wanted.w, wanted.h].every(Number.isFinite)) {
-      fillPanel();
-      return;
-    }
-    commit(Model.setGeometry(model, block.id, wanted));
-    fillPanel();
   }
 
   // ------------------------------------------------------------------ Deleting
@@ -742,7 +720,6 @@
   el.type.addEventListener(`change`, () => {
     if (selectedId) commit(Model.updateBlock(model, selectedId, { type: el.type.value }));
   });
-  for (const input of [el.page, el.x, el.y, el.w, el.h]) input.addEventListener(`change`, applyGeometry);
   el.remove.addEventListener(`click`, askDelete);
   el.close.addEventListener(`click`, () => select(selectedId, false));
   el.confirmYes.addEventListener(`click`, confirmDelete);

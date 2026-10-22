@@ -11,8 +11,8 @@
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'self'; script-src 'self' https://grist.numerique.gouv.fr; img-src 'self' data: blob: https:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>export_tdb</title>
-  <link rel="stylesheet" href="explorer.css?v=0.4.0">
-  <link rel="stylesheet" href="board.css?v=0.4.0">
+  <link rel="stylesheet" href="explorer.css?v=0.4.1">
+  <link rel="stylesheet" href="board.css?v=0.4.1">
   <script src="https://grist.numerique.gouv.fr/grist-plugin-api.js"></script>
 </head>
 <body>
@@ -77,8 +77,10 @@
         <div id="boardScroll"><div id="boardCanvas"></div></div>
         <aside id="boardPanel" hidden>
           <h2 data-i18n="boardPanelTitle"></h2>
+          <div id="boardTitleRow">
           <label for="boardTitle"><span class="help" tabindex="0" role="img" data-i18n-tip="tipFieldTitle">?</span> <span data-i18n="boardFieldTitle"></span></label>
           <input type="text" id="boardTitle" maxlength="200">
+          </div>
           <label for="boardType"><span class="help" tabindex="0" role="img" data-i18n-tip="tipFieldType">?</span> <span data-i18n="boardFieldType"></span></label>
           <select id="boardType"></select>
           <div id="boardTextSettings" hidden>
@@ -103,16 +105,6 @@
             <p id="boardTextInfo" class="hint" role="status"></p>
             <p id="boardCellState" class="hint" role="status"></p>
           </div>
-          <label for="boardPage"><span class="help" tabindex="0" role="img" data-i18n-tip="tipFieldPage">?</span> <span data-i18n="boardFieldPage"></span></label>
-          <input type="number" id="boardPage" min="1" step="1">
-          <label for="boardX"><span class="help" tabindex="0" role="img" data-i18n-tip="tipFieldPos">?</span> <span data-i18n="boardFieldX"></span></label>
-          <input type="number" id="boardX" min="0" step="5">
-          <label for="boardY"><span data-i18n="boardFieldY"></span></label>
-          <input type="number" id="boardY" min="0" step="5">
-          <label for="boardW"><span class="help" tabindex="0" role="img" data-i18n-tip="tipFieldSize">?</span> <span data-i18n="boardFieldW"></span></label>
-          <input type="number" id="boardW" min="10" step="5">
-          <label for="boardH"><span data-i18n="boardFieldH"></span></label>
-          <input type="number" id="boardH" min="10" step="5">
           <div class="row">
             <button type="button" id="boardDelete" class="button danger" data-i18n="boardDelete"></button>
             <button type="button" id="boardClose" class="button secondary" data-i18n="boardClose"></button>
@@ -209,25 +201,25 @@
     </div>
   </main>
 
-  <script src="shared/i18n.js?v=0.4.0"></script>
-  <script src="schema.js?v=0.4.0"></script>
-  <script src="shape.js?v=0.4.0"></script>
-  <script src="report.js?v=0.4.0"></script>
-  <script src="values.js?v=0.4.0"></script>
-  <script src="dataset.js?v=0.4.0"></script>
-  <script src="rowset.js?v=0.4.0"></script>
-  <script src="aggregate.js?v=0.4.0"></script>
-  <script src="format.js?v=0.4.0"></script>
-  <script src="explorer.js?v=0.4.0"></script>
-  <script src="lab.js?v=0.4.0"></script>
-  <script src="layout.js?v=0.4.0"></script>
-  <script src="model.js?v=0.4.0"></script>
-  <script src="grist-access.js?v=0.4.0"></script>
-  <script src="markdown.js?v=0.4.0"></script>
-  <script src="fields.js?v=0.4.0"></script>
-  <script src="data-cache.js?v=0.4.0"></script>
-  <script src="markdown-view.js?v=0.4.0"></script>
-  <script src="board.js?v=0.4.0"></script>
-  <script src="tabs.js?v=0.4.0"></script>
+  <script src="shared/i18n.js?v=0.4.1"></script>
+  <script src="schema.js?v=0.4.1"></script>
+  <script src="shape.js?v=0.4.1"></script>
+  <script src="report.js?v=0.4.1"></script>
+  <script src="values.js?v=0.4.1"></script>
+  <script src="dataset.js?v=0.4.1"></script>
+  <script src="rowset.js?v=0.4.1"></script>
+  <script src="aggregate.js?v=0.4.1"></script>
+  <script src="format.js?v=0.4.1"></script>
+  <script src="explorer.js?v=0.4.1"></script>
+  <script src="lab.js?v=0.4.1"></script>
+  <script src="layout.js?v=0.4.1"></script>
+  <script src="model.js?v=0.4.1"></script>
+  <script src="grist-access.js?v=0.4.1"></script>
+  <script src="markdown.js?v=0.4.1"></script>
+  <script src="fields.js?v=0.4.1"></script>
+  <script src="data-cache.js?v=0.4.1"></script>
+  <script src="markdown-view.js?v=0.4.1"></script>
+  <script src="board.js?v=0.4.1"></script>
+  <script src="tabs.js?v=0.4.1"></script>
 </body>
 </html>

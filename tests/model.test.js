@@ -130,17 +130,13 @@ test(`changing the format puts the blocks back in place without overlap`, () => 
   }
 });
 
-test(`the geometry from the settings panel is resolved like a move`, () => {
+test(`the title and the type of a block are changed without moving it`, () => {
   let model = M.emptyModel();
   const a = M.addBlock(model, `text`);
-  const b = M.addBlock(a.model, `text`);
-  model = M.setGeometry(b.model, b.id, { x: 0, y: 0, w: 30, h: 10 });
-  assertValid(model);
-  assert.equal(M.findBlock(model, b.id).w, 30);
-  model = M.updateBlock(model, b.id, { title: `Titre`, type: `chart` });
-  assert.equal(M.findBlock(model, b.id).title, `Titre`);
-  assert.equal(M.findBlock(model, b.id).type, `chart`);
-  assert.equal(M.findBlock(model, b.id).w, 30);
+  model = M.updateBlock(a.model, a.id, { title: `Titre`, type: `chart` });
+  assert.equal(M.findBlock(model, a.id).title, `Titre`);
+  assert.equal(M.findBlock(model, a.id).type, `chart`);
+  assert.deepEqual([M.findBlock(model, a.id).x, M.findBlock(model, a.id).y], [0, 0]);
 });
 
 test(`the settings of a text block are cleaned and the other types have none`, () => {
@@ -217,7 +213,6 @@ test(`random sequences of changes always leave a valid model`, () => {
       else if (roll < 0.65) model = M.deleteBlock(model, pick);
       else if (roll < 0.72) model = M.addPage(model);
       else if (roll < 0.82) model = M.setPage(model, { format: Object.keys(L.FORMATS)[Math.floor(next() * 5)], orientation: L.ORIENTATIONS[Math.floor(next() * 2)], margin: L.MARGINS[Math.floor(next() * 5)] });
-      else if (roll < 0.9) model = M.setGeometry(model, pick, { page: Math.floor(next() * model.pages), x: Math.floor(next() * 50), y: Math.floor(next() * 30), w: 2 + Math.floor(next() * 40), h: 2 + Math.floor(next() * 20) });
       else model = M.validateModel(JSON.parse(JSON.stringify(model))).model;
       assertValid(model);
     }
