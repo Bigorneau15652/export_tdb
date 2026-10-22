@@ -15,10 +15,35 @@
   // Size of a new block in grid steps, by type.
   const DEFAULT_SIZES = { text: { w: 20, h: 8 }, table: { w: 40, h: 16 }, chart: { w: 24, h: 16 }, image: { w: 20, h: 16 }, indicator: { w: 12, h: 8 } };
   const ID_PATTERN = /^[a-z0-9]{1,24}$/;
+  // Settings of a text block: where the text comes from, its size, its alignment and a background.
+  const TEXT_SOURCES = [`fixed`, `cell`];
+  const TEXT_SIZES = [`small`, `normal`, `large`];
+  const TEXT_ALIGNS = [`left`, `center`, `justify`];
+  const FILLS = [`none`, `grey`, `blue`, `green`, `yellow`, `red`];
+  const MAX_FIXED_TEXT = 5000;
+  const COLUMN_PATTERN = /^[A-Za-z_][A-Za-z0-9_]{0,63}$/;
 
   // A model with one empty page: screen format, landscape, 10 mm margins.
   function emptyModel() {
     return { version: FORMAT_VERSION, page: { format: `screen`, orientation: `landscape`, margin: DEFAULT_MARGIN }, pages: 1, blocks: [] };
+  }
+
+  // A value that must be one of the allowed ones, or the first allowed one.
+  const oneOf = (value, allowed) => (allowed.includes(value) ? value : allowed[0]);
+
+  // The settings of a block cleaned for its type. Only a text block has settings for now; the other
+  // types get an empty object that later versions will fill. Unknown keys are dropped.
+  function cleanConfig(type, raw) {
+    const source = raw && typeof raw === `object` ? raw : {};
+    if (type !== `text`) return {};
+    return {
+      source: oneOf(source.source, TEXT_SOURCES),
+      text: typeof source.text === `string` ? source.text.slice(0, MAX_FIXED_TEXT) : ``,
+      column: typeof source.column === `string` && COLUMN_PATTERN.test(source.column) ? source.column : ``,
+      size: TEXT_SIZES.includes(source.size) ? source.size : `normal`,
+      align: oneOf(source.align, TEXT_ALIGNS),
+      fill: oneOf(source.fill, FILLS)
+    };
   }
 
   // A new identifier that no block of the list uses.
@@ -116,7 +141,8 @@
         x: whole(item.x, 0, 1000, 0),
         y: whole(item.y, 0, 1000, 0),
         w: whole(item.w, 1, 1000, size.w),
-        h: whole(item.h, 1, 1000, size.h)
+        h: whole(item.h, 1, 1000, size.h),
+        config: cleanConfig(item.type, item.config)
       });
     }
     const pages = whole(raw.pages, 1, MAX_PAGES, 1);
@@ -143,7 +169,7 @@
       spot = { page: pages - 1, x: 0, y: 0 };
     }
     const id = newId(model.blocks);
-    const block = { id, type, title: ``, ...spot, ...size };
+    const block = { id, type, title: ``, ...spot, ...size, config: cleanConfig(type, {}) };
     return { model: { ...model, pages, blocks: [...model.blocks, block] }, id };
   }
 
@@ -153,13 +179,17 @@
     return { ...model, pages: model.pages + 1 };
   }
 
-  // Changes the title or the type of a block.
+  // Changes the title, the type or the settings of a block. A new type starts with default settings.
   function updateBlock(model, id, changes) {
     const block = findBlock(model, id);
     if (!block) return model;
     const next = { ...block };
     if (typeof changes.title === `string`) next.title = changes.title.slice(0, MAX_TITLE);
-    if (TYPES.includes(changes.type)) next.type = changes.type;
+    if (TYPES.includes(changes.type) && changes.type !== block.type) {
+      next.type = changes.type;
+      next.config = cleanConfig(changes.type, {});
+    }
+    if (changes.config && typeof changes.config === `object`) next.config = cleanConfig(next.type, { ...next.config, ...changes.config });
     return { ...model, blocks: model.blocks.map((item) => (item.id === id ? next : item)) };
   }
 
@@ -209,7 +239,7 @@
     return trimPages(reflow({ ...model, page: cleanPage({ ...model.page, ...changes }) }));
   }
 
-  const api = { FORMAT_VERSION, MAX_BLOCKS, MAX_TITLE, TYPES, DEFAULT_SIZES, emptyModel, validateModel, reflow, trimPages, findBlock, addBlock, addPage, updateBlock, moveBlock, resizeBlock, setGeometry, deleteBlock, setPage };
+  const api = { FORMAT_VERSION, MAX_BLOCKS, MAX_TITLE, MAX_FIXED_TEXT, TYPES, TEXT_SOURCES, TEXT_SIZES, TEXT_ALIGNS, FILLS, DEFAULT_SIZES, emptyModel, cleanConfig, validateModel, reflow, trimPages, findBlock, addBlock, addPage, updateBlock, moveBlock, resizeBlock, setGeometry, deleteBlock, setPage };
   if (typeof module !== `undefined` && module.exports) module.exports = api;
   else root.exportTdbModel = api;
 })(typeof window !== `undefined` ? window : globalThis);

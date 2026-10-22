@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0
+
+- Text block. Markdown is drawn safely: titles (levels 1 to 3), paragraphs, bulleted and numbered lists, bold, italic and https links without credentials. HTML is never made; anything else stays plain text.
+- Fields `{Column}` and `{Reference.Column}` are replaced by the value of the selected row, and the text follows the cursor of Grist. A field is replaced only inside plain text, so a value that holds Markdown signs cannot change the layout. Numeric columns and dates are written the French way, references by their label. The tables that the fields need are loaded once; a "Refresh the data" button loads them again.
+- Two sources for the text: a fixed text kept in the widget, or a Text column of the selected row. In the second case what is typed in the settings panel is written back into the cell (after a short pause, or when the row changes), after checking that the column exists, is of type Text and holds no formula. Two writing methods of the Grist API are tried one after the other.
+- Settings of a text block: size (small, normal, large), alignment (left, centred, justified) and a background among five light colours. A menu inserts a field at the cursor. The text size follows the scale of the page.
+- A text longer than its block is marked in the editing mode.
+- The model keeps the settings of each block under `config` (cleaned when read; models saved by 0.3 stay valid).
+- New pure modules `markdown.js` and `fields.js` with unit tests (including random texts), and the display files `markdown-view.js` and `data-cache.js`. `grist-access.js` also reads tables and writes a cell.
+
 ## 0.3.0
 
 - New first tab, Dashboard (the explorer and the query lab stay as the second and third tabs). The widget opens in reading mode; the Edit button shows the tools.

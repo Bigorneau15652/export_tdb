@@ -27,5 +27,28 @@
     }
   }
 
-  window.exportTdbAccess = { onModel, saveModel };
+  // Loads a whole table in columns, as `fetchTable` gives it.
+  function fetchTable(name) {
+    return grist.docApi.fetchTable(name);
+  }
+
+  // Writes `value` in one cell. Tries `applyUserActions` first, then the table object of the plugin API.
+  // Resolves to { ok: true } or { ok: false, reason }.
+  async function writeCell(tableId, rowId, colId, value) {
+    let reason = ``;
+    try {
+      await grist.docApi.applyUserActions([[`UpdateRecord`, tableId, rowId, { [colId]: value }]]);
+      return { ok: true };
+    } catch (first) {
+      reason = String(first && first.message ? first.message : first);
+    }
+    try {
+      await grist.getTable(tableId).update({ id: rowId, fields: { [colId]: value } });
+      return { ok: true };
+    } catch (second) {
+      return { ok: false, reason: String(second && second.message ? second.message : second) || reason };
+    }
+  }
+
+  window.exportTdbAccess = { onModel, saveModel, fetchTable, writeCell };
 })();
