@@ -1,0 +1,92 @@
+// Minimal translation helper: French if the browser language starts with "fr", English otherwise.
+(function () {
+  const dictionaries = {
+    fr: {
+      title: `Explorateur export_tdb`,
+      intro: `Cet outil lit la structure de votre document Grist (tables, colonnes, références) et teste les fonctions de l'API dont le futur widget a besoin. Il ne modifie rien, sauf si vous lancez le test d'écriture, qui écrit puis rétablit la valeur d'une cellule.`,
+      needFull: `L'accès complet au document est nécessaire. Dans le panneau de droite, réglez le niveau d'accès sur « Accès complet au document ».`,
+      pickRow: `Sélectionnez une ligne du tableau pour lancer l'exploration.`,
+      running: `Exploration en cours : {table}`,
+      done: `Exploration terminée.`,
+      failed: `L'exploration a échoué : {reason}`,
+      linked: `Table liée : {table}`,
+      rowsSeen: `Lignes vues en changeant de ligne : {count}`,
+      moveHint: `Changez de ligne dans le tableau Grist : le compteur doit augmenter.`,
+      revealLabel: `Montrer aussi les valeurs dans le rapport (par défaut seules les formes sont indiquées)`,
+      rerun: `Relancer l'exploration`,
+      reportTitle: `Rapport à copier`,
+      copy: `Copier le rapport`,
+      copied: `Rapport copié.`,
+      copyFailed: `La copie automatique est bloquée : sélectionnez le texte du rapport et copiez-le avec Ctrl+C.`,
+      testsTitle: `Tests de l'API`,
+      attachmentTest: `Tester le jeton d'une pièce jointe`,
+      attachmentNone: `La ligne sélectionnée n'a pas de pièce jointe dans la table liée : sélectionnez une ligne qui en a une.`,
+      writeTitle: `Test d'écriture`,
+      writeColumn: `Colonne de texte de la table liée`,
+      writePrepare: `Préparer le test d'écriture`,
+      writeWarning: `Ce test écrit un marqueur dans la cellule choisie de la ligne sélectionnée, vérifie qu'il est bien là, puis remet la valeur d'origine. Il le fait avec deux méthodes de l'API. Si une erreur survient pendant la remise en place, la valeur d'origine est affichée ici pour que vous puissiez la remettre à la main.`,
+      writeConfirm: `Je confirme : écrire puis rétablir`,
+      writeCancel: `Annuler`,
+      writeNoColumn: `Aucune colonne de texte modifiable dans la table liée.`,
+      writeRestoreFailed: `La valeur d'origine n'a pas pu être rétablie. Valeur d'origine à remettre à la main : {value}`,
+      testOk: `réussi`,
+      testFailed: `échoué`,
+      colTables: `Tables du document`,
+      colDescendants: `Tables qui descendent de la table liée`,
+      noDescendants: `Aucune table ne référence la table liée.`
+    },
+    en: {
+      title: `export_tdb explorer`,
+      intro: `This tool reads the structure of your Grist document (tables, columns, references) and tests the API functions that the future widget needs. It changes nothing, unless you run the write test, which writes then restores the value of one cell.`,
+      needFull: `Full document access is needed. In the right-hand panel, set the access level to "Full document access".`,
+      pickRow: `Select a row in the table to start the exploration.`,
+      running: `Exploring: {table}`,
+      done: `Exploration finished.`,
+      failed: `The exploration failed: {reason}`,
+      linked: `Linked table: {table}`,
+      rowsSeen: `Rows seen while moving: {count}`,
+      moveHint: `Move to another row in the Grist table: the counter must go up.`,
+      revealLabel: `Also show the values in the report (by default only the shapes are shown)`,
+      rerun: `Run the exploration again`,
+      reportTitle: `Report to copy`,
+      copy: `Copy the report`,
+      copied: `Report copied.`,
+      copyFailed: `Automatic copy is blocked: select the text of the report and copy it with Ctrl+C.`,
+      testsTitle: `API tests`,
+      attachmentTest: `Test the token of an attachment`,
+      attachmentNone: `The selected row has no attachment in the linked table: select a row that has one.`,
+      writeTitle: `Write test`,
+      writeColumn: `Text column of the linked table`,
+      writePrepare: `Prepare the write test`,
+      writeWarning: `This test writes a marker in the chosen cell of the selected row, checks that it is there, then puts the original value back. It does so with two methods of the API. If an error happens while restoring, the original value is shown here so that you can put it back by hand.`,
+      writeConfirm: `I confirm: write then restore`,
+      writeCancel: `Cancel`,
+      writeNoColumn: `No editable text column in the linked table.`,
+      writeRestoreFailed: `The original value could not be restored. Original value to put back by hand: {value}`,
+      testOk: `passed`,
+      testFailed: `failed`,
+      colTables: `Tables of the document`,
+      colDescendants: `Tables that descend from the linked table`,
+      noDescendants: `No table references the linked table.`
+    }
+  };
+
+  const lang = String(navigator.language || ``).toLowerCase().startsWith(`fr`) ? `fr` : `en`;
+
+  // Returns the translated text for a key, replacing each {name} with values[name].
+  function t(key, values) {
+    const template = dictionaries[lang][key];
+    if (template === undefined) return key;
+    return template.replace(/\{(\w+)\}/g, (match, name) => (values && values[name] !== undefined ? String(values[name]) : match));
+  }
+
+  // Fills every element carrying a data-i18n attribute.
+  function applyTranslations(root) {
+    document.documentElement.lang = lang;
+    root.querySelectorAll(`[data-i18n]`).forEach((el) => {
+      el.textContent = t(el.dataset.i18n);
+    });
+  }
+
+  window.exportTdbI18n = { t, lang, applyTranslations };
+})();

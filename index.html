@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!--
+    Content Security Policy: scripts come from this site and from the Grist plugin API only, and the
+    page opens no network connection. Pictures may come from https addresses (attachment test).
+    If you use another Grist server, change the host below AND in the script tag.
+  -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' https://grist.numerique.gouv.fr; img-src 'self' data: blob: https:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>export_tdb</title>
+  <link rel="stylesheet" href="explorer.css?v=0.1.0">
+  <script src="https://grist.numerique.gouv.fr/grist-plugin-api.js"></script>
+</head>
+<body>
+  <main id="app">
+    <h1 data-i18n="title"></h1>
+    <p id="intro" data-i18n="intro"></p>
+    <p id="status" role="status"></p>
+    <p id="error" role="alert" hidden></p>
+
+    <section id="summary" hidden>
+      <p id="linked"></p>
+      <p id="seen"></p>
+      <p class="hint" data-i18n="moveHint"></p>
+      <label class="check"><input type="checkbox" id="reveal"> <span data-i18n="revealLabel"></span></label>
+      <button type="button" id="rerun" class="button" data-i18n="rerun"></button>
+    </section>
+
+    <section id="tests" hidden>
+      <h2 data-i18n="testsTitle"></h2>
+      <div class="row">
+        <button type="button" id="attachmentTest" class="button" data-i18n="attachmentTest"></button>
+      </div>
+      <h3 data-i18n="writeTitle"></h3>
+      <label for="writeColumn" data-i18n="writeColumn"></label>
+      <select id="writeColumn"></select>
+      <div class="row">
+        <button type="button" id="writePrepare" class="button" data-i18n="writePrepare"></button>
+      </div>
+      <div id="writeConfirmBox" hidden>
+        <p class="warning" data-i18n="writeWarning"></p>
+        <div class="row">
+          <button type="button" id="writeConfirm" class="button" data-i18n="writeConfirm"></button>
+          <button type="button" id="writeCancel" class="button secondary" data-i18n="writeCancel"></button>
+        </div>
+      </div>
+      <p id="writeProblem" role="alert" hidden></p>
+      <ul id="testResults"></ul>
+    </section>
+
+    <section id="structure" hidden>
+      <h2 data-i18n="colDescendants"></h2>
+      <ul id="descendants"></ul>
+      <h2 data-i18n="colTables"></h2>
+      <ul id="tableList"></ul>
+    </section>
+
+    <section id="reportBox" hidden>
+      <h2 data-i18n="reportTitle"></h2>
+      <div class="row">
+        <button type="button" id="copy" class="button" data-i18n="copy"></button>
+        <span id="copyState" role="status"></span>
+      </div>
+      <textarea id="report" readonly rows="14" spellcheck="false"></textarea>
+    </section>
+  </main>
+
+  <script src="shared/i18n.js?v=0.1.0"></script>
+  <script src="schema.js?v=0.1.0"></script>
+  <script src="shape.js?v=0.1.0"></script>
+  <script src="report.js?v=0.1.0"></script>
+  <script src="explorer.js?v=0.1.0"></script>
+</body>
+</html>
