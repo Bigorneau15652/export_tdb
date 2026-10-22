@@ -287,6 +287,7 @@
     if (!record) return;
     state.record = record;
     state.rowsSeen.add(record.id);
+    window.dispatchEvent(new CustomEvent(`exporttdb:rowchanged`));
     if (state.schema || state.running) {
       renderSummary();
       renderReport();

@@ -26,6 +26,20 @@
     return [...reached].map((id) => first.rowOfId(id)).filter((row) => row >= 0).sort((a, b) => a - b);
   }
 
+  // Number of the row that a chain of single references leads to, starting from the row `rowId` of
+  // the first table of the chain; 0 when a reference on the way is empty or broken.
+  function contextRowId(dataset, steps, rowId) {
+    let id = rowId;
+    for (const step of steps) {
+      const table = dataset.table(step.from);
+      const index = table ? table.rowOfId(id) : -1;
+      const column = table && index >= 0 ? table.column(step.column) : null;
+      id = column ? column[index] : 0;
+      if (!Number.isInteger(id) || id <= 0) return 0;
+    }
+    return id;
+  }
+
   // Every row of a table (a block that uses the whole table, with no link to the selected row).
   function allRows(dataset, tableId) {
     const table = dataset.table(tableId);
@@ -96,7 +110,7 @@
     return { rows: kept, errors };
   }
 
-  const api = { rowsInContext, allRows, applyFilters };
+  const api = { rowsInContext, contextRowId, allRows, applyFilters };
   if (typeof module !== `undefined` && module.exports) module.exports = api;
   else root.exportTdbRowset = api;
 })(typeof window !== `undefined` ? window : globalThis);

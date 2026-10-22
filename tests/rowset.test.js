@@ -2,7 +2,7 @@
 const test = require(`node:test`);
 const assert = require(`node:assert/strict`);
 const { findDescendants } = require(`../schema.js`);
-const { rowsInContext, allRows, applyFilters } = require(`../rowset.js`);
+const { rowsInContext, contextRowId, allRows, applyFilters } = require(`../rowset.js`);
 const { schema, dataset } = require(`./helpers-dataset.js`);
 
 const pathsOf = (start, table) => findDescendants(schema, start).find((entry) => entry.table === table).paths;
@@ -102,4 +102,24 @@ test(`a filter that cannot be read is reported and ignored`, () => {
 test(`a missing source gives no match for a comparison`, () => {
   assert.deepEqual(keep(everything, [{ path: `Area`, op: `gt`, value: { kind: `field`, path: `Nope` } }]).rows, []);
   assert.deepEqual(keep(everything, [{ path: `Area`, op: `gt` }]).rows, []);
+});
+
+test(`contextRowId follows single references from the selected row`, () => {
+  assert.equal(contextRowId(dataset, [{ from: `Rooms`, column: `Building`, to: `Buildings` }], 1), 1);
+  assert.equal(contextRowId(dataset, [{ from: `Rooms`, column: `Building`, to: `Buildings` }], 5), 3);
+  const twoSteps = [{ from: `Rooms`, column: `Floor`, to: `Floors` }, { from: `Floors`, column: `Building`, to: `Buildings` }];
+  assert.equal(contextRowId(dataset, twoSteps, 5), 3);
+  assert.equal(contextRowId(dataset, [], 4), 4);
+});
+
+test(`contextRowId gives 0 when a reference is empty or the row is unknown`, () => {
+  assert.equal(contextRowId(dataset, [{ from: `Rooms`, column: `Usage`, to: `Usages` }], 4), 0);
+  assert.equal(contextRowId(dataset, [{ from: `Rooms`, column: `Building`, to: `Buildings` }], 99), 0);
+  assert.equal(contextRowId(dataset, [{ from: `Missing`, column: `x`, to: `y` }], 1), 0);
+});
+
+test(`the rooms of the same building as a selected room`, () => {
+  const buildingId = contextRowId(dataset, [{ from: `Rooms`, column: `Building`, to: `Buildings` }], 2);
+  const chain = findDescendants(schema, `Buildings`).find((e) => e.table === `Rooms`).paths[0];
+  assert.deepEqual(rowsInContext(dataset, chain, buildingId), [0, 1, 5]);
 });

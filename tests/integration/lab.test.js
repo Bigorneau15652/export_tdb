@@ -133,3 +133,74 @@ test(`narrow panel in dark mode: the lab does not overflow`, async () => {
   await run(w.page);
   assert.equal(await w.page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth), false);
 });
+
+// Opens the explorer linked to the rooms table, on room 1, and the lab tab.
+async function openLabOnRooms() {
+  const w = await openExplorer(browser, server.url, { linked: `Rooms` });
+  await w.selectRow(1);
+  await finished(w.page);
+  await w.page.click(`#tabLab`);
+  return w;
+}
+
+const lastValue = async (page) => (await rowsOf(page)).slice(-1)[0][1];
+
+test(`the starting row can be the parent of the selected row and the result follows the cursor`, async () => {
+  const w = await openLabOnRooms();
+  const starts = await w.page.$$eval(`#labStart option`, (options) => options.map((o) => o.textContent));
+  assert.match(starts[0], /selected row \(Rooms\)|ligne sélectionnée \(Rooms\)/);
+  assert.ok(starts.some((text) => text.includes(`Buildings`) && text.includes(`Rooms.Building`)));
+  await w.page.selectOption(`#labStart`, { label: starts.find((text) => text.includes(`Buildings`) && text.includes(`via Rooms.Building)`)) });
+  await w.page.selectOption(`#labTable`, `Rooms`);
+  await w.page.selectOption(`#labColumn`, `Area`);
+  await run(w.page);
+  assert.equal(await lastValue(w.page), `60,5`);
+  assert.match(await w.page.locator(`#labStartInfo`).innerText(), /Buildings, (ligne n°|row no\.) 1 \(Building A\)/);
+  await w.selectRow(3);
+  await w.page.waitForFunction(() => /20,25/.test(document.getElementById(`labResult`).textContent));
+  assert.match(await w.page.locator(`#labStartInfo`).innerText(), /Buildings, (ligne n°|row no\.) 2 \(Building B\)/);
+  assert.equal(await lastValue(w.page), `20,25`);
+});
+
+test(`the result does not follow the cursor when the option is turned off`, async () => {
+  const w = await openLabOnRooms();
+  const start = (await w.page.$$eval(`#labStart option`, (options) => options.map((o) => o.textContent))).find((text) => text.includes(`via Rooms.Building)`));
+  await w.page.selectOption(`#labStart`, { label: start });
+  await w.page.selectOption(`#labTable`, `Rooms`);
+  await w.page.selectOption(`#labColumn`, `Area`);
+  await w.page.uncheck(`#labAuto`);
+  await run(w.page);
+  await w.selectRow(3);
+  await w.page.waitForTimeout(500);
+  assert.equal(await lastValue(w.page), `60,5`);
+});
+
+test(`the link list starts with the best link and keeps all rows for the end`, async () => {
+  const w = await openLab();
+  await w.page.selectOption(`#labTable`, `Rooms`);
+  const paths = await w.page.$$eval(`#labPath option`, (options) => options.map((o) => o.value));
+  assert.equal(paths[paths.length - 1], `all`);
+  assert.notEqual(paths[0], `all`);
+});
+
+test(`the starting row alone is a choice for the table of the starting row`, async () => {
+  const w = await openLabOnRooms();
+  await w.page.selectOption(`#labTable`, `Rooms`);
+  assert.deepEqual(await w.page.$$eval(`#labPath option`, (options) => options.map((o) => o.value)), [`self`, `all`]);
+  await w.page.selectOption(`#labColumn`, `Area`);
+  await run(w.page);
+  assert.equal(await lastValue(w.page), `20,5`);
+});
+
+test(`rows of the same label are merged only on request`, async () => {
+  const w = await openLab();
+  await w.page.selectOption(`#labTable`, `Rooms`);
+  await w.page.selectOption(`#labPath`, `all`);
+  await w.page.selectOption(`#labGroup`, `Building`);
+  await w.page.selectOption(`#labColumn`, `Area`);
+  await run(w.page);
+  assert.deepEqual((await rowsOf(w.page)).slice(1, -1).map((r) => r[0]), [`Building A`, `Building A`, `Building B`]);
+  await w.page.check(`#labMerge`);
+  await run(w.page);
+  assert.deepEqual((await rowsOf(w.page)).slice(1, -1).map((r) => [r[0], r[1]]), [[`Building A`, `100,5`], [`Building B`, `20,25`]]);
+});

@@ -6,7 +6,7 @@ English first, version française plus bas.
 
 export_tdb will be a custom widget for [Grist](https://www.getgrist.com) that composes dashboards (Markdown text, tables with totals, charts, images and indicators) from a table and the tables linked to it, and prints them or saves them as PDF. It is built in small versions; the specification is in `docs/specification.md`.
 
-Status: version 0.2, the data engine. It does not compose dashboards yet. The Explorer tab reads the structure of your document and tests the Grist functions that the dashboard widget needs, then produces a report. The Query lab tab lets you try the calculations of the future widget on your real data: rows that belong to the selected row, filters, grouping, sums, averages and counts.
+Status: version 0.2.1, the data engine. It does not compose dashboards yet. The Explorer tab reads the structure of your document and tests the Grist functions that the dashboard widget needs, then produces a report. The Query lab tab lets you try the calculations of the future widget on your real data: rows that belong to the selected row, filters, grouping, sums, averages and counts.
 
 ### Install
 
@@ -23,7 +23,7 @@ The explorer shows the linked table, the tables that descend from it, a counter 
 
 ### Using the query lab
 
-Select a row in Grist, wait for the exploration to finish, then open the Query lab tab. Choose a table (the linked table or one that descends from it), the link with the selected row (the lab lists every chain of references that leads to it), the column to group by, the calculation and the column it applies to, then up to two filters. A filter compares a column (or a column reached through a reference, written `Reference > Column`) with a typed value, with a field of the selected row or with its number. Click Calculate: the result is a table with a total line, the number of rows kept and the time spent. Nothing is saved in the document. The lab reads the tables it needs once and keeps them until you click "Reload the data".
+Select a row in Grist, wait for the exploration to finish, then open the Query lab tab. The lab works in three steps. First the starting row: the selected row, or something it belongs to (for example the building of a selected room): the page shows which row it is. Then the table to calculate on (for example the rooms) and the link that attaches its rows to the starting row; the lab lists the chains of references and puts the best first (summary tables made by Grist and chains through lists come last and are labelled). Then the calculation: group by one or two columns, a sum, average, minimum, maximum or count of a column, and up to two filters. A filter compares a column (or a column reached through a reference, written `Reference > Column`) with a typed value, with a field of the starting row or with its number. The result is a table with a total line, the number of rows kept and the time spent. It is calculated again when you change row in Grist (you can turn this off). Two different rows that have the same label stay apart unless you tick the merge box. Nothing is saved in the document. The lab reads the tables it needs once and keeps them until you click "Reload the data".
 
 ### Security
 
@@ -42,7 +42,7 @@ MIT, see `LICENSE`. Author: Olivier Holweck.
 
 export_tdb sera un widget personnalisé pour [Grist](https://www.getgrist.com) qui compose des tableaux de bord (texte en Markdown, tableaux avec totaux, graphiques, images et indicateurs) à partir d'une table et des tables qui lui sont liées, et les imprime ou les enregistre en PDF. Il est construit par petites versions ; le cahier des charges est dans `docs/specification.md`.
 
-État : version 0.2, le moteur de données. Il ne compose pas encore de tableaux de bord. L'onglet Explorateur lit la structure de votre document et teste les fonctions de Grist dont le widget aura besoin, puis produit un rapport. L'onglet Laboratoire de requêtes permet d'essayer les calculs du futur widget sur vos vraies données : lignes rattachées à la ligne sélectionnée, filtres, regroupements, sommes, moyennes et nombres.
+État : version 0.2.1, le moteur de données. Il ne compose pas encore de tableaux de bord. L'onglet Explorateur lit la structure de votre document et teste les fonctions de Grist dont le widget aura besoin, puis produit un rapport. L'onglet Laboratoire de requêtes permet d'essayer les calculs du futur widget sur vos vraies données : lignes rattachées à la ligne sélectionnée, filtres, regroupements, sommes, moyennes et nombres.
 
 ### Installation
 
@@ -59,7 +59,7 @@ L'explorateur affiche la table liée, les tables qui en descendent, un compteur 
 
 ### Utilisation du laboratoire de requêtes
 
-Sélectionnez une ligne dans Grist, attendez la fin de l'exploration, puis ouvrez l'onglet Laboratoire de requêtes. Choisissez une table (la table liée ou une table qui en descend), le lien avec la ligne sélectionnée (le laboratoire liste toutes les chaînes de références qui y mènent), la colonne de regroupement, le calcul et la colonne sur laquelle il porte, puis jusqu'à deux filtres. Un filtre compare une colonne (ou une colonne atteinte par une référence, écrite `Référence > Colonne`) avec une valeur saisie, avec un champ de la ligne sélectionnée ou avec son numéro. Cliquez sur Calculer : le résultat est un tableau avec une ligne de total, le nombre de lignes retenues et le temps passé. Rien n'est enregistré dans le document. Le laboratoire lit une fois les tables dont il a besoin et les garde jusqu'à ce que vous cliquiez sur « Recharger les données ».
+Sélectionnez une ligne dans Grist, attendez la fin de l'exploration, puis ouvrez l'onglet Laboratoire de requêtes. Le laboratoire fonctionne en trois temps. D'abord la ligne de départ : la ligne sélectionnée, ou un élément auquel elle est rattachée (par exemple le bâtiment d'une salle sélectionnée) ; la page indique de quelle ligne il s'agit. Ensuite la table sur laquelle calculer (par exemple les salles) et le lien qui rattache ses lignes à la ligne de départ ; le laboratoire liste les chaînes de références et met la meilleure en premier (les tables de synthèse créées par Grist et les chaînes qui passent par une liste viennent en dernier et sont signalées). Enfin le calcul : regroupement sur une ou deux colonnes, somme, moyenne, minimum, maximum ou nombre d'une colonne, et jusqu'à deux filtres. Un filtre compare une colonne (ou une colonne atteinte par une référence, écrite `Référence > Colonne`) avec une valeur saisie, avec un champ de la ligne de départ ou avec son numéro. Le résultat est un tableau avec une ligne de total, le nombre de lignes retenues et le temps passé. Il est recalculé quand vous changez de ligne dans Grist (vous pouvez le désactiver). Deux lignes différentes qui portent le même libellé restent séparées, sauf si vous cochez la case de fusion. Rien n'est enregistré dans le document. Le laboratoire lit une fois les tables dont il a besoin et les garde jusqu'à ce que vous cliquiez sur « Recharger les données ».
 
 ### Sécurité
 

@@ -11,7 +11,7 @@
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'self'; script-src 'self' https://grist.numerique.gouv.fr; img-src 'self' data: blob: https:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>export_tdb</title>
-  <link rel="stylesheet" href="explorer.css?v=0.2.0">
+  <link rel="stylesheet" href="explorer.css?v=0.2.1">
   <script src="https://grist.numerique.gouv.fr/grist-plugin-api.js"></script>
 </head>
 <body>
@@ -76,8 +76,12 @@
 
     <div id="panelLab" role="tabpanel" hidden>
       <p data-i18n="labIntro"></p>
+      <p class="hint" data-i18n="labHelp"></p>
       <p id="labMessage" role="status"></p>
       <div id="labForm" hidden>
+        <label for="labStart" data-i18n="labStart"></label>
+        <select id="labStart"></select>
+        <p id="labStartInfo" class="hint" role="status"></p>
         <label for="labTable" data-i18n="labTable"></label>
         <select id="labTable"></select>
         <label for="labPath" data-i18n="labPath"></label>
@@ -86,6 +90,7 @@
         <select id="labGroup"></select>
         <label for="labGroup2" data-i18n="labGroupBy2"></label>
         <select id="labGroup2"></select>
+        <label class="check"><input type="checkbox" id="labMerge"> <span data-i18n="labMerge"></span></label>
         <label for="labFn" data-i18n="labFunction"></label>
         <select id="labFn"></select>
         <label for="labColumn" data-i18n="labColumn"></label>
@@ -94,6 +99,7 @@
         <fieldset class="filter" id="labFilter2"></fieldset>
         <label for="labSort" data-i18n="labSort"></label>
         <select id="labSort"></select>
+        <label class="check"><input type="checkbox" id="labAuto" checked> <span data-i18n="labAuto"></span></label>
         <div class="row">
           <button type="button" id="labRun" class="button" data-i18n="labRun"></button>
           <button type="button" id="labRefresh" class="button secondary" data-i18n="labRefresh"></button>
@@ -106,16 +112,16 @@
     </div>
   </main>
 
-  <script src="shared/i18n.js?v=0.2.0"></script>
-  <script src="schema.js?v=0.2.0"></script>
-  <script src="shape.js?v=0.2.0"></script>
-  <script src="report.js?v=0.2.0"></script>
-  <script src="values.js?v=0.2.0"></script>
-  <script src="dataset.js?v=0.2.0"></script>
-  <script src="rowset.js?v=0.2.0"></script>
-  <script src="aggregate.js?v=0.2.0"></script>
-  <script src="format.js?v=0.2.0"></script>
-  <script src="explorer.js?v=0.2.0"></script>
-  <script src="lab.js?v=0.2.0"></script>
+  <script src="shared/i18n.js?v=0.2.1"></script>
+  <script src="schema.js?v=0.2.1"></script>
+  <script src="shape.js?v=0.2.1"></script>
+  <script src="report.js?v=0.2.1"></script>
+  <script src="values.js?v=0.2.1"></script>
+  <script src="dataset.js?v=0.2.1"></script>
+  <script src="rowset.js?v=0.2.1"></script>
+  <script src="aggregate.js?v=0.2.1"></script>
+  <script src="format.js?v=0.2.1"></script>
+  <script src="explorer.js?v=0.2.1"></script>
+  <script src="lab.js?v=0.2.1"></script>
 </body>
 </html>
