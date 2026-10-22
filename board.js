@@ -14,6 +14,9 @@
   const Fields = window.exportTdbFields;
   const Data = window.exportTdbData;
   const { createDataset } = window.exportTdbDataset;
+  const { describeStep } = window.exportTdbSchema;
+  const Query = window.exportTdbTableQuery;
+  const FilterUi = window.exportTdbFilterUi;
   const { STEP_MM } = Layout;
 
   const ZOOMS = [0.5, 0.75, 1, 1.25, 1.5, 2];
@@ -25,10 +28,14 @@
   const WARNING_KEYS = { version: `boardWarnVersion`, invalid: `boardWarnInvalid`, blocks: `boardWarnBlocks` };
   // Height of the characters of a text block in millimetres, by size.
   const TEXT_MM = { small: 3, normal: 3.5, large: 5 };
+  const TABLE_MM = 3;
   const CELL_DELAY_MS = 900;
   const SIZE_KEYS = { small: `sizeSmall`, normal: `sizeNormal`, large: `sizeLarge` };
   const ALIGN_KEYS = { left: `alignLeft`, center: `alignCenter`, justify: `alignJustify` };
   const FILL_KEYS = { none: `fillNone`, grey: `fillGrey`, blue: `fillBlue`, green: `fillGreen`, yellow: `fillYellow`, red: `fillRed` };
+  const FN_KEYS = { sum: `fnSum`, avg: `fnAvg`, min: `fnMin`, max: `fnMax`, count: `fnCount`, distinct: `fnDistinct` };
+  const QUALITY_KEYS = { summary: `labQualitySummary`, list: `labQualityList` };
+  const REASON_KEYS = { choose: `boardTableChoose`, columns: `boardTableColumns`, groups: `boardTableGroups`, start: `boardTableStart`, nostart: `boardTableNoStart`, link: `boardTableLink`, notloaded: `boardTableNotLoaded` };
   const ARROWS = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
 
   const $ = (id) => document.getElementById(id);
@@ -41,8 +48,13 @@
     side: $(`boardPanel`), titleRow: $(`boardTitleRow`), title: $(`boardTitle`), type: $(`boardType`), remove: $(`boardDelete`), close: $(`boardClose`), refresh: $(`boardRefresh`),
     textBox: $(`boardTextSettings`), source: $(`boardSource`), columnRow: $(`boardColumnRow`), column: $(`boardColumn`),
     text: $(`boardText`), field: $(`boardField`), size: $(`boardSize`), align: $(`boardAlign`), fill: $(`boardFill`),
-    textInfo: $(`boardTextInfo`), cellState: $(`boardCellState`)
+    textInfo: $(`boardTextInfo`), cellState: $(`boardCellState`),
+    tableBox: $(`boardTableSettings`), mode: $(`boardMode`), start: $(`boardStart`), tableSel: $(`boardTable`), link: $(`boardLink`),
+    groupRow: $(`boardGroupRow`), group1: $(`boardGroup1`), group2: $(`boardGroup2`), merge: $(`boardMerge`),
+    columnRows: $(`boardColumnRows`), addColumn: $(`boardAddColumn`), sortBy: $(`boardSortBy`), sortColumn: $(`boardSortColumn`),
+    sortDir: $(`boardSortDir`), decimals: $(`boardDecimals`), total: $(`boardTotal`), tableInfo: $(`boardTableInfo`)
   };
+  const filterBoxes = [$(`boardFilter1`), $(`boardFilter2`), $(`boardFilter3`)];
 
   let model = Model.emptyModel();
   let locked = false;
@@ -132,13 +144,15 @@
     return { nodes: result.nodes, problems: result.problems, empty };
   }
 
-  // Loads the tables that the fields of the text blocks need, then draws again.
+  // Loads the tables that the text blocks and the table blocks need, then draws again.
   function requestData() {
     const state = context();
     if (!state.schema || !state.record || loadingData) return;
     const paths = new Set();
+    const wanted = new Set();
     for (const block of model.blocks) {
       if (block.type === `text`) Fields.extractFields(sourceText(block)).forEach((path) => paths.add(path));
+      if (block.type === `table`) Query.tablesFor(state.schema, state.linked, block.config).forEach((name) => wanted.add(name));
     }
     // A row that the loaded table does not hold yet (added since it was loaded): load the table again, once.
     const loadedLinked = Data.tables().get(state.linked);
@@ -146,7 +160,8 @@
       reloadedFor.add(state.record.id);
       Data.drop(state.linked);
     }
-    const names = Fields.tablesForPaths(state.schema, state.linked, [...paths]).filter((name) => !Data.tables().has(name) && !failedTables.has(name));
+    Fields.tablesForPaths(state.schema, state.linked, [...paths]).forEach((name) => wanted.add(name));
+    const names = [...wanted].filter((name) => !Data.tables().has(name) && !failedTables.has(name));
     if (!names.length) return;
     loadingData = true;
     Data.ensure(names).catch(() => names.forEach((name) => failedTables.add(name))).then(() => {
@@ -240,6 +255,72 @@
     node.style.height = `${rect.h * STEP_MM * mmPx}px`;
   }
 
+  // The texts that the tables use: names of the functions, the word total and the label of an empty key.
+  function tableWords() {
+    return { sum: tr(`fnSum`), avg: tr(`fnAvg`), min: tr(`fnMin`), max: tr(`fnMax`), count: tr(`fnCount`), distinct: tr(`fnDistinct`), total: tr(`labTotal`), empty: tr(`tableEmptyKey`), yes: tr(`wordYes`), no: tr(`wordNo`) };
+  }
+
+  // The result of a table block for the selected row, or a reason why there is none yet.
+  function tableResult(block) {
+    const state = context();
+    if (!state.schema || !state.record) return { ok: false, reason: `notready` };
+    return Query.runTable(state.schema, currentDataset(), state.linked, state.record, block.config, tableWords());
+  }
+
+  // The message that explains why a table cannot be shown yet.
+  function reasonText(result) {
+    if (result.reason === `notready`) return tr(`boardTableNotReady`);
+    if (result.reason === `error`) return tr(`boardTableError`, { reason: result.detail });
+    return tr(REASON_KEYS[result.reason] || `boardTableChoose`);
+  }
+
+  // Draws the table of a result: a heading line, the rows and the total line.
+  function drawTable(result) {
+    const table = document.createElement(`table`);
+    table.className = `dt`;
+    const head = table.createTHead().insertRow();
+    result.headers.forEach((header) => {
+      const cell = document.createElement(`th`);
+      cell.textContent = header.text;
+      if (header.numeric) cell.className = `num`;
+      head.appendChild(cell);
+    });
+    const body = table.createTBody();
+    const addRow = (texts, className) => {
+      const row = body.insertRow();
+      if (className) row.className = className;
+      texts.forEach((text, index) => {
+        const cell = row.insertCell();
+        cell.textContent = text;
+        if (result.headers[index] && result.headers[index].numeric) cell.className = `num`;
+      });
+    };
+    result.rows.forEach((texts) => addRow(texts, ``));
+    if (result.total) addRow(result.total, `total`);
+    return table;
+  }
+
+  // Fills the element of a table block: its title and its table, or a hint in the editing mode.
+  function buildTableBody(node, block) {
+    node.classList.add(`tableBlock`);
+    node.style.fontSize = `${TABLE_MM * mmPx}px`;
+    if (block.title) {
+      const title = document.createElement(`div`);
+      title.className = `tableTitle`;
+      title.textContent = block.title;
+      node.appendChild(title);
+    }
+    const result = tableResult(block);
+    if (result.ok) {
+      node.appendChild(drawTable(result));
+    } else if (editing) {
+      const hint = document.createElement(`p`);
+      hint.className = `tableHint`;
+      hint.textContent = reasonText(result);
+      node.appendChild(hint);
+    }
+  }
+
   // Fills the element of a text block: its look from the settings and its Markdown content.
   function buildTextBody(node, block) {
     const config = block.config;
@@ -271,6 +352,8 @@
     if (block.id === selectedId) node.classList.add(`selected`);
     if (block.type === `text`) {
       buildTextBody(node, block);
+    } else if (block.type === `table`) {
+      buildTableBody(node, block);
     } else {
       const kind = document.createElement(`div`);
       kind.className = `blockType`;
@@ -341,7 +424,7 @@
       hint.textContent = tr(`boardEmpty`);
       el.canvas.appendChild(hint);
     }
-    for (const node of el.canvas.querySelectorAll(`.block.textBlock`)) {
+    for (const node of el.canvas.querySelectorAll(`.block.textBlock, .block.tableBlock`)) {
       node.classList.toggle(`overflowing`, node.scrollHeight > node.clientHeight + 2);
     }
     syncTools();
@@ -424,6 +507,176 @@
     el.textInfo.className = messages.length ? `warning` : `hint`;
   }
 
+  // Sets the options of a select element only when the list changed, then its value.
+  function setOptions(select, items, value) {
+    const signature = JSON.stringify(items);
+    if (select.dataset.signature !== signature) {
+      fillSelect(select, items, value);
+      select.dataset.signature = signature;
+    }
+    if (select.value !== String(value)) select.value = String(value);
+  }
+
+  // The text that names a link between a table and the starting row.
+  function linkLabel(schema, link) {
+    if (link.key === `self`) return tr(`labSelfRow`);
+    if (link.key === `all`) return tr(`labAllRows`);
+    const note = QUALITY_KEYS[link.quality] ? ` ${tr(QUALITY_KEYS[link.quality])}` : ``;
+    return `${link.steps.map(describeStep).join(` ; `)}${note}`;
+  }
+
+  // The structure for which the filters and the column lines were built.
+  let filtersFor = ``;
+  let columnsFor = ``;
+  let filterUis = [];
+
+  // Changes the settings of the selected block (text or table) and draws again.
+  function changeConfig(changes) {
+    const block = selectedBlock();
+    if (block && (block.type === `text` || block.type === `table`)) commit(Model.updateBlock(model, block.id, { config: changes }));
+  }
+
+  // Builds the line of one column of the table: path, calculation, heading and the buttons.
+  function buildColumnRow(index) {
+    const row = document.createElement(`div`);
+    row.className = `colrow`;
+    row.dataset.index = String(index);
+    const path = document.createElement(`select`);
+    path.className = `colPath`;
+    const fn = document.createElement(`select`);
+    fn.className = `colFn`;
+    const tools = document.createElement(`div`);
+    tools.className = `tools`;
+    const label = document.createElement(`input`);
+    label.type = `text`;
+    label.className = `colLabel`;
+    label.maxLength = 60;
+    label.placeholder = tr(`boardColumnLabel`);
+    label.setAttribute(`aria-label`, tr(`boardColumnLabel`));
+    const button = (text, key, action) => {
+      const item = document.createElement(`button`);
+      item.type = `button`;
+      item.textContent = text;
+      item.setAttribute(`aria-label`, tr(key));
+      item.title = tr(key);
+      item.addEventListener(`click`, action);
+      return item;
+    };
+    const edit = (patch) => {
+      const block = selectedBlock();
+      if (!block) return;
+      const columns = block.config.columns.map((column) => ({ ...column }));
+      columns[index] = { ...columns[index], ...patch };
+      changeConfig({ columns });
+    };
+    const move = (delta) => {
+      const block = selectedBlock();
+      if (!block) return;
+      const columns = block.config.columns.map((column) => ({ ...column }));
+      const target = index + delta;
+      if (target < 0 || target >= columns.length) return;
+      [columns[index], columns[target]] = [columns[target], columns[index]];
+      changeConfig({ columns });
+    };
+    path.addEventListener(`change`, () => edit({ path: path.value }));
+    fn.addEventListener(`change`, () => edit({ fn: fn.value }));
+    label.addEventListener(`input`, () => edit({ label: label.value }));
+    tools.append(
+      label,
+      button(`\u2191`, `boardColumnUp`, () => move(-1)),
+      button(`\u2193`, `boardColumnDown`, () => move(1)),
+      button(`\u00d7`, `boardColumnRemove`, () => {
+        const block = selectedBlock();
+        if (block) changeConfig({ columns: block.config.columns.filter((_, at) => at !== index) });
+      })
+    );
+    row.append(path, fn, tools);
+    tools.style.gridColumn = `1 / 3`;
+    return row;
+  }
+
+  // Shows the column lines of the table block, rebuilding them only when their number or the table changes.
+  function renderColumnRows(block, choices) {
+    const config = block.config;
+    const key = `${block.id}|${config.table}|${config.mode}|${config.columns.length}`;
+    if (key !== columnsFor) {
+      columnsFor = key;
+      el.columnRows.textContent = ``;
+      config.columns.forEach((_, index) => el.columnRows.appendChild(buildColumnRow(index)));
+    }
+    const functions = Model.FUNCTIONS.map((name) => [name, tr(FN_KEYS[name])]);
+    const items = config.mode === `list` ? [[``, tr(`fnNoTotal`)], ...functions] : functions;
+    config.columns.forEach((column, index) => {
+      const row = el.columnRows.children[index];
+      if (!row) return;
+      setOptions(row.querySelector(`.colPath`), [[``, tr(`boardColumnNone`)], ...choices.map((choice) => [choice.path, choice.label])], column.path);
+      setOptions(row.querySelector(`.colFn`), items, column.fn || (config.mode === `group` ? `sum` : ``));
+      setValue(row.querySelector(`.colLabel`), column.label);
+    });
+  }
+
+  // Builds the three filters of the table block, only when the starting row or the table changes.
+  function renderFilters(block, choices, startChoices) {
+    const key = `${block.id}|${block.config.start}|${block.config.table}`;
+    if (key === filtersFor) return;
+    filtersFor = key;
+    filterUis = filterBoxes.map((box, index) => FilterUi.build(box, choices, startChoices, block.config.filters[index], () => {
+      changeConfig({ filters: filterUis.map(FilterUi.read).filter(Boolean) });
+    }));
+  }
+
+  // Fills the settings of a table block and the messages about its content.
+  function fillTableSettings(block) {
+    const config = block.config;
+    const state = context();
+    const controls = [el.mode, el.start, el.tableSel, el.link, el.group1, el.group2, el.merge, el.addColumn, el.sortBy, el.sortColumn, el.sortDir, el.decimals, el.total];
+    controls.forEach((control) => { control.disabled = !state.schema; });
+    if (!state.schema) {
+      el.tableInfo.textContent = tr(`boardTableNotReady`);
+      el.tableInfo.className = `warning`;
+      return;
+    }
+    const schema = state.schema;
+    const starts = Query.listStarts(schema, state.linked);
+    const start = starts.find((item) => item.key === config.start) || starts[0];
+    const choices = config.table && schema.tables.has(config.table) ? Fields.fieldChoices(schema, config.table) : [];
+    const columnItems = [[``, tr(`boardColumnNone`)], ...choices.map((choice) => [choice.path, choice.label])];
+    setOptions(el.mode, [[`list`, tr(`boardModeList`)], [`group`, tr(`boardModeGroup`)]], config.mode);
+    setOptions(el.start, starts.map((item) => [item.key, item.key === `` ? tr(`labStartSelected`, { table: state.linked }) : tr(`labStartParent`, { table: item.table, chain: item.steps.map((step) => `${step.from}.${step.column}`).join(` > `) })]), start.key);
+    const tables = Query.listTables(schema, start.table).map((entry) => [entry.table, `${entry.table}${QUALITY_KEYS[entry.quality] ? ` ${tr(QUALITY_KEYS[entry.quality])}` : ``}`]);
+    setOptions(el.tableSel, [[``, tr(`boardColumnNone`)], ...tables], config.table);
+    const links = config.table ? Query.listLinks(schema, start.table, config.table).map((link) => [link.key, linkLabel(schema, link)]) : [];
+    setOptions(el.link, [[``, tr(`boardColumnNone`)], ...links], config.link);
+    el.groupRow.hidden = config.mode !== `group`;
+    setOptions(el.group1, columnItems, config.groupBy[0] || ``);
+    setOptions(el.group2, columnItems, config.groupBy[1] || ``);
+    el.merge.checked = config.merge;
+    const sortItems = config.mode === `list` ? [[`none`, tr(`sortNone`)], [`column`, tr(`sortByColumn`)]] : [[`key`, tr(`sortByKey`)], [`value`, tr(`sortByValue`)]];
+    const sortBy = sortItems.some(([value]) => value === config.sort.by) ? config.sort.by : sortItems[0][0];
+    setOptions(el.sortBy, sortItems, sortBy);
+    el.sortColumn.hidden = !(config.mode === `list` && sortBy === `column`);
+    setOptions(el.sortColumn, [[``, tr(`sortChoose`)], ...choices.map((choice) => [choice.path, choice.label])], config.sort.column);
+    setOptions(el.sortDir, [[`asc`, tr(`sortAsc`)], [`desc`, tr(`sortDesc`)]], config.sort.dir);
+    setOptions(el.decimals, [[-1, tr(`decimalsAuto`)], [0, `0`], [1, `1`], [2, `2`], [3, `3`]], config.decimals);
+    el.total.checked = config.total;
+    renderColumnRows(block, choices);
+    renderFilters(block, choices, Fields.fieldChoices(schema, start.table));
+    const messages = [];
+    const result = tableResult(block);
+    if (result.ok) {
+      messages.push(tr(`boardTableCounts`, { kept: result.kept, total: result.scanned }));
+      result.warnings.forEach((reason) => messages.push(tr(`boardTableFilterIgnored`, { reason })));
+      if (result.truncated) messages.push(tr(`boardTableTruncated`, { max: Query.MAX_ROWS }));
+    } else if (result.reason !== `choose`) {
+      messages.push(reasonText(result));
+    }
+    const node = el.canvas.querySelector(`.block[data-id="${block.id}"]`);
+    const overflow = Boolean(node) && node.classList.contains(`overflowing`);
+    if (overflow) messages.push(tr(`boardTableOverflow`));
+    el.tableInfo.textContent = messages.join(` `);
+    el.tableInfo.className = overflow || (result.ok && (result.warnings.length || result.truncated)) || (!result.ok && result.reason !== `choose`) ? `warning` : `hint`;
+  }
+
   // Fills the settings panel with the selected block.
   function fillPanel() {
     const block = selectedBlock();
@@ -431,6 +684,8 @@
     setValue(el.title, block.title);
     el.type.value = block.type;
     el.titleRow.hidden = block.type === `text`;
+    el.tableBox.hidden = block.type !== `table`;
+    if (block.type === `table`) fillTableSettings(block);
     el.textBox.hidden = block.type !== `text`;
     if (block.type === `text`) fillTextSettings(block);
   }
@@ -732,11 +987,41 @@
   el.confirmYes.addEventListener(`click`, confirmDelete);
   el.confirmNo.addEventListener(`click`, cancelDelete);
 
-  // Changes a setting of the selected text block.
-  const changeConfig = (changes) => {
+
+  // The settings of the table block that depend on the table are cleared when the table changes.
+  const tableReset = (mode) => ({ link: ``, columns: [], groupBy: [], filters: [], sort: { by: mode === `group` ? `key` : `none`, column: ``, dir: `asc` } });
+  el.mode.addEventListener(`change`, () => {
     const block = selectedBlock();
-    if (block && block.type === `text`) commit(Model.updateBlock(model, block.id, { config: changes }));
-  };
+    if (!block) return;
+    const group = el.mode.value === `group`;
+    changeConfig({ mode: el.mode.value, columns: block.config.columns.map((column) => ({ ...column, fn: group ? column.fn || `sum` : column.fn })), sort: { ...block.config.sort, by: group ? `key` : `none` } });
+  });
+  el.start.addEventListener(`change`, () => {
+    const block = selectedBlock();
+    if (!block) return;
+    const state = context();
+    const next = Query.listStarts(state.schema, state.linked).find((item) => item.key === el.start.value);
+    const stays = next && Query.listTables(state.schema, next.table).some((entry) => entry.table === block.config.table);
+    changeConfig(stays ? { start: el.start.value, link: ``, filters: [] } : { start: el.start.value, table: ``, ...tableReset(block.config.mode) });
+  });
+  el.tableSel.addEventListener(`change`, () => {
+    const block = selectedBlock();
+    if (block) changeConfig({ table: el.tableSel.value, ...tableReset(block.config.mode) });
+  });
+  el.link.addEventListener(`change`, () => changeConfig({ link: el.link.value }));
+  el.group1.addEventListener(`change`, () => changeConfig({ groupBy: [el.group1.value, el.group2.value] }));
+  el.group2.addEventListener(`change`, () => changeConfig({ groupBy: [el.group1.value, el.group2.value] }));
+  el.merge.addEventListener(`change`, () => changeConfig({ merge: el.merge.checked }));
+  el.addColumn.addEventListener(`click`, () => {
+    const block = selectedBlock();
+    if (block && block.config.columns.length < Model.MAX_COLUMNS) changeConfig({ columns: [...block.config.columns, { path: ``, fn: block.config.mode === `group` ? `sum` : ``, label: `` }] });
+  });
+  const changeSort = () => changeConfig({ sort: { by: el.sortBy.value, column: el.sortColumn.value, dir: el.sortDir.value } });
+  el.sortBy.addEventListener(`change`, changeSort);
+  el.sortColumn.addEventListener(`change`, changeSort);
+  el.sortDir.addEventListener(`change`, changeSort);
+  el.decimals.addEventListener(`change`, () => changeConfig({ decimals: Number(el.decimals.value) }));
+  el.total.addEventListener(`change`, () => changeConfig({ total: el.total.checked }));
   el.source.addEventListener(`change`, () => changeConfig({ source: el.source.value }));
   el.column.addEventListener(`change`, () => changeConfig({ column: el.column.value }));
   el.size.addEventListener(`change`, () => changeConfig({ size: el.size.value }));

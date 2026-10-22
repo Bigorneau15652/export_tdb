@@ -10,6 +10,7 @@
   const { rowsInContext, contextRowId, allRows, applyFilters } = window.exportTdbRowset;
   const { groupRows } = window.exportTdbAggregate;
   const { formatNumber } = window.exportTdbFormat;
+  const FilterUi = window.exportTdbFilterUi;
 
   // A table loaded for a calculation is kept here until the user reloads the data.
   const cache = new Map();
@@ -17,11 +18,6 @@
   const REF_DEPTH = 2;
   const MAX_LOADED = 18;
   const FUNCTIONS = [[`sum`, `fnSum`], [`avg`, `fnAvg`], [`min`, `fnMin`], [`max`, `fnMax`], [`count`, `fnCount`], [`distinct`, `fnDistinct`]];
-  const OPERATORS = [
-    [`eq`, `opEq`], [`ne`, `opNe`], [`gt`, `opGt`], [`ge`, `opGe`], [`lt`, `opLt`], [`le`, `opLe`],
-    [`contains`, `opContains`], [`empty`, `opEmpty`], [`notEmpty`, `opNotEmpty`], [`true`, `opTrue`], [`false`, `opFalse`]
-  ];
-  const NO_VALUE = new Set([`empty`, `notEmpty`, `true`, `false`]);
   const QUALITY_KEYS = { summary: `labQualitySummary`, list: `labQualityList` };
 
   const $ = (id) => document.getElementById(id);
@@ -41,19 +37,6 @@
   let descendants = [];
 
   const state = () => window.exportTdbContext.state;
-
-  // Builds the small "?" badge that shows an explanation on hover, focus or click.
-  function makeHelp(key) {
-    const badge = document.createElement(`span`);
-    badge.className = `help`;
-    badge.tabIndex = 0;
-    badge.setAttribute(`role`, `img`);
-    badge.textContent = `?`;
-    badge.dataset.tip = t(key);
-    badge.title = t(key);
-    badge.setAttribute(`aria-label`, t(key));
-    return badge;
-  }
 
   // ------------------------------------------------------------------ Form
 
@@ -139,7 +122,7 @@
     fillSelect(el.group, [[``, t(`labNone`)], ...choices.map((c) => [c.path, c.label])], false);
     fillSelect(el.group2, [[``, t(`labNone`)], ...choices.map((c) => [c.path, c.label])], false);
     fillColumns([...choices.filter((c) => c.numeric), ...choices.filter((c) => !c.numeric)]);
-    for (const filter of filters) fillFilter(filter, choices, columnChoices(start.table));
+    for (const filter of filters) Object.assign(filter, FilterUi.build(filter.box, choices, columnChoices(start.table)));
   }
 
   // Builds the list of check boxes of the columns to calculate, keeping the ticks that still apply.
@@ -163,53 +146,6 @@
   // Paths of the columns ticked in the list.
   function selectedColumns() {
     return [...el.columns.querySelectorAll(`input:checked`)].map((box) => box.value);
-  }
-
-  // Builds the controls of one filter: column, operator, source and value.
-  function fillFilter(filter, choices, startChoices) {
-    const box = filter.box;
-    box.textContent = ``;
-    const legend = document.createElement(`legend`);
-    legend.textContent = t(`labFilter`);
-    legend.appendChild(makeHelp(`tipFilter`));
-    box.appendChild(legend);
-    const make = (tag) => box.appendChild(document.createElement(tag));
-    filter.column = make(`select`);
-    fillSelect(filter.column, [[``, t(`labNone`)], ...choices.map((c) => [c.path, c.label])], false);
-    filter.op = make(`select`);
-    fillSelect(filter.op, OPERATORS.map(([value, key]) => [value, t(key)]), false);
-    filter.source = make(`select`);
-    fillSelect(filter.source, [[`const`, t(`sourceConst`)], [`field`, t(`sourceField`)], [`id`, t(`sourceId`)]], false);
-    filter.value = make(`input`);
-    filter.value.type = `text`;
-    filter.value.setAttribute(`aria-label`, t(`labValue`));
-    filter.field = make(`select`);
-    fillSelect(filter.field, startChoices.map((c) => [c.path, c.label]), false);
-    filter.field.setAttribute(`aria-label`, t(`labField`));
-    const sync = () => {
-      const needsValue = !NO_VALUE.has(filter.op.value);
-      filter.source.hidden = !needsValue;
-      filter.value.hidden = !needsValue || filter.source.value !== `const`;
-      filter.field.hidden = !needsValue || filter.source.value !== `field`;
-    };
-    filter.op.addEventListener(`change`, sync);
-    filter.source.addEventListener(`change`, sync);
-    sync();
-  }
-
-  // Reads one filter of the form, or null when no column is chosen.
-  function readFilter(filter) {
-    if (!filter.column || !filter.column.value) return null;
-    const op = filter.op.value;
-    if (NO_VALUE.has(op)) return { path: filter.column.value, op };
-    let value;
-    if (filter.source.value === `id`) value = { kind: `id` };
-    else if (filter.source.value === `field`) value = { kind: `field`, path: filter.field.value };
-    else {
-      const text = filter.value.value.trim();
-      value = { kind: `const`, value: text !== `` && Number.isFinite(Number(text.replace(`,`, `.`))) ? Number(text.replace(`,`, `.`)) : text };
-    }
-    return { path: filter.column.value, op, value };
   }
 
   // Makes the form ready once the exploration has run.
@@ -351,7 +287,7 @@
       else if (choice === `self`) rows = dataset.table(tableId).rowOfId(startId) >= 0 ? [dataset.table(tableId).rowOfId(startId)] : [];
       else rows = startId && chain ? rowsInContext(dataset, chain, startId) : [];
       const context = { dataset, linked: start.table, selectedId: startId };
-      const wanted = filters.map(readFilter).filter(Boolean);
+      const wanted = filters.map(FilterUi.read).filter(Boolean);
       const filtered = applyFilters(rows, tableId, wanted, context);
       rows = filtered.rows;
       const problems = filtered.errors.map((reason) => t(`labFilterIgnored`, { reason }));

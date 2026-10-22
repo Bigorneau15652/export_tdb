@@ -22,6 +22,18 @@
   const FILLS = [`none`, `grey`, `blue`, `green`, `yellow`, `red`];
   const MAX_FIXED_TEXT = 5000;
   const COLUMN_PATTERN = /^[A-Za-z_][A-Za-z0-9_]{0,63}$/;
+  // Settings of a table block: what is chosen in the panel, checked against these lists and patterns.
+  const TABLE_MODES = [`list`, `group`];
+  const FUNCTIONS = [`sum`, `avg`, `min`, `max`, `count`, `distinct`];
+  const OPERATORS = [`eq`, `ne`, `gt`, `ge`, `lt`, `le`, `contains`, `empty`, `notEmpty`, `true`, `false`];
+  const SORT_BYS = [`none`, `key`, `value`, `column`];
+  const MAX_COLUMNS = 12;
+  const MAX_FILTERS = 3;
+  const MAX_GROUPS = 2;
+  const MAX_LABEL = 60;
+  const MAX_FILTER_TEXT = 200;
+  const PATH_PATTERN = /^[A-Za-z_][A-Za-z0-9_]{0,63}(\.[A-Za-z_][A-Za-z0-9_]{0,63}){0,3}$/;
+  const LINK_PATTERN = /^[A-Za-z_][A-Za-z0-9_]{0,63}\.[A-Za-z_][A-Za-z0-9_]{0,63}(>[A-Za-z_][A-Za-z0-9_]{0,63}\.[A-Za-z_][A-Za-z0-9_]{0,63}){0,5}$/;
 
   // A model with one empty page: screen format, landscape, 10 mm margins.
   function emptyModel() {
@@ -31,10 +43,55 @@
   // A value that must be one of the allowed ones, or the first allowed one.
   const oneOf = (value, allowed) => (allowed.includes(value) ? value : allowed[0]);
 
-  // The settings of a block cleaned for its type. Only a text block has settings for now; the other
+  // A text that must match a pattern, or an empty text.
+  const matching = (value, pattern) => (typeof value === `string` && pattern.test(value) ? value : ``);
+
+  // A filter of a table block cleaned: a known column path and operator, and a value typed as a number,
+  // a text, the value of a column of the starting row or the number of that row.
+  function cleanFilter(raw) {
+    if (!raw || typeof raw !== `object`) return null;
+    const path = matching(raw.path, PATH_PATTERN);
+    if (!path || !OPERATORS.includes(raw.op)) return null;
+    const filter = { path, op: raw.op };
+    const value = raw.value;
+    if (value && typeof value === `object`) {
+      if (value.kind === `id`) filter.value = { kind: `id` };
+      else if (value.kind === `field` && matching(value.path, PATH_PATTERN)) filter.value = { kind: `field`, path: value.path };
+      else if (value.kind === `const` && (typeof value.value === `number` ? Number.isFinite(value.value) : typeof value.value === `string`)) {
+        filter.value = { kind: `const`, value: typeof value.value === `string` ? value.value.slice(0, MAX_FILTER_TEXT) : value.value };
+      }
+    }
+    return filter;
+  }
+
+  // The settings of a table block cleaned.
+  function cleanTable(raw) {
+    const sort = raw.sort && typeof raw.sort === `object` ? raw.sort : {};
+    const list = (value, max) => (Array.isArray(value) ? value.slice(0, max) : []);
+    return {
+      mode: oneOf(raw.mode, TABLE_MODES),
+      start: matching(raw.start, PATH_PATTERN),
+      table: matching(raw.table, COLUMN_PATTERN),
+      link: raw.link === `self` || raw.link === `all` ? raw.link : matching(raw.link, LINK_PATTERN),
+      groupBy: list(raw.groupBy, MAX_GROUPS).map((path) => matching(path, PATH_PATTERN)),
+      merge: raw.merge === true,
+      columns: list(raw.columns, MAX_COLUMNS).filter((item) => item && typeof item === `object`).map((item) => ({
+        path: matching(item.path, PATH_PATTERN),
+        fn: FUNCTIONS.includes(item.fn) ? item.fn : ``,
+        label: typeof item.label === `string` ? item.label.slice(0, MAX_LABEL) : ``
+      })),
+      filters: list(raw.filters, MAX_FILTERS).map(cleanFilter).filter(Boolean),
+      sort: { by: oneOf(sort.by, SORT_BYS), column: matching(sort.column, PATH_PATTERN), dir: sort.dir === `desc` ? `desc` : `asc` },
+      total: raw.total === true,
+      decimals: Number.isInteger(raw.decimals) && raw.decimals >= 0 && raw.decimals <= 4 ? raw.decimals : -1
+    };
+  }
+
+  // The settings of a block cleaned for its type. The text and table blocks have settings; the other
   // types get an empty object that later versions will fill. Unknown keys are dropped.
   function cleanConfig(type, raw) {
     const source = raw && typeof raw === `object` ? raw : {};
+    if (type === `table`) return cleanTable(source);
     if (type !== `text`) return {};
     return {
       source: oneOf(source.source, TEXT_SOURCES),
@@ -221,7 +278,7 @@
     return trimPages(reflow({ ...model, page: cleanPage({ ...model.page, ...changes }) }));
   }
 
-  const api = { FORMAT_VERSION, MAX_BLOCKS, MAX_TITLE, MAX_FIXED_TEXT, TYPES, TEXT_SOURCES, TEXT_SIZES, TEXT_ALIGNS, FILLS, DEFAULT_SIZES, emptyModel, cleanConfig, validateModel, reflow, trimPages, findBlock, addBlock, addPage, updateBlock, moveBlock, resizeBlock, deleteBlock, setPage };
+  const api = { FORMAT_VERSION, MAX_BLOCKS, MAX_TITLE, MAX_FIXED_TEXT, MAX_COLUMNS, MAX_FILTERS, MAX_GROUPS, TABLE_MODES, FUNCTIONS, OPERATORS, SORT_BYS, TYPES, TEXT_SOURCES, TEXT_SIZES, TEXT_ALIGNS, FILLS, DEFAULT_SIZES, emptyModel, cleanConfig, validateModel, reflow, trimPages, findBlock, addBlock, addPage, updateBlock, moveBlock, resizeBlock, deleteBlock, setPage };
   if (typeof module !== `undefined` && module.exports) module.exports = api;
   else root.exportTdbModel = api;
 })(typeof window !== `undefined` ? window : globalThis);

@@ -71,16 +71,17 @@
     return [...found];
   }
 
-  // A value of a column as a text for a sentence: numbers of Numeric columns and dates the French
-  // way, references by their label, lists by their items, booleans as yes or no.
-  function formatValue(column, raw, dataset, words) {
+  // A value of a column as a text for a sentence or a cell: numbers of Numeric columns and dates the
+  // French way (with `decimals` decimals when it is 0 or more), references by their label, lists by
+  // their items, booleans as yes or no.
+  function formatValue(column, raw, dataset, words, decimals) {
     if (raw === null || raw === undefined) return ``;
     if (column.kind === `ref`) return dataset.refLabel(column, raw);
     if (column.kind === `reflist`) return values.listItems(raw).map((id) => dataset.refLabel(column, id)).filter(Boolean).join(`, `);
     if (values.isUnusable(raw)) return ``;
     if (column.base === `Numeric`) {
       const number = values.toNumber(raw);
-      return number === null ? `` : format.formatNumber(number);
+      return number === null ? `` : format.formatNumber(number, decimals >= 0 ? decimals : undefined);
     }
     if (column.base === `Date` || column.base === `DateTime`) {
       const seconds = values.toSeconds(raw);
