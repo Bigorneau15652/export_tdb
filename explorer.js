@@ -6,10 +6,10 @@
 (function () {
   const { t, applyTranslations } = window.exportTdbI18n;
   const { buildSchema, findDescendants, describeStep } = window.exportTdbSchema;
-  const { describeColumn } = window.exportTdbShape;
+  const { describeColumn, describeValue } = window.exportTdbShape;
   const { buildReport } = window.exportTdbReport;
 
-  const VERSION = `0.1.0`;
+  const VERSION = `0.4.2`;
   // At most this many descendant tables are loaded to measure them and to look at their values.
   const MAX_TABLES = 12;
   const TEST_MARKER = `__export_tdb_test__`;
@@ -92,6 +92,13 @@
     el.seen.textContent = t(`rowsSeen`, { count: state.rowsSeen.size });
   }
 
+  // The shape of each value that Grist gave with the selected row, to see what a widget really receives.
+  function recordShapes() {
+    const table = state.schema && state.schema.tables.get(state.linked);
+    if (!table || !state.record) return [];
+    return table.columns.map((column) => ({ column: column.id, type: column.type, shape: describeValue(state.record[column.id], el.reveal.checked) }));
+  }
+
   // Rebuilds the text of the report from what was found.
   function renderReport() {
     const schema = state.schema;
@@ -99,7 +106,8 @@
       version: VERSION, reveal: el.reveal.checked, linked: state.linked,
       record: state.record ? state.record.id : null, events: state.rowsSeen.size,
       tables: schema ? schema.order.map((id) => schema.tables.get(id)) : [], descendants: state.descendants,
-      shapes: state.shapes, timings: state.timings, tests: [...state.tests.values()]
+      shapes: state.shapes, timings: state.timings, tests: [...state.tests.values()],
+      recordShapes: recordShapes()
     });
     el.reportBox.hidden = false;
   }

@@ -103,15 +103,16 @@ async function openExplorer(browser, baseUrl, options = {}) {
   await page.waitForFunction(() => typeof window.__onRecord === `function`);
   if (options.tab !== `board`) await page.click(`#tabExplorer`);
   // Gives the explorer the row `id` of the linked table, as Grist does when the selection changes.
-  const selectRow = (id) => page.evaluate((rowId) => {
+  // With `bare` true the record holds only the row number, as when Grist sends no column.
+  const selectRow = (id, bare = false) => page.evaluate(([rowId, onlyId]) => {
     const name = window.__linkedName;
     return window.grist.docApi.fetchTable(name).then((table) => {
       const index = table.id.indexOf(rowId);
       const record = { id: rowId };
-      for (const key of Object.keys(table)) if (key !== `id`) record[key] = table[key][index];
+      if (!onlyId) for (const key of Object.keys(table)) if (key !== `id`) record[key] = table[key][index];
       window.__onRecord(record, {});
     });
-  }, id);
+  }, [id, bare]);
   return { page, errors, selectRow };
 }
 

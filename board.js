@@ -62,6 +62,7 @@
   let datasetMemo = null;
   let loadingData = false;
   const failedTables = new Set();
+  const reloadedFor = new Set();
 
   // ------------------------------------------------------------------ Helpers
 
@@ -138,6 +139,12 @@
     const paths = new Set();
     for (const block of model.blocks) {
       if (block.type === `text`) Fields.extractFields(sourceText(block)).forEach((path) => paths.add(path));
+    }
+    // A row that the loaded table does not hold yet (added since it was loaded): load the table again, once.
+    const loadedLinked = Data.tables().get(state.linked);
+    if (loadedLinked && paths.size && !(loadedLinked.id || []).includes(state.record.id) && !reloadedFor.has(state.record.id)) {
+      reloadedFor.add(state.record.id);
+      Data.drop(state.linked);
     }
     const names = Fields.tablesForPaths(state.schema, state.linked, [...paths]).filter((name) => !Data.tables().has(name) && !failedTables.has(name));
     if (!names.length) return;
@@ -752,6 +759,7 @@
   el.refresh.addEventListener(`click`, () => {
     Data.clear();
     failedTables.clear();
+    reloadedFor.clear();
     datasetMemo = null;
     render({ keepFocus: true });
   });

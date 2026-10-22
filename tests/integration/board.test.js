@@ -423,3 +423,25 @@ test(`the widget asks Grist for the raw values of every normal column of the sel
   const w = await openBoard();
   assert.deepEqual(await w.page.evaluate(() => window.__recordOptions), { keepEncoded: true, expandRefs: false, includeColumns: `normal` });
 });
+
+test(`fields still work when Grist sends no column with the selected row`, async () => {
+  const text = `{Number} in {Building.Name} ({Building.Site.Name}), {Area} m2, floor {Floor}`;
+  const w = await openBoard({ linked: `Rooms`, savedOptions: textModel({ source: `fixed`, text }) });
+  await w.selectRow(2, true);
+  await finished(w.page);
+  await w.page.waitForFunction(() => /North campus/.test(document.querySelector(`.block[data-id="tx1"]`).textContent));
+  assert.equal(await blockText(w.page), `A-002 in Building A (North campus), 35 m2, floor Level 1`);
+  await w.selectRow(5, true);
+  await w.page.waitForFunction(() => /C-001/.test(document.querySelector(`.block[data-id="tx1"]`).textContent));
+  assert.equal(await blockText(w.page), `C-001 in Building A (South campus), 40 m2, floor Ground`);
+  assert.deepEqual(w.errors, []);
+});
+
+test(`the explorer report shows what Grist gave with the selected row`, async () => {
+  const w = await openExplorer(browser, server.url, { viewport: { width: 1000, height: 800 } });
+  await w.selectRow(1);
+  await finished(w.page);
+  const report = await w.page.inputValue(`#report`);
+  assert.match(report, /7\. Values that Grist gave with the selected row/);
+  assert.match(report, /Name \[Text\] text\(/);
+});

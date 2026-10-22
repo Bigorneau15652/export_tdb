@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.2
+
+- The fields of a text no longer depend on what Grist sends with the selected row. The value of a column is taken from the selected row when it has the expected type (text, number, yes or no), and otherwise from the loaded table, which holds the raw values (row numbers of references, encoded dates). The table of the row is loaded again, once, when the selected row is not in it yet.
+- Explorer report: a new section 7 shows the shape of each value that Grist gave with the selected row, to see what a widget really receives.
+
 ## 0.4.1
 
 - Fields of a text were empty in Grist: by default Grist gives a widget only the columns shown in its right panel, and shows the content of references instead of their row number. The widget now asks for the raw values of every normal column (`keepEncoded`, `expandRefs: false`, `includeColumns: normal`), which is what the fields and the references need.

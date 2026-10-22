@@ -33,6 +33,9 @@
     add();
     add(`6. Tests of the API`);
     for (const test of data.tests) add(`${test.name}: ${test.ok ? `OK` : `FAILED`}${test.detail ? ` - ${test.detail}` : ``}`);
+    add();
+    add(`7. Values that Grist gave with the selected row (column, type, shape)`);
+    for (const row of data.recordShapes || []) add(`${row.column} [${row.type}] ${row.shape}`);
     return lines.join(`\n`);
   }
 
