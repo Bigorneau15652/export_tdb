@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.1
+
+- Fields of a text were empty in Grist: by default Grist gives a widget only the columns shown in its right panel, and shows the content of references instead of their row number. The widget now asks for the raw values of every normal column (`keepEncoded`, `expandRefs: false`, `includeColumns: normal`), which is what the fields and the references need.
+- The settings panel of a block no longer has the page, position and size fields (the blocks are moved and resized on the page): more room for the text settings. The title field is hidden for a text block, which shows no title.
+
 ## 0.4.0
 
 - Text block. Markdown is drawn safely: titles (levels 1 to 3), paragraphs, bulleted and numbered lists, bold, italic and https links without credentials. HTML is never made; anything else stays plain text.

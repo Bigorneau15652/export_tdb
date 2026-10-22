@@ -177,27 +177,28 @@ test(`arrows move the selected block by one step and Delete asks before removing
 test(`a double click opens the settings and the title and type are changed there`, async () => {
   const w = await openBoard({ savedOptions: SAVED });
   await edit(w);
-  await w.page.dblclick(`.block[data-id="aaa1"]`, { position: { x: 20, y: 30 } });
+  await w.page.dblclick(`.block[data-id="bbb2"]`, { position: { x: 20, y: 30 } });
   assert.equal(await w.page.locator(`#boardPanel`).isVisible(), true);
-  assert.equal(await w.page.inputValue(`#boardTitle`), `Introduction`);
+  assert.equal(await w.page.inputValue(`#boardTitle`), `Surfaces`);
   await w.page.fill(`#boardTitle`, `Présentation de l'école`);
   await w.page.selectOption(`#boardType`, `image`);
-  const block = (await model(w.page)).blocks.find((b) => b.id === `aaa1`);
+  const block = (await model(w.page)).blocks.find((b) => b.id === `bbb2`);
   assert.equal(block.title, `Présentation de l'école`);
   assert.equal(block.type, `image`);
-  assert.match(await w.page.locator(`.block[data-id="aaa1"]`).innerText(), /Présentation de l'école/);
+  assert.match(await w.page.locator(`.block[data-id="bbb2"]`).innerText(), /Présentation de l'école/);
+  await w.page.selectOption(`#boardType`, `text`);
+  assert.equal(await w.page.locator(`#boardTitle`).isHidden(), true);
+  assert.equal(await w.page.locator(`#boardText`).isVisible(), true);
   assert.deepEqual(w.errors, []);
 });
 
-test(`the pencil opens the settings and a size typed in millimetres is applied`, async () => {
+test(`the pencil opens the settings and Close hides them`, async () => {
   const w = await openBoard({ savedOptions: SAVED });
   await edit(w);
   await w.page.click(`.block[data-id="aaa1"]`, { position: { x: 20, y: 30 } });
   await w.page.click(`.block[data-id="aaa1"] .pencil`);
   assert.equal(await w.page.locator(`#boardPanel`).isVisible(), true);
-  await w.page.fill(`#boardW`, `60`);
-  await w.page.dispatchEvent(`#boardW`, `change`);
-  assert.equal((await model(w.page)).blocks.find((b) => b.id === `aaa1`).w, 12);
+  assert.equal(await w.page.locator(`#boardX`).count(), 0);
   await w.page.click(`#boardClose`);
   assert.equal(await w.page.locator(`#boardPanel`).isHidden(), true);
 });
@@ -416,4 +417,9 @@ test(`a refused write is announced and the settings panel is usable at 340 pixel
   await w.page.fill(`#boardText`, `Will be refused`);
   await w.page.waitForFunction(() => /impossible|Cannot/.test(document.getElementById(`boardCellState`).textContent), null, { timeout: 5000 });
   assert.equal(await w.page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth), false);
+});
+
+test(`the widget asks Grist for the raw values of every normal column of the selected row`, async () => {
+  const w = await openBoard();
+  assert.deepEqual(await w.page.evaluate(() => window.__recordOptions), { keepEncoded: true, expandRefs: false, includeColumns: `normal` });
 });

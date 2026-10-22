@@ -211,24 +211,6 @@
     return { ...model, blocks: model.blocks.map((item) => (item.id === id ? { ...item, ...size } : item)) };
   }
 
-  // Sets the geometry of a block from the settings panel: size first, then place.
-  function setGeometry(model, id, wanted) {
-    const block = findBlock(model, id);
-    if (!block) return model;
-    const grid = gridOf(model.page);
-    const size = clampSize({ w: wanted.w === undefined ? block.w : wanted.w, h: wanted.h === undefined ? block.h : wanted.h }, grid);
-    const others = model.blocks.filter((item) => item.id !== id);
-    const resized = { ...block, ...size, x: Math.min(block.x, grid.cols - size.w), y: Math.min(block.y, grid.rows - size.h) };
-    const target = {
-      page: wanted.page === undefined ? block.page : Math.min(Math.max(0, wanted.page), model.pages - 1),
-      x: wanted.x === undefined ? resized.x : wanted.x,
-      y: wanted.y === undefined ? resized.y : wanted.y
-    };
-    const spot = resolveMove(others, { ...resized, page: target.page }, target, grid);
-    if (!spot) return model;
-    return trimPages({ ...model, blocks: model.blocks.map((item) => (item.id === id ? { ...resized, ...spot } : item)) });
-  }
-
   // Removes a block and the empty pages at the end.
   function deleteBlock(model, id) {
     return trimPages({ ...model, blocks: model.blocks.filter((block) => block.id !== id) });
@@ -239,7 +221,7 @@
     return trimPages(reflow({ ...model, page: cleanPage({ ...model.page, ...changes }) }));
   }
 
-  const api = { FORMAT_VERSION, MAX_BLOCKS, MAX_TITLE, MAX_FIXED_TEXT, TYPES, TEXT_SOURCES, TEXT_SIZES, TEXT_ALIGNS, FILLS, DEFAULT_SIZES, emptyModel, cleanConfig, validateModel, reflow, trimPages, findBlock, addBlock, addPage, updateBlock, moveBlock, resizeBlock, setGeometry, deleteBlock, setPage };
+  const api = { FORMAT_VERSION, MAX_BLOCKS, MAX_TITLE, MAX_FIXED_TEXT, TYPES, TEXT_SOURCES, TEXT_SIZES, TEXT_ALIGNS, FILLS, DEFAULT_SIZES, emptyModel, cleanConfig, validateModel, reflow, trimPages, findBlock, addBlock, addPage, updateBlock, moveBlock, resizeBlock, deleteBlock, setPage };
   if (typeof module !== `undefined` && module.exports) module.exports = api;
   else root.exportTdbModel = api;
 })(typeof window !== `undefined` ? window : globalThis);

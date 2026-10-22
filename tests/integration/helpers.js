@@ -59,7 +59,7 @@ function apply(tableId, rowId, fields) {
 }
 window.grist = {
   ready(settings) { window.__ready = settings; },
-  onRecord(callback) { window.__onRecord = callback; },
+  onRecord(callback, recordOptions) { window.__onRecord = callback; window.__recordOptions = recordOptions; },
   onOptions(callback) {
     window.__onOptions = callback;
     setTimeout(() => callback(options.savedOptions || null, {}), 0);

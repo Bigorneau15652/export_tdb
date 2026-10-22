@@ -318,5 +318,7 @@
   });
 
   grist.ready({ requiredAccess: `full` });
-  grist.onRecord(onRecord);
+  // Raw values (references as row numbers, dates and lists in their encoded form) and every normal
+  // column of the table, not only the columns shown in the right panel of the widget.
+  grist.onRecord(onRecord, { keepEncoded: true, expandRefs: false, includeColumns: `normal` });
 })();
