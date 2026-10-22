@@ -31,6 +31,9 @@
     shapes: [], timings: [], tests: new Map(), metadataOk: false
   };
 
+  // The lab tab reads what the exploration found.
+  window.exportTdbContext = { state, explored: () => Boolean(state.schema && state.linked) };
+
   // ---------------------------------------------------------------- Display
 
   function setStatus(text) {
@@ -172,6 +175,7 @@
       el.tests.hidden = false;
       el.structure.hidden = false;
       setStatus(t(`done`));
+      window.dispatchEvent(new CustomEvent(`exporttdb:explored`));
     } catch (error) {
       const text = String(error && error.message ? error.message : error);
       if (!state.metadataOk) recordTest(`metadata tables read`, false, text);

@@ -39,4 +39,4 @@ export_tdb is a Grist custom widget: a dashboard composer. It reads the table it
 
 ## Plan
 
-Version 0.1 explorer (proves the Grist API assumptions), 0.2 data engine, 0.3 canvas and layout, 0.4 text block, 0.5 table block, 0.6 indicators and named values, 0.7 chart block, 0.8 image block, 0.9 printing and PDF, 0.10 templates export and import, help and README, 0.11 final acceptance test with the maintainer. Then the finalisation audit (security, performance, cleaning, comments).
+Version 0.1 explorer (proves the Grist API assumptions), 0.2 data engine and query lab, 0.3 canvas and layout, 0.4 text block, 0.5 table block, 0.6 indicators and named values, 0.7 chart block, 0.8 image block, 0.9 printing and PDF, 0.10 templates export and import, help and README, 0.11 final acceptance test with the maintainer. Then the finalisation audit (security, performance, cleaning, comments).
