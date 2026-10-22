@@ -50,6 +50,7 @@ window.__linkedName = options.linked || \`Sites\`;
 let writeCount = 0;
 function apply(tableId, rowId, fields) {
   writeCount += 1;
+  if (options.failAllWrites) throw new Error(\`write refused\`);
   if (options.failOnWrite && writeCount === options.failOnWrite) throw new Error(\`write refused\`);
   const table = tables[tableId];
   const index = table.id.indexOf(rowId);

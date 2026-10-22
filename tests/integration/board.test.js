@@ -254,3 +254,166 @@ test(`the zoom buttons change the size of the page and Fit brings it back`, asyn
   await w.page.click(`#boardZoomFit`);
   assert.ok(Math.abs((await box(w.page, `.page`)).width - base) < 2);
 });
+
+// A saved model with one text block of the given settings, on a screen page.
+const textModel = (config, extra = {}) => ({
+  model: { version: 1, page: { format: `screen`, orientation: `landscape`, margin: 10 }, pages: 1, blocks: [{ id: `tx1`, type: `text`, title: ``, page: 0, x: 0, y: 0, w: 40, h: 12, config, ...extra }] }
+});
+const finished = (page) => page.waitForFunction(() => /finished|terminée/.test(document.getElementById(`status`).textContent));
+const blockText = (page) => page.locator(`.block[data-id="tx1"] .md`).innerText();
+
+// Opens the dashboard, gives it the row `id` of the linked table and waits for the exploration.
+async function openWithRow(options, id = 1) {
+  const w = await openBoard(options);
+  await w.selectRow(id);
+  await finished(w.page);
+  return w;
+}
+
+test(`a text block draws Markdown with titles, bold, lists and https links, and never HTML`, async () => {
+  const text = `# Title\n\nSome **bold** and *italic* text with a [link](https://example.org/a) and <b>raw</b>\n\n- one\n- two\n\n[bad](javascript:alert(1))`;
+  const w = await openBoard({ savedOptions: textModel({ source: `fixed`, text }) });
+  const block = w.page.locator(`.block[data-id="tx1"]`);
+  assert.equal(await block.locator(`h1`).innerText(), `Title`);
+  assert.equal(await block.locator(`strong`).innerText(), `bold`);
+  assert.equal(await block.locator(`em`).innerText(), `italic`);
+  assert.equal(await block.locator(`li`).count(), 2);
+  const link = block.locator(`a`);
+  assert.equal(await link.count(), 1);
+  assert.equal(await link.getAttribute(`href`), `https://example.org/a`);
+  assert.match(await link.getAttribute(`rel`), /noopener/);
+  assert.match(await blockText(w.page), /<b>raw<\/b>/);
+  assert.equal(await block.locator(`b`).count(), 0);
+  assert.equal(await block.locator(`script`).count(), 0);
+  assert.deepEqual(w.errors, []);
+});
+
+test(`fields take the value of the selected row and follow the cursor`, async () => {
+  const w = await openWithRow({ savedOptions: textModel({ source: `fixed`, text: `Site {Name}, address: {Address}` }) }, 1);
+  await w.page.waitForFunction(() => /North campus/.test(document.querySelector(`.block[data-id="tx1"]`).textContent));
+  assert.equal(await blockText(w.page), `Site North campus, address: 1 Example street`);
+  await w.selectRow(2);
+  await w.page.waitForFunction(() => /South campus/.test(document.querySelector(`.block[data-id="tx1"]`).textContent));
+  assert.equal(await blockText(w.page), `Site South campus, address:`);
+  assert.deepEqual(w.errors, []);
+});
+
+test(`fields through references load the other tables and numbers are written the French way`, async () => {
+  const text = `{Number} in {Building.Name} ({Building.Site.Name}), {Area} m2, built {Building.Year}, floor {Floor}`;
+  const w = await openWithRow({ linked: `Rooms`, savedOptions: textModel({ source: `fixed`, text }) }, 2);
+  await w.page.waitForFunction(() => /North campus/.test(document.querySelector(`.block[data-id="tx1"]`).textContent));
+  assert.equal(await blockText(w.page), `A-002 in Building A (North campus), 35 m2, built 1965, floor Level 1`);
+  await w.selectRow(4);
+  await w.page.waitForFunction(() => /B-002/.test(document.querySelector(`.block[data-id="tx1"]`).textContent));
+  assert.match(await blockText(w.page), /B-002 in Building B \(North campus\), 8,25 m2/);
+  assert.deepEqual(w.errors, []);
+});
+
+test(`a value that holds Markdown signs is shown as it is`, async () => {
+  const w = await openWithRow({ linked: `Notes`, savedOptions: textModel({ source: `fixed`, text: `{Text}` }) }, 1);
+  await w.page.waitForFunction(() => /not related/.test(document.querySelector(`.block[data-id="tx1"]`).textContent));
+  assert.equal(await blockText(w.page), `not related to anything`);
+});
+
+test(`an unknown field stays written and the settings panel says so`, async () => {
+  const w = await openWithRow({ savedOptions: textModel({ source: `fixed`, text: `Hello {Nope}` }) }, 1);
+  assert.equal(await blockText(w.page), `Hello {Nope}`);
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="tx1"]`, { position: { x: 20, y: 20 } });
+  assert.match(await w.page.locator(`#boardTextInfo`).innerText(), /\{Nope\}/);
+});
+
+test(`the text settings change the look and the field menu inserts a field at the cursor`, async () => {
+  const w = await openWithRow({ savedOptions: textModel({ source: `fixed`, text: `Start` }) }, 1);
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="tx1"]`, { position: { x: 20, y: 20 } });
+  await w.page.selectOption(`#boardSize`, `large`);
+  await w.page.selectOption(`#boardAlign`, `center`);
+  await w.page.selectOption(`#boardFill`, `green`);
+  const block = w.page.locator(`.block[data-id="tx1"]`);
+  assert.match(await block.getAttribute(`class`), /fill-green/);
+  assert.match(await block.getAttribute(`class`), /align-center/);
+  const saved = (await model(w.page)).blocks[0].config;
+  assert.deepEqual([saved.size, saved.align, saved.fill], [`large`, `center`, `green`]);
+  await w.page.click(`#boardText`);
+  await w.page.keyboard.press(`End`);
+  await w.page.selectOption(`#boardField`, `Name`);
+  assert.equal(await w.page.inputValue(`#boardText`), `Start{Name}`);
+  await w.page.waitForFunction(() => /StartNorth campus/.test(document.querySelector(`.block[data-id="tx1"]`).textContent));
+  assert.deepEqual(w.errors, []);
+});
+
+test(`typing in the text area changes the fixed text and keeps the cursor in the field`, async () => {
+  const w = await openBoard({ savedOptions: textModel({ source: `fixed`, text: `` }) });
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="tx1"]`, { position: { x: 20, y: 20 } });
+  await w.page.click(`#boardText`);
+  await w.page.keyboard.type(`Première ligne: c'est l'école`);
+  assert.equal(await w.page.inputValue(`#boardText`), `Première ligne: c'est l'école`);
+  assert.equal((await model(w.page)).blocks[0].config.text, `Première ligne: c'est l'école`);
+  assert.equal(await w.page.evaluate(() => document.activeElement.id), `boardText`);
+});
+
+test(`a text that is longer than its block is marked in the editing mode`, async () => {
+  const text = Array.from({ length: 40 }, (_, i) => `Line ${i}`).join(`\n\n`);
+  const w = await openBoard({ savedOptions: textModel({ source: `fixed`, text }, { w: 20, h: 4 }) });
+  await edit(w);
+  assert.match(await w.page.locator(`.block[data-id="tx1"]`).getAttribute(`class`), /overflowing/);
+});
+
+test(`a cell source reads the cell of the selected row and writes what is typed back into it`, async () => {
+  const w = await openWithRow({ savedOptions: textModel({ source: `cell`, column: `Address` }) }, 1);
+  await w.page.waitForFunction(() => /Example street/.test(document.querySelector(`.block[data-id="tx1"]`).textContent));
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="tx1"]`, { position: { x: 20, y: 20 } });
+  assert.equal(await w.page.inputValue(`#boardText`), `1 Example street`);
+  assert.deepEqual(await w.page.$$eval(`#boardColumn option`, (list) => list.map((o) => o.value)), [``, `Name`, `Address`]);
+  await w.page.fill(`#boardText`, `**New** address`);
+  assert.equal(await blockText(w.page), `New address`);
+  await w.page.waitForFunction(() => window.__writes.length === 1, null, { timeout: 5000 });
+  assert.deepEqual(await w.page.evaluate(() => window.__writes[0]), { Address: `**New** address` });
+  await w.page.waitForFunction(() => /enregistré|saved/i.test(document.getElementById(`boardCellState`).textContent));
+  assert.deepEqual(w.errors, []);
+});
+
+test(`a text typed for a cell is written to its own row even when the row changes at once`, async () => {
+  const w = await openWithRow({ savedOptions: textModel({ source: `cell`, column: `Address` }) }, 1);
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="tx1"]`, { position: { x: 20, y: 20 } });
+  await w.page.fill(`#boardText`, `Typed for row one`);
+  await w.selectRow(2);
+  await w.page.waitForFunction(() => window.__writes.length === 1, null, { timeout: 5000 });
+  const rows = await w.page.evaluate(async () => {
+    const table = await window.grist.docApi.fetchTable(`Sites`);
+    return table.Address;
+  });
+  assert.equal(rows[0], `Typed for row one`);
+  assert.equal(rows[1], ``);
+});
+
+test(`only real text columns without formula can be chosen for a cell`, async () => {
+  const w = await openWithRow({ linked: `Rooms`, savedOptions: textModel({ source: `cell`, column: `Number` }) }, 1);
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="tx1"]`, { position: { x: 20, y: 20 } });
+  const columns = await w.page.$$eval(`#boardColumn option`, (list) => list.map((o) => o.value));
+  assert.ok(columns.includes(`Number`));
+  assert.ok(!columns.includes(`Area`) && !columns.includes(`Building`) && !columns.includes(`Tags`) && !columns.includes(`Surface`));
+});
+
+test(`a write that Grist refuses is announced and the first method failing is not an error`, async () => {
+  const w = await openWithRow({ savedOptions: textModel({ source: `cell`, column: `Address` }), failOnWrite: 1 }, 1);
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="tx1"]`, { position: { x: 20, y: 20 } });
+  await w.page.fill(`#boardText`, `Second method`);
+  await w.page.waitForFunction(() => window.__writes.length === 1, null, { timeout: 5000 });
+  await w.page.waitForFunction(() => /enregistré|saved/i.test(document.getElementById(`boardCellState`).textContent));
+});
+
+test(`a refused write is announced and the settings panel is usable at 340 pixels in dark mode`, async () => {
+  const w = await openWithRow({ savedOptions: textModel({ source: `cell`, column: `Address` }), failAllWrites: true, viewport: { width: 340, height: 700 }, colorScheme: `dark` }, 1);
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="tx1"]`, { position: { x: 10, y: 10 } });
+  await w.page.fill(`#boardText`, `Will be refused`);
+  await w.page.waitForFunction(() => /impossible|Cannot/.test(document.getElementById(`boardCellState`).textContent), null, { timeout: 5000 });
+  assert.equal(await w.page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth), false);
+});

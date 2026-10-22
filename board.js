@@ -1,13 +1,19 @@
-// The dashboard tab (version 0.3): draws the pages and the blocks, lets the user add, move, resize
+// The dashboard tab (versions 0.3 and 0.4): draws the pages and the blocks, lets the user add, move, resize
 // and delete blocks with the pointer or the keyboard, edits the title and the type of a block in a
-// settings panel, and saves the model in the options of the widget. The blocks are empty frames for
-// now: their content comes in the next versions. Rules about places, collisions and cleaning are in
+// settings panel, and saves the model in the options of the widget. A text block shows Markdown with
+// fields taken from the selected row, and can read and write a text cell; the other blocks are empty
+// frames for now: their content comes in the next versions. Rules about places, collisions and cleaning are in
 // layout.js and model.js; this file only draws and listens.
 (function () {
   const { t } = window.exportTdbI18n;
   const Layout = window.exportTdbLayout;
   const Model = window.exportTdbModel;
   const access = window.exportTdbAccess;
+  const Markdown = window.exportTdbMarkdown;
+  const MarkdownView = window.exportTdbMarkdownView;
+  const Fields = window.exportTdbFields;
+  const Data = window.exportTdbData;
+  const { createDataset } = window.exportTdbDataset;
   const { STEP_MM } = Layout;
 
   const ZOOMS = [0.5, 0.75, 1, 1.25, 1.5, 2];
@@ -17,6 +23,12 @@
   const FORMAT_KEYS = { screen: `formatScreen`, a3: `formatA3`, a4: `formatA4`, a5: `formatA5`, square: `formatSquare` };
   const ORIENTATION_KEYS = { landscape: `orientationLandscape`, portrait: `orientationPortrait` };
   const WARNING_KEYS = { version: `boardWarnVersion`, invalid: `boardWarnInvalid`, blocks: `boardWarnBlocks` };
+  // Height of the characters of a text block in millimetres, by size.
+  const TEXT_MM = { small: 3, normal: 3.5, large: 5 };
+  const CELL_DELAY_MS = 900;
+  const SIZE_KEYS = { small: `sizeSmall`, normal: `sizeNormal`, large: `sizeLarge` };
+  const ALIGN_KEYS = { left: `alignLeft`, center: `alignCenter`, justify: `alignJustify` };
+  const FILL_KEYS = { none: `fillNone`, grey: `fillGrey`, blue: `fillBlue`, green: `fillGreen`, yellow: `fillYellow`, red: `fillRed` };
   const ARROWS = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
 
   const $ = (id) => document.getElementById(id);
@@ -27,7 +39,10 @@
     zoomIn: $(`boardZoomIn`), saveState: $(`boardSaveState`), confirm: $(`boardConfirm`), confirmText: $(`boardConfirmText`),
     confirmYes: $(`boardConfirmYes`), confirmNo: $(`boardConfirmNo`), scroll: $(`boardScroll`), canvas: $(`boardCanvas`),
     side: $(`boardPanel`), title: $(`boardTitle`), type: $(`boardType`), page: $(`boardPage`), x: $(`boardX`), y: $(`boardY`),
-    w: $(`boardW`), h: $(`boardH`), remove: $(`boardDelete`), close: $(`boardClose`)
+    w: $(`boardW`), h: $(`boardH`), remove: $(`boardDelete`), close: $(`boardClose`), refresh: $(`boardRefresh`),
+    textBox: $(`boardTextSettings`), source: $(`boardSource`), columnRow: $(`boardColumnRow`), column: $(`boardColumn`),
+    text: $(`boardText`), field: $(`boardField`), size: $(`boardSize`), align: $(`boardAlign`), fill: $(`boardFill`),
+    textInfo: $(`boardTextInfo`), cellState: $(`boardCellState`)
   };
 
   let model = Model.emptyModel();
@@ -40,6 +55,14 @@
   let saveTimer = null;
   // Pixels per millimetre of the page on the screen.
   let mmPx = 1;
+  // The text typed for a cell source and not yet written, and the written value kept on screen until
+  // Grist gives the row again.
+  let cellPending = null;
+  let cellOverride = null;
+  let cellTimer = null;
+  let datasetMemo = null;
+  let loadingData = false;
+  const failedTables = new Set();
 
   // ------------------------------------------------------------------ Helpers
 
@@ -62,6 +85,107 @@
       select.appendChild(option);
     }
     select.value = String(value);
+  }
+
+  // ------------------------------------------------------------------ Text blocks
+
+  // What the exploration found: the schema, the linked table and the selected row.
+  const context = () => window.exportTdbContext.state;
+
+  // The dataset of the loaded tables, rebuilt only when tables were loaded.
+  function currentDataset() {
+    const state = context();
+    if (!datasetMemo || datasetMemo.version !== Data.version() || datasetMemo.schema !== state.schema) {
+      datasetMemo = { version: Data.version(), schema: state.schema, dataset: createDataset(state.schema, Data.tables()) };
+    }
+    return datasetMemo.dataset;
+  }
+
+  // The text columns of the linked table that can receive a text: real Text columns, no formula.
+  function writableColumns() {
+    const state = context();
+    const table = state.schema && state.schema.tables.get(state.linked);
+    return table ? table.columns.filter((column) => column.base === `Text` && column.kind === `plain` && !column.isFormula) : [];
+  }
+
+  // The Markdown text of a block: the fixed text or the content of the cell of the selected row.
+  function sourceText(block) {
+    const config = block.config;
+    if (config.source !== `cell`) return config.text;
+    const record = context().record;
+    if (!record || !config.column) return ``;
+    if (cellOverride && cellOverride.rowId === record.id && cellOverride.column === config.column) return cellOverride.value;
+    const value = record[config.column];
+    return typeof value === `string` ? value : ``;
+  }
+
+  // The nodes of a text block with its fields replaced, and the fields that could not be read.
+  function textContent(block) {
+    const raw = sourceText(block);
+    const tree = Markdown.parseMarkdown(raw);
+    const state = context();
+    const empty = !raw.trim();
+    if (!state.schema || !state.record) return { nodes: tree, problems: [], empty };
+    const words = { yes: tr(`wordYes`), no: tr(`wordNo`) };
+    const dataset = currentDataset();
+    const result = Fields.expandFields(tree, (path) => Fields.resolveField(dataset, state.schema, state.linked, state.record, path, words));
+    return { nodes: result.nodes, problems: result.problems, empty };
+  }
+
+  // Loads the tables that the fields of the text blocks need, then draws again.
+  function requestData() {
+    const state = context();
+    if (!state.schema || !state.record || loadingData) return;
+    const paths = new Set();
+    for (const block of model.blocks) {
+      if (block.type === `text`) Fields.extractFields(sourceText(block)).forEach((path) => paths.add(path));
+    }
+    const names = Fields.tablesForPaths(state.schema, state.linked, [...paths]).filter((name) => !Data.tables().has(name) && !failedTables.has(name));
+    if (!names.length) return;
+    loadingData = true;
+    Data.ensure(names).catch(() => names.forEach((name) => failedTables.add(name))).then(() => {
+      names.filter((name) => !Data.tables().has(name)).forEach((name) => failedTables.add(name));
+      loadingData = false;
+      render({ keepFocus: true });
+    });
+  }
+
+  // Writes the text typed for a cell source, after checking the column and the row.
+  async function flushCell() {
+    clearTimeout(cellTimer);
+    const pending = cellPending;
+    if (!pending) return;
+    cellPending = null;
+    const state = context();
+    const column = writableColumns().find((item) => item.id === pending.column);
+    if (!column || pending.table !== state.linked || !(pending.rowId > 0)) {
+      el.cellState.textContent = tr(`boardCellUnsafe`);
+      el.cellState.className = `warning`;
+      return;
+    }
+    const result = await access.writeCell(pending.table, pending.rowId, pending.column, pending.value);
+    el.cellState.textContent = result.ok ? tr(`boardCellSaved`) : tr(`boardCellFailed`, { reason: result.reason });
+    el.cellState.className = result.ok ? `hint` : `warning`;
+    if (!result.ok) cellOverride = null;
+    else if (state.record && cellOverride && state.record[cellOverride.column] === cellOverride.value) cellOverride = null;
+  }
+
+  // Keeps the text typed for a cell source on screen and writes it a short time after the last key.
+  function typeInCell(block, value) {
+    const record = context().record;
+    if (!record || !block.config.column) return;
+    if (!writableColumns().some((column) => column.id === block.config.column)) {
+      el.cellState.textContent = tr(`boardCellUnsafe`);
+      el.cellState.className = `warning`;
+      return;
+    }
+    cellOverride = { rowId: record.id, column: block.config.column, value };
+    cellPending = { table: context().linked, rowId: record.id, column: block.config.column, value };
+    el.cellState.textContent = tr(`boardCellPending`);
+    el.cellState.className = `hint`;
+    clearTimeout(cellTimer);
+    cellTimer = setTimeout(flushCell, CELL_DELAY_MS);
+    render({ keepFocus: true });
   }
 
   // ------------------------------------------------------------------ Saving
@@ -98,7 +222,7 @@
   // Computes the scale so that the page fills the width of the area, times the zoom.
   function computeScale() {
     const size = Layout.pageSizeMm(model.page.format, model.page.orientation);
-    const available = Math.max(120, el.scroll.clientWidth - 2);
+    const available = Math.max(120, el.scroll.clientWidth - 18);
     mmPx = (available / size.w) * ZOOMS[zoomIndex];
   }
 
@@ -108,6 +232,25 @@
     node.style.top = `${rect.y * STEP_MM * mmPx}px`;
     node.style.width = `${rect.w * STEP_MM * mmPx}px`;
     node.style.height = `${rect.h * STEP_MM * mmPx}px`;
+  }
+
+  // Fills the element of a text block: its look from the settings and its Markdown content.
+  function buildTextBody(node, block) {
+    const config = block.config;
+    node.classList.add(`textBlock`, `fill-${config.fill}`, `align-${config.align}`);
+    node.style.fontSize = `${TEXT_MM[config.size] * mmPx}px`;
+    const body = document.createElement(`div`);
+    body.className = `md`;
+    const content = textContent(block);
+    if (content.empty) {
+      if (editing) {
+        body.classList.add(`placeholder`);
+        body.textContent = tr(`boardTextEmpty`);
+      }
+    } else {
+      body.appendChild(MarkdownView.build(content.nodes));
+    }
+    node.appendChild(body);
   }
 
   // Builds the element of one block, with its pencil and its three resize handles.
@@ -120,14 +263,18 @@
     node.setAttribute(`aria-label`, tr(`boardBlockLabel`, { type: tr(TYPE_KEYS[block.type]), title: blockTitle(block) }));
     if (editing) node.tabIndex = 0;
     if (block.id === selectedId) node.classList.add(`selected`);
-    const kind = document.createElement(`div`);
-    kind.className = `blockType`;
-    kind.textContent = tr(TYPE_KEYS[block.type]);
-    const title = document.createElement(`div`);
-    title.className = `blockTitle`;
-    if (!block.title) title.classList.add(`empty`);
-    title.textContent = blockTitle(block);
-    node.append(kind, title);
+    if (block.type === `text`) {
+      buildTextBody(node, block);
+    } else {
+      const kind = document.createElement(`div`);
+      kind.className = `blockType`;
+      kind.textContent = tr(TYPE_KEYS[block.type]);
+      const title = document.createElement(`div`);
+      title.className = `blockTitle`;
+      if (!block.title) title.classList.add(`empty`);
+      title.textContent = blockTitle(block);
+      node.append(kind, title);
+    }
     if (editing) {
       const pencil = document.createElement(`button`);
       pencil.type = `button`;
@@ -148,6 +295,7 @@
 
   // Draws every page with its blocks. With `focus` the selected block gets the keyboard focus again.
   function render(options = {}) {
+    const hadFocus = Boolean(options.keepFocus) && el.canvas.contains(document.activeElement);
     computeScale();
     const size = Layout.pageSizeMm(model.page.format, model.page.orientation);
     const margin = Layout.gridOf(model.page).margin;
@@ -187,9 +335,13 @@
       hint.textContent = tr(`boardEmpty`);
       el.canvas.appendChild(hint);
     }
+    for (const node of el.canvas.querySelectorAll(`.block.textBlock`)) {
+      node.classList.toggle(`overflowing`, node.scrollHeight > node.clientHeight + 2);
+    }
     syncTools();
     if (panelOpen) fillPanel();
-    if (options.focus && selectedId) {
+    requestData();
+    if ((options.focus || hadFocus) && selectedId) {
       const node = el.canvas.querySelector(`.block[data-id="${selectedId}"]`);
       if (node) node.focus({ preventScroll: true });
     }
@@ -211,18 +363,75 @@
 
   // ------------------------------------------------------------------ Settings panel
 
+  // Sets the value of a field of the panel, unless the user is typing in it.
+  function setValue(input, value) {
+    if (input.value !== value && document.activeElement !== input) input.value = value;
+  }
+
+  // The schema for which the lists of columns of the panel were built.
+  let listsFor = null;
+
+  // Builds the lists that depend on the document: the text columns and the fields that can be inserted.
+  function fillDynamicLists() {
+    const state = context();
+    if (listsFor === state.schema) return;
+    listsFor = state.schema;
+    const columns = writableColumns().map((column) => [column.id, column.id]);
+    fillSelect(el.column, [[``, tr(`boardColumnNone`)], ...columns], ``);
+    const fields = state.schema && state.linked ? Fields.fieldChoices(state.schema, state.linked).map((choice) => [choice.path, choice.label]) : [];
+    fillSelect(el.field, [[``, tr(`boardFieldPlaceholder`)], ...fields], ``);
+  }
+
+  // Fills the settings of a text block and the messages about its text.
+  function fillTextSettings(block) {
+    const config = block.config;
+    const state = context();
+    fillDynamicLists();
+    el.source.value = config.source;
+    el.size.value = config.size;
+    el.align.value = config.align;
+    el.fill.value = config.fill;
+    el.columnRow.hidden = config.source !== `cell`;
+    if ([...el.column.options].some((option) => option.value === config.column)) el.column.value = config.column;
+    else el.column.value = ``;
+    const cell = config.source === `cell`;
+    const messages = [];
+    let usable = true;
+    if (cell && !state.schema) {
+      messages.push(tr(`boardCellNotReady`));
+      usable = false;
+    } else if (cell && !config.column) {
+      messages.push(tr(`boardCellNoColumn`));
+      usable = false;
+    } else if (cell && !state.record) {
+      messages.push(tr(`boardCellNoRow`));
+      usable = false;
+    }
+    el.text.disabled = !usable;
+    el.text.maxLength = cell ? 20000 : Model.MAX_FIXED_TEXT;
+    setValue(el.text, usable ? (cell ? sourceText(block) : config.text) : ``);
+    const content = textContent(block);
+    if (content.problems.length) messages.push(tr(`boardTextProblems`, { fields: content.problems.map((path) => `{${path}}`).join(`, `) }));
+    const node = el.canvas.querySelector(`.block[data-id="${block.id}"]`);
+    if (node && node.classList.contains(`overflowing`)) messages.push(tr(`boardTextOverflow`));
+    el.textInfo.textContent = messages.join(` `);
+    el.textInfo.className = messages.length ? `warning` : `hint`;
+  }
+
   // Fills the settings panel with the selected block.
   function fillPanel() {
     const block = selectedBlock();
     if (!block) return;
-    el.title.value = block.title;
+    setValue(el.title, block.title);
     el.type.value = block.type;
-    el.page.value = String(block.page + 1);
+    setValue(el.page, String(block.page + 1));
     el.page.max = String(model.pages);
-    el.x.value = String(block.x * STEP_MM);
-    el.y.value = String(block.y * STEP_MM);
-    el.w.value = String(block.w * STEP_MM);
-    el.h.value = String(block.h * STEP_MM);
+    setValue(el.x, String(block.x * STEP_MM));
+    setValue(el.y, String(block.y * STEP_MM));
+    setValue(el.w, String(block.w * STEP_MM));
+    setValue(el.h, String(block.h * STEP_MM));
+    el.textBox.hidden = block.type !== `text`;
+    if (block.type === `text`) fillTextSettings(block);
   }
 
   // Selects a block (or none) and opens or closes its settings.
@@ -459,6 +668,7 @@
   function setEditing(value) {
     editing = value && !locked;
     if (!editing) {
+      flushCell();
       selectedId = null;
       panelOpen = false;
       el.confirm.hidden = true;
@@ -501,6 +711,10 @@
     fillSelect(el.format, Object.keys(FORMAT_KEYS).map((key) => [key, tr(FORMAT_KEYS[key])]), model.page.format);
     fillSelect(el.orientation, Layout.ORIENTATIONS.map((key) => [key, tr(ORIENTATION_KEYS[key])]), model.page.orientation);
     fillSelect(el.margin, Layout.MARGINS.map((mm) => [mm, tr(`boardMarginValue`, { mm })]), model.page.margin);
+    fillSelect(el.source, Model.TEXT_SOURCES.map((key) => [key, tr(key === `fixed` ? `boardSourceFixed` : `boardSourceCell`)]), `fixed`);
+    fillSelect(el.size, Model.TEXT_SIZES.map((key) => [key, tr(SIZE_KEYS[key])]), `normal`);
+    fillSelect(el.align, Model.TEXT_ALIGNS.map((key) => [key, tr(ALIGN_KEYS[key])]), `left`);
+    fillSelect(el.fill, Model.FILLS.map((key) => [key, tr(FILL_KEYS[key])]), `none`);
   }
 
   el.edit.addEventListener(`click`, () => setEditing(!editing));
@@ -534,6 +748,37 @@
   el.confirmYes.addEventListener(`click`, confirmDelete);
   el.confirmNo.addEventListener(`click`, cancelDelete);
 
+  // Changes a setting of the selected text block.
+  const changeConfig = (changes) => {
+    const block = selectedBlock();
+    if (block && block.type === `text`) commit(Model.updateBlock(model, block.id, { config: changes }));
+  };
+  el.source.addEventListener(`change`, () => changeConfig({ source: el.source.value }));
+  el.column.addEventListener(`change`, () => changeConfig({ column: el.column.value }));
+  el.size.addEventListener(`change`, () => changeConfig({ size: el.size.value }));
+  el.align.addEventListener(`change`, () => changeConfig({ align: el.align.value }));
+  el.fill.addEventListener(`change`, () => changeConfig({ fill: el.fill.value }));
+  el.text.addEventListener(`input`, () => {
+    const block = selectedBlock();
+    if (!block || block.type !== `text`) return;
+    if (block.config.source === `cell`) typeInCell(block, el.text.value);
+    else commit(Model.updateBlock(model, block.id, { config: { text: el.text.value } }));
+  });
+  el.field.addEventListener(`change`, () => {
+    const path = el.field.value;
+    if (!path || el.text.disabled) return;
+    el.text.setRangeText(`{${path}}`, el.text.selectionStart, el.text.selectionEnd, `end`);
+    el.field.value = ``;
+    el.text.focus();
+    el.text.dispatchEvent(new Event(`input`));
+  });
+  el.refresh.addEventListener(`click`, () => {
+    Data.clear();
+    failedTables.clear();
+    datasetMemo = null;
+    render({ keepFocus: true });
+  });
+
   // The page is drawn again when the tab is shown (its width is known only then) and when the window changes size.
   window.addEventListener(`exporttdb:tabchanged`, (event) => {
     if (event.detail === `board`) render();
@@ -556,6 +801,28 @@
       panelOpen = false;
     }
     render();
+  });
+
+  // The selected row changed (or its content): the texts are drawn again. A text typed for the cell of
+  // the previous row is written first.
+  window.addEventListener(`exporttdb:rowchanged`, () => {
+    const record = context().record;
+    if (cellPending && record && cellPending.rowId !== record.id) flushCell();
+    if (cellOverride && record && (cellOverride.rowId !== record.id || record[cellOverride.column] === cellOverride.value) && !cellPending) cellOverride = null;
+    if (!drag) render({ keepFocus: true });
+  });
+  // The exploration is done (or done again): the lists of columns and the loaded tables start again.
+  window.addEventListener(`exporttdb:explored`, () => {
+    Data.clear();
+    failedTables.clear();
+    datasetMemo = null;
+    listsFor = null;
+    if (!drag) render({ keepFocus: true });
+  });
+  // A text that is still waiting is written before the page is left.
+  window.addEventListener(`pagehide`, flushCell);
+  document.addEventListener(`visibilitychange`, () => {
+    if (document.visibilityState === `hidden`) flushCell();
   });
 
   fillTools();

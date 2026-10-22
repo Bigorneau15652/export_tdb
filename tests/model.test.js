@@ -143,6 +143,36 @@ test(`the geometry from the settings panel is resolved like a move`, () => {
   assert.equal(M.findBlock(model, b.id).w, 30);
 });
 
+test(`the settings of a text block are cleaned and the other types have none`, () => {
+  const { model } = M.validateModel({
+    version: 1,
+    blocks: [
+      { id: `t1`, type: `text`, page: 0, x: 0, y: 0, w: 10, h: 4, config: { source: `cell`, text: `hello`, column: `Notes`, size: `large`, align: `justify`, fill: `green`, extra: 1 } },
+      { id: `t2`, type: `text`, page: 0, x: 0, y: 5, w: 10, h: 4, config: { source: `other`, text: 5, column: `bad name`, size: `huge`, align: `x`, fill: `#ff0000` } },
+      { id: `t3`, type: `text`, page: 0, x: 0, y: 10, w: 10, h: 4 },
+      { id: `c1`, type: `chart`, page: 0, x: 0, y: 15, w: 10, h: 4, config: { source: `cell` } }
+    ]
+  });
+  assert.deepEqual(M.findBlock(model, `t1`).config, { source: `cell`, text: `hello`, column: `Notes`, size: `large`, align: `justify`, fill: `green` });
+  assert.deepEqual(M.findBlock(model, `t2`).config, { source: `fixed`, text: ``, column: ``, size: `normal`, align: `left`, fill: `none` });
+  assert.deepEqual(M.findBlock(model, `t3`).config, { source: `fixed`, text: ``, column: ``, size: `normal`, align: `left`, fill: `none` });
+  assert.deepEqual(M.findBlock(model, `c1`).config, {});
+  const long = M.cleanConfig(`text`, { text: `x`.repeat(9000) });
+  assert.equal(long.text.length, M.MAX_FIXED_TEXT);
+});
+
+test(`changing the settings keeps the others, and a new type starts with default settings`, () => {
+  let model = M.addBlock(M.emptyModel(), `text`).model;
+  const id = model.blocks[0].id;
+  model = M.updateBlock(model, id, { config: { text: `Bonjour {Name}`, align: `center` } });
+  model = M.updateBlock(model, id, { config: { size: `small` } });
+  assert.deepEqual(M.findBlock(model, id).config, { source: `fixed`, text: `Bonjour {Name}`, column: ``, size: `small`, align: `center`, fill: `none` });
+  model = M.updateBlock(model, id, { type: `chart` });
+  assert.deepEqual(M.findBlock(model, id).config, {});
+  model = M.updateBlock(model, id, { type: `text` });
+  assert.equal(M.findBlock(model, id).config.text, ``);
+});
+
 test(`the functions do not change the model they receive`, () => {
   const model = M.addBlock(M.emptyModel(), `table`).model;
   const copy = JSON.stringify(model);
