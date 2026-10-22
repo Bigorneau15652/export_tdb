@@ -15,13 +15,13 @@ const columnRows = [
   C(7, 2, `Parent`, `Ref:Buildings`, { visibleCol: 3 }), C(8, 2, `Managers`, `RefList:Contacts`, { visibleCol: 20 }),
   C(9, 3, `Label`, `Text`), C(10, 3, `Building`, `Ref:Buildings`, { visibleCol: 3 }),
   C(11, 4, `Number`, `Text`), C(12, 4, `Building`, `Ref:Buildings`, { visibleCol: 3 }), C(13, 4, `Floor`, `Ref:Floors`, { visibleCol: 9 }),
-  C(14, 4, `Site`, `Ref:Sites`, { visibleCol: 1 }), C(15, 4, `Usage`, `Ref:Usages`, { visibleCol: 16 }), C(16, 4, `Area`, `Numeric`),
+  C(14, 4, `Site`, `Ref:Sites`, { visibleCol: 1 }), C(15, 4, `Usage`, `Ref:Usages`, { visibleCol: 25 }), C(16, 4, `Area`, `Numeric`),
   C(17, 4, `Seats`, `Int`), C(18, 4, `Tags`, `ChoiceList`), C(19, 4, `Surface`, `Numeric`, { isFormula: true }),
   C(16 + 4 + 5, 5, `Label`, `Text`), C(26, 5, `Counts`, `Bool`),
   C(20, 6, `Name`, `Text`),
   C(27, 7, `Text`, `Text`),
   C(28, 4, `manualSort`, `ManualSortPos`), C(29, 4, `gristHelper_Display`, `Any`, { isFormula: true }),
-  C(30, 8, `Usage`, `Ref:Usages`), C(31, 8, `Area`, `Numeric`, { isFormula: true })
+  C(30, 8, `Usage`, `Ref:Usages`), C(31, 8, `Area`, `Numeric`, { isFormula: true }), C(32, 2, `Inspected`, `Date`)
 ];
 
 // Metadata tables in the column form of fetchTable.
@@ -37,7 +37,8 @@ const data = {
   Sites: { id: [1, 2], Name: [`North campus`, `South campus`], Address: [`1 Example street`, ``] },
   Buildings: {
     id: [1, 2, 3, 4], Name: [`Building A`, `Building B`, `Building A`, `Annex`], Site: [1, 1, 2, 1], Year: [1965, 1990, 2005, 0],
-    Photo: [[`L`, 11, 12], null, [`L`], null], Parent: [0, 0, 0, 1], Managers: [[`L`, 1, 2], [`L`], null, [`L`, 2]]
+    Photo: [[`L`, 11, 12], null, [`L`], null], Parent: [0, 0, 0, 1], Managers: [[`L`, 1, 2], [`L`], null, [`L`, 2]],
+    Inspected: [1736294400, 1704067200, null, 1736294400]
   },
   Floors: { id: [1, 2, 3, 4], Label: [`Ground`, `Level 1`, `Ground`, `Ground`], Building: [1, 1, 2, 3] },
   Rooms: {

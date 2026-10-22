@@ -46,6 +46,7 @@ const data = ${JSON.stringify(demo.data)};
 const options = ${JSON.stringify(options)};
 const tables = Object.assign({}, data, metadata);
 window.__writes = [];
+window.__linkedName = options.linked || \`Sites\`;
 let writeCount = 0;
 function apply(tableId, rowId, fields) {
   writeCount += 1;
@@ -90,7 +91,7 @@ async function openExplorer(browser, baseUrl, options = {}) {
   await page.waitForFunction(() => typeof window.__onRecord === `function`);
   // Gives the explorer the row `id` of the linked table, as Grist does when the selection changes.
   const selectRow = (id) => page.evaluate((rowId) => {
-    const name = window.__linkedName || `Sites`;
+    const name = window.__linkedName;
     return window.grist.docApi.fetchTable(name).then((table) => {
       const index = table.id.indexOf(rowId);
       const record = { id: rowId };

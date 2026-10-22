@@ -57,3 +57,37 @@ ul { margin: 6px 0; padding-left: 20px; }
 li { margin: 2px 0; overflow-wrap: anywhere; }
 li.ok::marker { color: #1b6e3c; }
 li.bad { color: #8a1c1c; }
+
+/* Tabs and lab. */
+#tabs { display: flex; gap: 4px; margin: 8px 0; border-bottom: 2px solid #52606d; }
+.tab {
+  padding: 6px 12px;
+  border: 2px solid #52606d;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  background: #e4e7eb;
+  color: #1f2933;
+  font: inherit;
+  cursor: pointer;
+}
+.tab[aria-selected="true"] { background: #1c5d8c; border-color: #1c5d8c; color: #ffffff; }
+.tab:focus-visible { outline: 3px solid #f2b705; outline-offset: 2px; }
+label { display: block; margin: 10px 0 2px; font-weight: 600; }
+fieldset.filter { margin: 10px 0; padding: 6px 8px; border: 1px solid #9aa5b1; border-radius: 6px; }
+fieldset.filter legend { padding: 0 4px; font-weight: 600; }
+fieldset.filter select, fieldset.filter input[type="text"] { margin: 4px 0; }
+input[type="text"] {
+  display: block;
+  width: 100%;
+  padding: 6px;
+  border: 2px solid #52606d;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #1f2933;
+  font: inherit;
+}
+.tableWrap { overflow-x: auto; margin: 8px 0; }
+#labResult { border-collapse: collapse; width: 100%; font-size: 13px; }
+#labResult th, #labResult td { padding: 4px 8px; border-bottom: 1px solid #cbd2d9; text-align: left; }
+#labResult td.num, #labResult th.num { text-align: right; white-space: nowrap; }
+#labResult tr.total td { font-weight: 700; border-top: 2px solid #1f2933; }

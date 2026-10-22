@@ -6,7 +6,7 @@ English first, version française plus bas.
 
 export_tdb will be a custom widget for [Grist](https://www.getgrist.com) that composes dashboards (Markdown text, tables with totals, charts, images and indicators) from a table and the tables linked to it, and prints them or saves them as PDF. It is built in small versions; the specification is in `docs/specification.md`.
 
-Status: version 0.1, the explorer. It does not compose dashboards yet. It reads the structure of your document and tests the Grist functions that the dashboard widget needs, then produces a report that you copy and send to the developer.
+Status: version 0.2, the data engine. It does not compose dashboards yet. The Explorer tab reads the structure of your document and tests the Grist functions that the dashboard widget needs, then produces a report. The Query lab tab lets you try the calculations of the future widget on your real data: rows that belong to the selected row, filters, grouping, sums, averages and counts.
 
 ### Install
 
@@ -21,13 +21,17 @@ If your Grist server is not `grist.numerique.gouv.fr`, edit two places in `index
 
 The explorer shows the linked table, the tables that descend from it, a counter of the rows seen while you move in the table, two tests and a report. By default the report holds only the shape of the values (for example "list of references") and no content of your document; tick the box to show values too. The attachment test needs a selected row that has an attachment. The write test is optional: after your confirmation it writes a marker in the text column you choose, reads it back, then puts the original value back, with the two methods of the API.
 
+### Using the query lab
+
+Select a row in Grist, wait for the exploration to finish, then open the Query lab tab. Choose a table (the linked table or one that descends from it), the link with the selected row (the lab lists every chain of references that leads to it), the column to group by, the calculation and the column it applies to, then up to two filters. A filter compares a column (or a column reached through a reference, written `Reference > Column`) with a typed value, with a field of the selected row or with its number. Click Calculate: the result is a table with a total line, the number of rows kept and the time spent. Nothing is saved in the document. The lab reads the tables it needs once and keeps them until you click "Reload the data".
+
 ### Security
 
 Scripts come from this site and from the Grist plugin API only, and the page opens no network connection (`connect-src 'none'`). Nothing is stored in the browser and nothing is sent to a third party. The only write is the test that you confirm.
 
 ### Development and tests
 
-- `npm test` runs the unit tests with Node (no dependency to install).
+- `npm test` runs the unit tests with Node (no dependency to install): schema, shapes, report, values, tables in memory, rows and filters, grouping and cross tables, expressions and formats, with random comparisons against naive calculations.
 - `npm run test:integration` runs the tests in a real browser with a fake Grist object. Run `npm install` once; if no browser is installed, run `npx playwright install chromium`, or set `CHROMIUM_PATH` to an existing Chromium.
 
 ### Licence
@@ -38,7 +42,7 @@ MIT, see `LICENSE`. Author: Olivier Holweck.
 
 export_tdb sera un widget personnalisé pour [Grist](https://www.getgrist.com) qui compose des tableaux de bord (texte en Markdown, tableaux avec totaux, graphiques, images et indicateurs) à partir d'une table et des tables qui lui sont liées, et les imprime ou les enregistre en PDF. Il est construit par petites versions ; le cahier des charges est dans `docs/specification.md`.
 
-État : version 0.1, l'explorateur. Il ne compose pas encore de tableaux de bord. Il lit la structure de votre document et teste les fonctions de Grist dont le widget aura besoin, puis produit un rapport que vous copiez et envoyez au développeur.
+État : version 0.2, le moteur de données. Il ne compose pas encore de tableaux de bord. L'onglet Explorateur lit la structure de votre document et teste les fonctions de Grist dont le widget aura besoin, puis produit un rapport. L'onglet Laboratoire de requêtes permet d'essayer les calculs du futur widget sur vos vraies données : lignes rattachées à la ligne sélectionnée, filtres, regroupements, sommes, moyennes et nombres.
 
 ### Installation
 
@@ -53,13 +57,17 @@ Si votre serveur Grist n'est pas `grist.numerique.gouv.fr`, modifiez deux endroi
 
 L'explorateur affiche la table liée, les tables qui en descendent, un compteur des lignes vues quand vous changez de ligne, deux tests et un rapport. Par défaut le rapport ne contient que la forme des valeurs (par exemple « liste de références ») et aucun contenu de votre document ; cochez la case pour montrer aussi les valeurs. Le test des pièces jointes demande une ligne sélectionnée qui en possède une. Le test d'écriture est facultatif : après votre confirmation il écrit un marqueur dans la colonne de texte choisie, le relit, puis remet la valeur d'origine, avec les deux méthodes de l'API.
 
+### Utilisation du laboratoire de requêtes
+
+Sélectionnez une ligne dans Grist, attendez la fin de l'exploration, puis ouvrez l'onglet Laboratoire de requêtes. Choisissez une table (la table liée ou une table qui en descend), le lien avec la ligne sélectionnée (le laboratoire liste toutes les chaînes de références qui y mènent), la colonne de regroupement, le calcul et la colonne sur laquelle il porte, puis jusqu'à deux filtres. Un filtre compare une colonne (ou une colonne atteinte par une référence, écrite `Référence > Colonne`) avec une valeur saisie, avec un champ de la ligne sélectionnée ou avec son numéro. Cliquez sur Calculer : le résultat est un tableau avec une ligne de total, le nombre de lignes retenues et le temps passé. Rien n'est enregistré dans le document. Le laboratoire lit une fois les tables dont il a besoin et les garde jusqu'à ce que vous cliquiez sur « Recharger les données ».
+
 ### Sécurité
 
 Les scripts viennent de ce site et de l'API des widgets Grist uniquement, et la page n'ouvre aucune connexion réseau (`connect-src 'none'`). Rien n'est stocké dans le navigateur et rien n'est envoyé à un tiers. La seule écriture est le test que vous confirmez.
 
 ### Développement et tests
 
-- `npm test` lance les tests unitaires avec Node (aucune dépendance à installer).
+- `npm test` lance les tests unitaires avec Node (aucune dépendance à installer) : structure, formes, rapport, valeurs, tables en mémoire, lignes et filtres, regroupements et tableaux croisés, expressions et formats, avec des comparaisons aléatoires à un calcul naïf.
 - `npm run test:integration` lance les tests dans un vrai navigateur avec un faux objet Grist. Lancez une fois `npm install` ; si aucun navigateur n'est installé, lancez `npx playwright install chromium`, ou indiquez un Chromium existant avec `CHROMIUM_PATH`.
 
 ### Licence

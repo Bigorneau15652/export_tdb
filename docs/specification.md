@@ -146,3 +146,13 @@ Lien avec Grist : le widget est lié à une table avec Sélectionner par ; un s�
 
 Nom du dépôt : export_tdb, déjà créé.
 
+
+Constats de la version 0.1 (explorateur, relevés sur un vrai document)
+
+L'API fonctionne comme prévu : la table liée se lit avec grist.selectedTable, les tables de métadonnées _grist_Tables et _grist_Tables_column se lisent avec fetchTable et l'accès complet. Une table d'environ cinq mille lignes et cinquante colonnes se charge en un demi-seconde ; treize tables en moins de deux secondes. Cela confirme le choix de charger chaque table une fois et de la garder.
+
+Formes des valeurs. Une référence est un nombre (le numéro de ligne, 0 quand elle est vide). Une liste de références, une liste de choix et une liste de pièces jointes sont des tableaux dont le premier élément est le code L. Une date est un nombre de secondes depuis 1970. Les colonnes de type Any peuvent contenir des valeurs encodées : liste L, objet O, date d, date et heure D, référence R, liste de références r, erreur E, valeur en attente P, valeur masquée C, valeur non lisible U, élément ignoré S. Un nombre entier et un nombre décimal ne se distinguent pas. Un nombre vide est null et 0 est une vraie valeur ; une référence vide est 0.
+
+Structure. Un document réel a plusieurs dizaines de tables, dont des tables de synthèse (créées par Grist) qui apparaissent comme descendantes parce qu'elles contiennent une colonne de références vers la table liée ou une liste de lignes. Une table peut atteindre la table liée par plusieurs chemins (une référence directe et une chaîne passant par une autre table) ; ces chemins ne donnent pas toujours les mêmes lignes quand les données sont incohérentes. Deux lignes différentes peuvent porter le même libellé : les regroupements se font donc sur le numéro de ligne et non sur le texte. Les tables de synthèse et les chemins qui passent par une liste sont signalés à l'utilisateur et ne sont pas proposés en premier.
+
+Restent à vérifier avec le propriétaire du document : le jeton d'une pièce jointe, l'écriture dans une cellule avec les deux méthodes et le changement de ligne (tests prévus dans l'explorateur).
