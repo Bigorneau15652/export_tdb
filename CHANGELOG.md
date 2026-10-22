@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.0
+
+- New first tab, Dashboard (the explorer and the query lab stay as the second and third tabs). The widget opens in reading mode; the Edit button shows the tools.
+- Pages in millimetres: A3, A4, A5, square (210 x 210) and screen 16/9 (297 x 167), portrait or landscape, margins of 0 to 20 mm, grid of 5 mm. Zoom and fit to the width of the panel.
+- Blocks of five types (text, table, chart, image, indicator) with a title, empty for now. They are added at the first free place (a page is added when there is no room), moved and resized with the pointer (the Shift key keeps the proportions), moved with the arrow keys, deleted with the Delete key after a confirmation, and edited in a settings panel (title, type, page, place and size in millimetres) opened with a double click or the pencil. The panel becomes a sheet at the bottom of the widget when it is narrow.
+- Blocks never overlap and never leave the page: a move or a resize that would break this goes to the closest valid place.
+- The model (page settings and blocks) is saved in the options of the widget under the key `model`, cleaned when it is read (known types, bounded numbers, no overlap) and protected against a newer format.
+- A "?" help badge before every menu of the tools and of the settings panel.
+- New pure modules `layout.js` (geometry and collisions) and `model.js` (model, cleaning, changes), `grist-access.js` (the only place where the dashboard talks to Grist), `tabs.js`, with unit tests including random sequences of changes.
+
 ## 0.2.3
 
 - Query lab: a warning appears when a sum or an average is calculated on a column read through a reference (its value is counted once per row that points to it, which inflates the total).
