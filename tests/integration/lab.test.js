@@ -246,3 +246,16 @@ test(`every menu of the lab has a help badge with a text`, async () => {
   assert.ok(tips.every((text) => text && text.length > 20));
   assert.deepEqual(w.errors, []);
 });
+
+test(`a sum on a column read through a reference shows a warning`, async () => {
+  const w = await openLab();
+  await w.page.selectOption(`#labTable`, `Rooms`);
+  await w.page.selectOption(`#labPath`, { label: `Rooms.Site -> Sites` });
+  await pick(w.page, [`Building.Year`]);
+  await run(w.page);
+  assert.match(await w.page.locator(`#labWarnings`).innerText(), /Building\.Year/);
+  await pick(w.page, [`Area`]);
+  await run(w.page);
+  assert.equal(await w.page.locator(`#labWarnings`).isHidden(), true);
+  assert.deepEqual(w.errors, []);
+});

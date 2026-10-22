@@ -6,7 +6,7 @@ English first, version française plus bas.
 
 export_tdb will be a custom widget for [Grist](https://www.getgrist.com) that composes dashboards (Markdown text, tables with totals, charts, images and indicators) from a table and the tables linked to it, and prints them or saves them as PDF. It is built in small versions; the specification is in `docs/specification.md`.
 
-Status: version 0.2.2, the data engine. It does not compose dashboards yet. The Explorer tab reads the structure of your document and tests the Grist functions that the dashboard widget needs, then produces a report. The Query lab tab lets you try the calculations of the future widget on your real data: rows that belong to the selected row, filters, grouping, sums, averages and counts.
+Status: version 0.2.3, the data engine. It does not compose dashboards yet. The Explorer tab reads the structure of your document and tests the Grist functions that the dashboard widget needs, then produces a report. The Query lab tab lets you try the calculations of the future widget on your real data: rows that belong to the selected row, filters, grouping, sums, averages and counts.
 
 ### Install
 
@@ -42,7 +42,7 @@ MIT, see `LICENSE`. Author: Olivier Holweck.
 
 export_tdb sera un widget personnalisé pour [Grist](https://www.getgrist.com) qui compose des tableaux de bord (texte en Markdown, tableaux avec totaux, graphiques, images et indicateurs) à partir d'une table et des tables qui lui sont liées, et les imprime ou les enregistre en PDF. Il est construit par petites versions ; le cahier des charges est dans `docs/specification.md`.
 
-État : version 0.2.2, le moteur de données. Il ne compose pas encore de tableaux de bord. L'onglet Explorateur lit la structure de votre document et teste les fonctions de Grist dont le widget aura besoin, puis produit un rapport. L'onglet Laboratoire de requêtes permet d'essayer les calculs du futur widget sur vos vraies données : lignes rattachées à la ligne sélectionnée, filtres, regroupements, sommes, moyennes et nombres.
+État : version 0.2.3, le moteur de données. Il ne compose pas encore de tableaux de bord. L'onglet Explorateur lit la structure de votre document et teste les fonctions de Grist dont le widget aura besoin, puis produit un rapport. L'onglet Laboratoire de requêtes permet d'essayer les calculs du futur widget sur vos vraies données : lignes rattachées à la ligne sélectionnée, filtres, regroupements, sommes, moyennes et nombres.
 
 ### Installation
 

@@ -1,4 +1,4 @@
-// Query lab (version 0.2.2): lets the maintainer try the calculations of the future widget on the real
+// Query lab (version 0.2.3): lets the maintainer try the calculations of the future widget on the real
 // data of the document. The user chooses a starting row (the selected row, or a parent of it such
 // as the building of a selected room), a table that belongs to that row, and a calculation. The result
 // follows the selected row. Nothing is written in the document. The calculations are done by the pure
@@ -377,6 +377,8 @@
       const fnLabel = t(FUNCTIONS.find(([value]) => value === el.fn.value)[1]);
       renderResult(spec, result, { keys: groupBy.map((g) => g.path), measures: measures.map((m) => `${fnLabel}${m.path ? ` (${m.path})` : ``}`) });
       el.info.textContent = `${t(`labResultRows`, { kept: rows.length, total })} ${t(`labLoaded`, { ms: Math.round(loadedInfo.ms), count: loadedInfo.loaded })} ${t(`labComputed`, { ms: Math.round(performance.now() - started) })}`;
+      const throughReference = paths.filter((path) => path.includes(`.`));
+      if (throughReference.length && [`sum`, `avg`].includes(el.fn.value)) problems.push(t(`labReferenceWarning`, { columns: throughReference.join(`, `) }));
       if (problems.length) {
         el.warnings.textContent = problems.join(` `);
         el.warnings.hidden = false;
