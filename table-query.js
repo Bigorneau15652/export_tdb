@@ -50,6 +50,41 @@
     return links;
   }
 
+  // Every table of the document that a block can show, the ordinary tables first (alphabetical order),
+  // then the summary tables. Returns [{ table, summary }].
+  function listAllTables(schema) {
+    const all = schema.order.map((id) => ({ table: id, summary: Boolean(schema.tables.get(id).summary) }));
+    return all.sort((a, b) => Number(a.summary) - Number(b.summary) || a.table.localeCompare(b.table, `fr`, { sensitivity: `base` }));
+  }
+
+  // The ways to choose the rows of a table: the selected row alone, the rows that point to the selected
+  // row or to an item that it points to (a building, a site...), and all the rows. Each choice holds
+  // `value` (`start|link`, to keep in a menu), `start` and `link` (the settings of the block), `kind`
+  // (`self`, `link` or `all`), `quality`, `startTable`, `startSteps` (from the selected row to the
+  // starting item) and `steps` (from the table to the starting item). The best choices come first.
+  function listChoices(schema, linked, tableId) {
+    const rank = { direct: 0, summary: 1, list: 2 };
+    const found = [];
+    for (const start of listStarts(schema, linked)) {
+      if (start.table === tableId) {
+        found.push({ value: `${start.key}|self`, start: start.key, link: `self`, kind: `self`, quality: `direct`, startTable: start.table, startSteps: start.steps, steps: [] });
+      }
+      for (const link of listLinks(schema, start.table, tableId)) {
+        if (link.key === `self` || link.key === `all`) continue;
+        found.push({ value: `${start.key}|${link.key}`, start: start.key, link: link.key, kind: `link`, quality: link.quality, startTable: start.table, startSteps: start.steps, steps: link.steps });
+      }
+    }
+    const order = (choice) => [choice.kind === `self` ? 0 : 1, rank[choice.quality] === undefined ? 3 : rank[choice.quality], choice.steps.length, choice.startSteps.length];
+    found.sort((a, b) => {
+      const x = order(a);
+      const y = order(b);
+      for (let index = 0; index < x.length; index += 1) if (x[index] !== y[index]) return x[index] - y[index];
+      return 0;
+    });
+    found.push({ value: `|all`, start: ``, link: `all`, kind: `all`, quality: `all`, startTable: linked, startSteps: [], steps: [] });
+    return found;
+  }
+
   // Names of the tables that a block needs: the table of the row, the tables of the starting row and of
   // the link, the table of the block and the tables that its columns, groups and filters cross.
   function tablesFor(schema, linked, config) {
@@ -192,7 +227,7 @@
     return { ok: true, ...outcome, kept: filtered.rows.length, scanned: chosen.rows.length, warnings: filtered.errors };
   }
 
-  const api = { MAX_ROWS, chainKey, listStarts, listTables, listLinks, tablesFor, runTable };
+  const api = { MAX_ROWS, chainKey, listStarts, listTables, listLinks, listAllTables, listChoices, tablesFor, runTable };
   if (isNode) module.exports = api;
   else root.exportTdbTableQuery = api;
 })(typeof window !== `undefined` ? window : globalThis);

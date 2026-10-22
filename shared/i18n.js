@@ -18,6 +18,16 @@
       tabExplorer: `Explorateur`,
       tabLab: `Laboratoire de requêtes`,
       tabBoard: `Tableau de bord`,
+      boardTableHelp: `Choisissez la table qui contient les valeurs à afficher (par exemple la table des étages pour des surfaces par étage), puis les lignes à garder, puis les colonnes.`,
+      boardTableLabel: `Table qui contient les valeurs`,
+      boardRows: `Lignes à garder`,
+      boardWhereSelected: `la ligne sélectionnée ({table})`,
+      boardWhereItem: `{table} de la ligne sélectionnée (via {chain})`,
+      boardRowsPointing: `Les lignes dont {column} est {where}`,
+      boardRowsLinked: `Les lignes reliées par {chain} à {where}`,
+      boardRowsOnly: `Seulement {where}`,
+      tipBoardTable: `La table dont les lignes sont affichées ou additionnées. Choisissez celle qui contient les chiffres : par exemple la table des étages pour des surfaces par étage, la table des salles pour des surfaces par salle. Les tables de synthèse sont en fin de liste.`,
+      tipBoardRows: `Quelles lignes de cette table garder. Par exemple « Les lignes dont BDD_Etages.Batiment est BDD_Batiments de la ligne sélectionnée » garde les étages du bâtiment de la salle sélectionnée. Avec « Toutes les lignes de la table », rien n'est filtré par la ligne sélectionnée.`,
       boardTableTitle: `Données du tableau`,
       boardMode: `Type de tableau`,
       boardModeList: `Liste des lignes`,
@@ -267,6 +277,16 @@
       tabExplorer: `Explorer`,
       tabLab: `Query lab`,
       tabBoard: `Dashboard`,
+      boardTableHelp: `Choose the table that holds the values to show (for example the table of floors for areas per floor), then the rows to keep, then the columns.`,
+      boardTableLabel: `Table that holds the values`,
+      boardRows: `Rows to keep`,
+      boardWhereSelected: `the selected row ({table})`,
+      boardWhereItem: `{table} of the selected row (via {chain})`,
+      boardRowsPointing: `The rows whose {column} is {where}`,
+      boardRowsLinked: `The rows linked by {chain} to {where}`,
+      boardRowsOnly: `Only {where}`,
+      tipBoardTable: `The table whose rows are shown or added up. Choose the one that holds the figures: for example the table of floors for areas per floor, the table of rooms for areas per room. Summary tables come last.`,
+      tipBoardRows: `Which rows of this table to keep. For example « The rows whose BDD_Etages.Batiment is BDD_Batiments of the selected row » keeps the floors of the building of the selected room. With « All the rows of the table » nothing is filtered by the selected row.`,
       boardTableTitle: `Table data`,
       boardMode: `Kind of table`,
       boardModeList: `List of rows`,
@@ -524,7 +544,7 @@
     root.querySelectorAll(`[data-i18n-tip]`).forEach((el) => {
       const text = t(el.dataset.i18nTip);
       el.dataset.tip = text;
-      el.title = text;
+      el.removeAttribute(`title`);
       el.setAttribute(`aria-label`, text);
     });
   }

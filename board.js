@@ -49,7 +49,7 @@
     textBox: $(`boardTextSettings`), source: $(`boardSource`), columnRow: $(`boardColumnRow`), column: $(`boardColumn`),
     text: $(`boardText`), field: $(`boardField`), size: $(`boardSize`), align: $(`boardAlign`), fill: $(`boardFill`),
     textInfo: $(`boardTextInfo`), cellState: $(`boardCellState`),
-    tableBox: $(`boardTableSettings`), mode: $(`boardMode`), start: $(`boardStart`), tableSel: $(`boardTable`), link: $(`boardLink`),
+    tableBox: $(`boardTableSettings`), mode: $(`boardMode`), tableSel: $(`boardTable`), link: $(`boardLink`), linkInfo: $(`boardLinkInfo`),
     groupRow: $(`boardGroupRow`), group1: $(`boardGroup1`), group2: $(`boardGroup2`), merge: $(`boardMerge`),
     columnRows: $(`boardColumnRows`), addColumn: $(`boardAddColumn`), sortBy: $(`boardSortBy`), sortColumn: $(`boardSortColumn`),
     sortDir: $(`boardSortDir`), decimals: $(`boardDecimals`), total: $(`boardTotal`), tableInfo: $(`boardTableInfo`)
@@ -517,12 +517,16 @@
     if (select.value !== String(value)) select.value = String(value);
   }
 
-  // The text that names a link between a table and the starting row.
-  function linkLabel(schema, link) {
-    if (link.key === `self`) return tr(`labSelfRow`);
-    if (link.key === `all`) return tr(`labAllRows`);
-    const note = QUALITY_KEYS[link.quality] ? ` ${tr(QUALITY_KEYS[link.quality])}` : ``;
-    return `${link.steps.map(describeStep).join(` ; `)}${note}`;
+  // The sentence that names a way to choose the rows of a table (see Query.listChoices).
+  function choiceLabel(choice) {
+    const linked = context().linked;
+    const chain = choice.startSteps.map((step) => `${step.from}.${step.column}`).join(` > `);
+    const where = choice.startSteps.length ? tr(`boardWhereItem`, { table: choice.startTable, chain }) : tr(`boardWhereSelected`, { table: linked });
+    if (choice.kind === `all`) return tr(`labAllRows`);
+    if (choice.kind === `self`) return choice.startSteps.length ? tr(`boardRowsOnly`, { where }) : tr(`labSelfRow`);
+    const note = QUALITY_KEYS[choice.quality] ? ` ${tr(QUALITY_KEYS[choice.quality])}` : ``;
+    if (choice.steps.length === 1) return tr(`boardRowsPointing`, { column: `${choice.steps[0].from}.${choice.steps[0].column}`, where }) + note;
+    return tr(`boardRowsLinked`, { chain: choice.steps.map(describeStep).join(` ; `), where }) + note;
   }
 
   // The structure for which the filters and the column lines were built.
@@ -629,7 +633,7 @@
   function fillTableSettings(block) {
     const config = block.config;
     const state = context();
-    const controls = [el.mode, el.start, el.tableSel, el.link, el.group1, el.group2, el.merge, el.addColumn, el.sortBy, el.sortColumn, el.sortDir, el.decimals, el.total];
+    const controls = [el.mode, el.tableSel, el.link, el.group1, el.group2, el.merge, el.addColumn, el.sortBy, el.sortColumn, el.sortDir, el.decimals, el.total];
     controls.forEach((control) => { control.disabled = !state.schema; });
     if (!state.schema) {
       el.tableInfo.textContent = tr(`boardTableNotReady`);
@@ -642,11 +646,12 @@
     const choices = config.table && schema.tables.has(config.table) ? Fields.fieldChoices(schema, config.table) : [];
     const columnItems = [[``, tr(`boardColumnNone`)], ...choices.map((choice) => [choice.path, choice.label])];
     setOptions(el.mode, [[`list`, tr(`boardModeList`)], [`group`, tr(`boardModeGroup`)]], config.mode);
-    setOptions(el.start, starts.map((item) => [item.key, item.key === `` ? tr(`labStartSelected`, { table: state.linked }) : tr(`labStartParent`, { table: item.table, chain: item.steps.map((step) => `${step.from}.${step.column}`).join(` > `) })]), start.key);
-    const tables = Query.listTables(schema, start.table).map((entry) => [entry.table, `${entry.table}${QUALITY_KEYS[entry.quality] ? ` ${tr(QUALITY_KEYS[entry.quality])}` : ``}`]);
+    const tables = Query.listAllTables(schema).map((entry) => [entry.table, entry.summary ? `${entry.table} ${tr(`labQualitySummary`)}` : entry.table]);
     setOptions(el.tableSel, [[``, tr(`boardColumnNone`)], ...tables], config.table);
-    const links = config.table ? Query.listLinks(schema, start.table, config.table).map((link) => [link.key, linkLabel(schema, link)]) : [];
-    setOptions(el.link, [[``, tr(`boardColumnNone`)], ...links], config.link);
+    const rowChoices = config.table && schema.tables.has(config.table) ? Query.listChoices(schema, state.linked, config.table) : [];
+    const chosen = rowChoices.find((item) => item.start === config.start && item.link === config.link);
+    setOptions(el.link, [[``, tr(`boardColumnNone`)], ...rowChoices.map((item) => [item.value, choiceLabel(item)])], chosen ? chosen.value : ``);
+    el.linkInfo.textContent = chosen ? choiceLabel(chosen) : ``;
     el.groupRow.hidden = config.mode !== `group`;
     setOptions(el.group1, columnItems, config.groupBy[0] || ``);
     setOptions(el.group2, columnItems, config.groupBy[1] || ``);
@@ -996,19 +1001,16 @@
     const group = el.mode.value === `group`;
     changeConfig({ mode: el.mode.value, columns: block.config.columns.map((column) => ({ ...column, fn: group ? column.fn || `sum` : column.fn })), sort: { ...block.config.sort, by: group ? `key` : `none` } });
   });
-  el.start.addEventListener(`change`, () => {
-    const block = selectedBlock();
-    if (!block) return;
-    const state = context();
-    const next = Query.listStarts(state.schema, state.linked).find((item) => item.key === el.start.value);
-    const stays = next && Query.listTables(state.schema, next.table).some((entry) => entry.table === block.config.table);
-    changeConfig(stays ? { start: el.start.value, link: ``, filters: [] } : { start: el.start.value, table: ``, ...tableReset(block.config.mode) });
-  });
   el.tableSel.addEventListener(`change`, () => {
     const block = selectedBlock();
-    if (block) changeConfig({ table: el.tableSel.value, ...tableReset(block.config.mode) });
+    if (block) changeConfig({ table: el.tableSel.value, start: ``, ...tableReset(block.config.mode) });
   });
-  el.link.addEventListener(`change`, () => changeConfig({ link: el.link.value }));
+  el.link.addEventListener(`change`, () => {
+    const block = selectedBlock();
+    if (!block) return;
+    const [start, link] = el.link.value ? el.link.value.split(`|`) : [``, ``];
+    changeConfig(start === block.config.start ? { start, link } : { start, link, filters: [] });
+  });
   el.group1.addEventListener(`change`, () => changeConfig({ groupBy: [el.group1.value, el.group2.value] }));
   el.group2.addEventListener(`change`, () => changeConfig({ groupBy: [el.group1.value, el.group2.value] }));
   el.merge.addEventListener(`change`, () => changeConfig({ merge: el.merge.checked }));

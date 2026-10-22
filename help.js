@@ -11,7 +11,6 @@
     badge.setAttribute(`role`, `img`);
     badge.textContent = `?`;
     badge.dataset.tip = t(key);
-    badge.title = t(key);
     badge.setAttribute(`aria-label`, t(key));
     return badge;
   }
