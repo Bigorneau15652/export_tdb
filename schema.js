@@ -99,6 +99,7 @@
   // is { from, column, to }; the shortest chains come first.
   function findAncestors(schema, startId, maxDepth = 2) {
     const out = [];
+    // Follows the single references of `currentId`; `trail` holds the tables already on the chain.
     function walk(currentId, trail, steps) {
       if (steps.length >= maxDepth) return;
       const table = schema.tables.get(currentId);
