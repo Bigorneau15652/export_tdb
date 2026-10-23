@@ -118,3 +118,12 @@ input[type="number"]:focus-visible, input[type="text"]:focus-visible { outline: 
 #boardPanel fieldset.filter { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 4px; }
 #boardPanel fieldset.filter legend { grid-column: 1 / 3; }
 #boardPanel fieldset.filter select, #boardPanel fieldset.filter input[type="text"] { min-width: 0; margin: 0; }
+
+/* Version 0.5.3: the table settings. */
+.colrow.group { grid-template-columns: 112px 1fr; }
+.colrow.list { grid-template-columns: 1fr 112px; }
+.check.inline { display: inline-flex; margin: 0 0 0 4px; font-weight: 400; }
+.explain { margin: 4px 0; padding: 6px 8px; border: 1px solid #9aa5b1; border-radius: 6px; background: #f5f7fa; color: #1f2933; font-size: 12px; }
+.explain p { margin: 4px 0; }
+.explain ul { margin: 4px 0; padding-left: 16px; }
+.explain li { margin: 4px 0; }

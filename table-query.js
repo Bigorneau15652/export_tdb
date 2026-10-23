@@ -95,6 +95,60 @@
     return kept;
   }
 
+  // The tables that a dynamic table can show, in three groups: `own` (the table of the selected row and
+  // the tables that point to it), `related` (the tables of the items that the selected row points to, such as
+  // its building or its site, and the tables that point to those items) and `summary` (summary tables of
+  // the selected row). Each group is in alphabetical order. Returns [{ table, group }].
+  function listDynamicTables(schema, linked) {
+    const byName = (a, b) => a.table.localeCompare(b.table, `fr`, { sensitivity: `base` });
+    const seen = new Set();
+    const groups = { own: [], related: [], summary: [] };
+    const add = (table, group) => {
+      if (seen.has(table) || !schema.tables.has(table)) return;
+      seen.add(table);
+      groups[group].push({ table, group });
+    };
+    const own = listTables(schema, linked);
+    own.filter((entry) => entry.quality === `direct`).forEach((entry) => add(entry.table, `own`));
+    for (const start of listStarts(schema, linked).slice(1)) {
+      add(start.table, `related`);
+      listTables(schema, start.table).filter((entry) => entry.quality === `direct`).forEach((entry) => add(entry.table, `related`));
+    }
+    own.filter((entry) => entry.quality === `summary`).forEach((entry) => add(entry.table, `summary`));
+    return [...groups.own.sort(byName), ...groups.related.sort(byName), ...groups.summary.sort(byName)];
+  }
+
+  // The columns of a table that hold numbers (they can be added up or averaged): numeric columns and
+  // columns of type Any, also reached through a reference (`Floor.Area`). Returns a Set of paths.
+  function numericPaths(schema, tableId) {
+    return new Set(fields.fieldChoices(schema, tableId).filter((choice) => choice.base === `Numeric` || choice.base === `Int` || choice.base === `Any`).map((choice) => choice.path));
+  }
+
+  // The names of the tables needed to count the rows of every choice of rows of a table.
+  function tablesForChoices(schema, linked, tableId) {
+    const found = new Set([linked, tableId]);
+    for (const choice of listChoices(schema, linked, tableId)) {
+      found.add(choice.startTable);
+      choice.startSteps.forEach((step) => found.add(step.to));
+      choice.steps.forEach((step) => {
+        found.add(step.from);
+        found.add(step.to);
+      });
+    }
+    return [...found].filter((name) => schema.tables.has(name));
+  }
+
+  // For every choice of rows of a table, how many rows it keeps for the selected row `record`: the
+  // explanation shown to the user. Returns [{ choice, kept, total }] (`kept` is null when it cannot be
+  // counted yet: a table is not loaded, or the selected row has no starting item).
+  function explainChoices(schema, dataset, linked, record, tableId) {
+    const total = dataset.table(tableId) ? dataset.table(tableId).count : null;
+    return listChoices(schema, linked, tableId).map((choice) => {
+      const chosen = record && dataset.table(tableId) ? selectRows(schema, dataset, linked, record, { table: tableId, start: choice.start, link: choice.link }) : { problem: `notloaded` };
+      return { choice, kept: chosen.problem ? null : chosen.rows.length, total };
+    });
+  }
+
   // Names of the tables that a block needs: the table of the row, the tables of the starting row and of
   // the link, the table of the block and the tables that its columns, groups and filters cross.
   function tablesFor(schema, linked, config) {
@@ -237,7 +291,7 @@
     return { ok: true, ...outcome, kept: filtered.rows.length, scanned: chosen.rows.length, warnings: filtered.errors };
   }
 
-  const api = { MAX_ROWS, chainKey, listStarts, listTables, listLinks, listAllTables, listChoices, tablesFor, runTable };
+  const api = { MAX_ROWS, chainKey, listStarts, listTables, listLinks, listAllTables, listChoices, listDynamicTables, numericPaths, tablesForChoices, explainChoices, tablesFor, runTable };
   if (isNode) module.exports = api;
   else root.exportTdbTableQuery = api;
 })(typeof window !== `undefined` ? window : globalThis);

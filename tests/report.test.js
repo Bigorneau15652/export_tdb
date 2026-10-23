@@ -41,3 +41,10 @@ test(`the report copes with nothing found`, () => {
   assert.match(text, /Table: unknown/);
   assert.match(text, /Selected row id: none/);
 });
+
+test(`the loading line says whether the manual order column came with the table`, () => {
+  const text = buildReport({ version: `x`, reveal: false, linked: `Sites`, record: 1, events: 1, tables: [], descendants: [], shapes: [], timings: [{ table: `Sites`, rows: 2, columns: 3, ms: 5, manualSort: true }, { table: `Rooms`, rows: 6, columns: 9, ms: 7, manualSort: false }, { table: `Old`, rows: 1, columns: 1, ms: 1 }], tests: [] });
+  assert.match(text, /Sites: 2 rows, 3 columns, 5 ms, manual order column present/);
+  assert.match(text, /Rooms: 6 rows, 9 columns, 7 ms, manual order column absent/);
+  assert.match(text, /Old: 1 rows, 1 columns, 1 ms\n/);
+});

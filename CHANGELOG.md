@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.5.3
+
+- Table block, simpler settings, following the first trials in Grist.
+  - New menu "Kind of table": Dynamic (the table follows the selected row) or Fixed (the whole table, whatever the selected row). The menu that links the rows to the selected row only appears for a dynamic table. The old "Rows to keep" with its "All the rows" choice is replaced by this.
+  - The menu "List or Grouped" is gone: a table is grouped as soon as an item is chosen, and a list otherwise. "Group by" is now "Item", and the second grouping ("Then by") is removed (columns are added with "Add a column"; a two-level grouping with subtotals will come back later).
+  - For a dynamic table the table menu only offers the table of the selected row, the tables attached to it, the tables of its items (building, site, floor...) and its summary tables, in groups. A fixed table offers every table.
+  - The menu "Linked to the selected row by" offers only the direct links, like the Select by menu of Grist. The advanced links come with the tick box "More choices". A "Learn more" button opens a panel that counts, for the row selected now, how many rows each choice keeps.
+  - In a grouped table each column line starts with the calculation, then the column. A calculation on numbers (sum, average, minimum, maximum) only offers the columns of numbers; counting offers every column, or the number of rows. In a list the column comes first and the function of the total line second.
+  - "Total line" is out of the folded section, which is now called "Filters, sort and decimals".
+- The model keeps its keys: the kind of table (list or grouped) is now worked out from the item, and a fixed table is the link `all`, so tables saved by 0.5.2 stay valid.
+- Tests of the translations (same keys in French and English, every text asked for exists).
+- The explorer report says whether the manual order column of a table comes with its data (needed to follow the order that the user gives to a reference table in Grist).
+
 ## 0.5.2
 
 - Pages by hand. The program no longer adds a page when a new block does not fit and no longer removes an empty page. A new block that does not fit is refused with the message "No room left on the pages: add a page with Add a page, then add the block". The "Add a page" button adds a page at the end, and the new "Remove the last page" button removes it, only when it is empty (otherwise a message asks to move or delete its blocks first; the only page cannot be removed). Moving or deleting a block never changes the number of pages. The only case where pages are added by the program is a change of format or a saved model whose blocks no longer fit: pages are then added so that no block is lost.

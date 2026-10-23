@@ -504,36 +504,99 @@ test(`a table is built from the settings panel`, async () => {
   await addBlock(w, `table`);
   await w.page.dblclick(`.block[data-type="table"]`, { position: { x: 20, y: 20 } });
   assert.equal(await w.page.locator(`#boardTableSettings`).isVisible(), true);
+  assert.equal(await w.page.locator(`#boardKind`).inputValue(), `dynamic`);
+  assert.equal(await w.page.locator(`#boardLinkRow`).isVisible(), true);
   assert.equal(await w.page.locator(`#boardTable`).inputValue(), ``);
   assert.match(await w.page.locator(`.block[data-type="table"]`).innerText(), /table|Table/);
   await w.page.selectOption(`#boardTable`, `Rooms`);
   await w.page.selectOption(`#boardLink`, `|Rooms.Site`);
   await w.page.click(`#boardAddColumn`);
-  await w.page.selectOption(`.colrow .colPath`, `Number`);
+  await w.page.selectOption(`.colrow:nth-child(1) .colPath`, `Number`);
   await w.page.click(`#boardAddColumn`);
   await w.page.selectOption(`.colrow:nth-child(2) .colPath`, `Area`);
   await w.page.selectOption(`.colrow:nth-child(2) .colFn`, `sum`);
-  await w.page.click(`#boardMore summary`);
   await w.page.check(`#boardTotal`);
   await w.page.waitForFunction(() => document.querySelectorAll(`.block[data-type="table"] .dt tr`).length > 1);
   const rows = await w.page.$$eval(`.block[data-type="table"] .dt tr`, (list) => list.map((row) => [...row.children].map((cell) => cell.textContent)));
   assert.deepEqual(rows[rows.length - 1], [`Total`, `75,75`]);
   assert.match(await w.page.locator(`#boardTableInfo`).innerText(), /4/);
-  await w.page.selectOption(`#boardMode`, `group`);
+  assert.equal(await w.page.locator(`#boardMode`).count(), 0);
+  assert.equal(await w.page.locator(`#boardGroup2`).count(), 0);
   await w.page.selectOption(`#boardGroup1`, `Usage`);
   await w.page.waitForFunction(() => /Classroom/.test(document.querySelector(`.block[data-type="table"]`).textContent));
+  assert.equal((await model(w.page)).blocks[0].config.mode, `group`);
+  assert.deepEqual(w.errors, []);
+});
+
+test(`a fixed table keeps the whole table, shows no link menu and lists every table`, async () => {
+  const config = { table: `Rooms`, link: `Rooms.Site`, columns: [{ path: `Number` }, { path: `Area`, fn: `sum` }], total: true };
+  const w = await openWithRow({ savedOptions: tableModel(config) }, 1);
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 20, y: 30 } });
+  await w.page.selectOption(`#boardKind`, `fixed`);
+  assert.equal(await w.page.locator(`#boardLinkRow`).isHidden(), true);
+  assert.equal((await model(w.page)).blocks[0].config.link, `all`);
+  await w.page.waitForFunction(() => document.querySelectorAll(`.block[data-id="tb1"] .dt tr`).length === 8);
+  const rows = await cells(w.page);
+  assert.deepEqual(rows[rows.length - 1], [`Total`, `120,75`]);
+  const tables = await w.page.$$eval(`#boardTable option`, (list) => list.map((o) => o.value));
+  assert.ok(tables.includes(`Notes`) && tables.includes(`Contacts`));
+  await w.page.selectOption(`#boardKind`, `dynamic`);
+  assert.equal(await w.page.locator(`#boardLinkRow`).isVisible(), true);
+  assert.equal((await model(w.page)).blocks[0].config.link, ``);
+  assert.deepEqual(w.errors, []);
+});
+
+test(`a dynamic table only offers the tables of the selected row and the other tables only in fixed mode`, async () => {
+  const w = await openWithRow({ savedOptions: tableModel({}) }, 1);
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 20, y: 30 } });
+  const tables = await w.page.$$eval(`#boardTable option`, (list) => list.map((o) => o.value));
+  assert.ok(tables.includes(`Rooms`) && tables.includes(`Buildings`) && tables.includes(`Sites`));
+  assert.ok(!tables.includes(`Notes`) && !tables.includes(`Contacts`));
+  const groups = await w.page.$$eval(`#boardTable optgroup`, (list) => list.map((g) => g.label));
+  assert.ok(groups.length >= 1);
+  await w.page.selectOption(`#boardTable`, `Rooms`);
+  await w.page.selectOption(`#boardKind`, `fixed`);
+  await w.page.selectOption(`#boardKind`, `dynamic`);
+  assert.equal(await w.page.locator(`#boardTable`).inputValue(), `Rooms`);
+  assert.deepEqual(w.errors, []);
+});
+
+test(`the item makes a grouped table and the calculation decides which columns are offered`, async () => {
+  const config = { table: `Rooms`, link: `Rooms.Site`, columns: [{ path: `Number` }, { path: `Area` }] };
+  const w = await openWithRow({ savedOptions: tableModel(config) }, 1);
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 20, y: 30 } });
+  assert.equal((await model(w.page)).blocks[0].config.mode, `list`);
+  const listColumns = await w.page.$$eval(`.colrow:nth-child(1) .colPath option`, (list) => list.map((o) => o.value));
+  assert.ok(listColumns.includes(`Number`) && listColumns.includes(`Building`));
+  await w.page.selectOption(`#boardGroup1`, `Usage`);
+  const saved = (await model(w.page)).blocks[0].config;
+  assert.equal(saved.mode, `group`);
+  assert.deepEqual(saved.columns.map((c) => [c.path, c.fn]), [[`Number`, `count`], [`Area`, `sum`]]);
+  const sumColumns = await w.page.$$eval(`.colrow:nth-child(2) .colPath option`, (list) => list.map((o) => o.value));
+  assert.ok(sumColumns.includes(`Area`) && sumColumns.includes(`Seats`) && sumColumns.includes(`Building.Year`));
+  assert.ok(!sumColumns.includes(`Number`) && !sumColumns.includes(`Building`) && !sumColumns.includes(`Building.Name`));
+  await w.page.selectOption(`.colrow:nth-child(2) .colFn`, `count`);
+  const countColumns = await w.page.$$eval(`.colrow:nth-child(2) .colPath option`, (list) => list.map((o) => o.value));
+  assert.ok(countColumns.includes(`Number`) && countColumns.includes(`Building`));
+  await w.page.selectOption(`.colrow:nth-child(1) .colFn`, `sum`);
+  assert.equal((await model(w.page)).blocks[0].config.columns[0].path, ``);
+  await w.page.selectOption(`#boardGroup1`, ``);
+  assert.equal((await model(w.page)).blocks[0].config.mode, `list`);
   assert.deepEqual(w.errors, []);
 });
 
 test(`column lines can be moved and removed and a filter keeps the right rows`, async () => {
-  const config = { mode: `list`, table: `Rooms`, link: `Rooms.Site`, columns: [{ path: `Number` }, { path: `Area` }] };
+  const config = { table: `Rooms`, link: `Rooms.Site`, columns: [{ path: `Number` }, { path: `Area` }] };
   const w = await openWithRow({ savedOptions: tableModel(config) }, 1);
   await edit(w);
   await w.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 20, y: 30 } });
-  await w.page.click(`.colrow:nth-child(1) button[title]:nth-of-type(2)`);
+  await w.page.click(`.colrow:nth-child(1) .tools button:nth-of-type(2)`);
   const order = (await model(w.page)).blocks[0].config.columns.map((c) => c.path);
   assert.deepEqual(order, [`Area`, `Number`]);
-  await w.page.click(`.colrow:nth-child(1) button[title]:nth-of-type(3)`);
+  await w.page.click(`.colrow:nth-child(1) .tools button:nth-of-type(3)`);
   assert.deepEqual((await model(w.page)).blocks[0].config.columns.map((c) => c.path), [`Number`]);
   await w.page.click(`#boardMore summary`);
   await w.page.selectOption(`#boardFilter1 select >> nth=0`, `Area`);
@@ -542,6 +605,34 @@ test(`column lines can be moved and removed and a filter keeps the right rows`, 
   const saved = (await model(w.page)).blocks[0].config.filters;
   assert.deepEqual(saved, [{ path: `Area`, op: `gt`, value: { kind: `const`, value: 10 } }]);
   assert.equal((await cells(w.page)).length, 4);
+  assert.deepEqual(w.errors, []);
+});
+
+test(`the Learn more panel counts the rows kept by each choice for the selected row`, async () => {
+  const config = { table: `Floors`, link: `` };
+  const w = await openWithRow({ linked: `Rooms`, savedOptions: tableModel(config) }, 1);
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 20, y: 30 } });
+  assert.equal(await w.page.locator(`#boardExplain`).isHidden(), true);
+  await w.page.click(`#boardExplainButton`);
+  await w.page.waitForFunction(() => /Floors.Building/.test(document.getElementById(`boardExplain`).textContent) && !/cannot be counted|pas encore/.test(document.getElementById(`boardExplain`).textContent));
+  const text = await w.page.locator(`#boardExplain`).innerText();
+  assert.match(text, /4 (rows?|ligne)/);
+  assert.match(text, /2 (row|ligne)/);
+  assert.match(text, /1 (row|ligne)/);
+  assert.equal(await w.page.getAttribute(`#boardExplainButton`, `aria-expanded`), `true`);
+  await w.page.click(`#boardExplainButton`);
+  assert.equal(await w.page.locator(`#boardExplain`).isHidden(), true);
+  assert.deepEqual(w.errors, []);
+});
+
+test(`the advanced links stay hidden until More choices is ticked`, async () => {
+  const w = await openWithRow({ linked: `Rooms`, savedOptions: tableModel({ table: `Floors`, link: `` }) }, 1);
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 20, y: 30 } });
+  assert.equal(await w.page.locator(`#boardLink optgroup`).count(), 0);
+  await w.page.check(`#boardMoreLinks`);
+  assert.equal(await w.page.locator(`#boardLink optgroup`).count(), 1);
   assert.deepEqual(w.errors, []);
 });
 
@@ -554,23 +645,17 @@ test(`the table settings fit a 340 pixel dark panel without overflow and the tab
   assert.equal(await w.page.locator(`#boardTable`).inputValue(), `Rooms`);
 });
 
-test(`the table menu lists every table and the rows menu says in a sentence which rows are kept`, async () => {
+test(`the rows menu says in a short sentence which rows are kept and keeps the advanced links apart`, async () => {
   const w = await openWithRow({ linked: `Rooms`, savedOptions: { model: { version: 1, page: { format: `screen`, orientation: `landscape`, margin: 10 }, pages: 1, blocks: [{ id: `tb1`, type: `table`, title: ``, page: 0, x: 0, y: 0, w: 40, h: 14, config: {} }] } } }, 1);
   await edit(w);
   await w.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 20, y: 20 } });
-  const tables = await w.page.$$eval(`#boardTable option`, (list) => list.map((o) => o.value));
-  assert.ok(tables.includes(`Floors`) && tables.includes(`Buildings`) && tables.includes(`Rooms`) && tables.includes(`Sites`));
-  assert.ok(tables.indexOf(`Rooms_summary_Usage`) > tables.indexOf(`Sites`));
   await w.page.selectOption(`#boardTable`, `Floors`);
   const rows = await w.page.$$eval(`#boardLink option`, (list) => list.map((o) => [o.value, o.textContent]));
   const building = rows.find(([value]) => value === `Building|Floors.Building`);
   assert.ok(building, JSON.stringify(rows));
   assert.match(building[1], /Same Building as the selected row|Même Building que la ligne sélectionnée/);
+  assert.ok(!rows.some(([value]) => value === `|all`));
   assert.ok(rows.length < 8, `the menu must stay short: ${rows.length}`);
-  const values = rows.map(([value]) => value);
-  assert.ok(values.indexOf(`|all`) > values.indexOf(`Building|Floors.Building`));
-  assert.ok(values.indexOf(`|all`) < values.indexOf(`Site|Floors.Building>Buildings.Site`));
-  assert.deepEqual(await w.page.$$eval(`#boardLink optgroup`, (list) => list.map((g) => g.label)).then((labels) => labels.length), 1);
   await w.page.selectOption(`#boardLink`, `Building|Floors.Building`);
   assert.match(await w.page.locator(`#boardLinkInfo`).innerText(), /Floors\.Building/);
   await w.page.click(`.block[data-id="tb1"]`);

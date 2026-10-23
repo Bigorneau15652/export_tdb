@@ -64,16 +64,18 @@
     return filter;
   }
 
-  // The settings of a table block cleaned.
+  // The settings of a table block cleaned. The kind of table is not chosen: it is `group` when an item to
+  // group by is chosen and `list` otherwise.
   function cleanTable(raw) {
     const sort = raw.sort && typeof raw.sort === `object` ? raw.sort : {};
     const list = (value, max) => (Array.isArray(value) ? value.slice(0, max) : []);
+    const groupBy = list(raw.groupBy, MAX_GROUPS).map((path) => matching(path, PATH_PATTERN));
     return {
-      mode: oneOf(raw.mode, TABLE_MODES),
+      mode: groupBy.some(Boolean) ? `group` : `list`,
       start: matching(raw.start, PATH_PATTERN),
       table: matching(raw.table, COLUMN_PATTERN),
       link: raw.link === `self` || raw.link === `all` ? raw.link : matching(raw.link, LINK_PATTERN),
-      groupBy: list(raw.groupBy, MAX_GROUPS).map((path) => matching(path, PATH_PATTERN)),
+      groupBy,
       merge: raw.merge === true,
       columns: list(raw.columns, MAX_COLUMNS).filter((item) => item && typeof item === `object`).map((item) => ({
         path: matching(item.path, PATH_PATTERN),
