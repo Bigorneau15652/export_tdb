@@ -1162,3 +1162,15 @@ test(`the PDF keeps one sheet per page when the print dialog imposes margins of 
   assert.equal((pdf.match(/\/Type\s*\/Page[^s]/g) || []).length, 2);
   await popup.close();
 });
+
+test(`a new named value starts with the type of the previous one`, async () => {
+  const fieldValue = { name: `seats`, kind: `field`, path: `Seats`, unit: ``, decimals: -1 };
+  const w = await openWithRow({ linked: `Rooms`, savedOptions: VALUES_MODEL([fieldValue], []) }, 1);
+  await edit(w);
+  await w.page.click(`#boardValuesButton`);
+  await w.page.click(`#boardValuesAdd`);
+  assert.equal(await w.page.locator(`.valueCard`).count(), 2);
+  assert.equal(await w.page.locator(`.valueCard:nth-child(2) .valueKind`).inputValue(), `field`);
+  assert.equal((await model(w.page)).values[1].kind, `field`);
+  assert.deepEqual(w.errors, []);
+});

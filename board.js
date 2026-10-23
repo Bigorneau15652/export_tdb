@@ -1920,7 +1920,7 @@
     render();
   });
   el.valuesAdd.addEventListener(`click`, () => {
-    if (model.values.length < Model.MAX_VALUES) commit(Model.setValues(model, [...model.values, { name: ``, kind: `calc` }]));
+    if (model.values.length < Model.MAX_VALUES) commit(Model.setValues(model, [...model.values, { name: ``, kind: model.values.length ? model.values[model.values.length - 1].kind : `calc` }]));
   });
   el.confirmYes.addEventListener(`click`, confirmDelete);
   el.confirmNo.addEventListener(`click`, cancelDelete);

@@ -3,7 +3,8 @@
 ## 0.9.1
 
 - Printing: a blank sheet was inserted after every page when the print dialog of the browser kept margins of its own (for example the choice "Minimum" in "Margins"): the page of the dashboard, a little taller than the printable area, spilled onto a second sheet. In print the page now follows the printable area (`100vw` by `100vh`), so there is exactly one sheet per page whatever the margins chosen; when the margins are at zero, as the dashboard asks, the page is the full sheet as before. The message of the print window also tells to set "Margins" to "Default" or "None".
-- Tests: the PDF of the print window keeps one sheet per page when the dialog imposes margins.
+- Named values: "Add a value" now gives the new value the same type as the previous one (for example "Column of the selected row") instead of always "Calculation on a table", so the same fields are asked. The type stays editable at the top right of the card. The first value still starts as a calculation.
+- Tests: the PDF of the print window keeps one sheet per page when the dialog imposes margins, and the type of a new named value.
 
 ## 0.9.0
 
