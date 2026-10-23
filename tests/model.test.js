@@ -219,7 +219,7 @@ test(`the settings of a text block are cleaned and the other types have none`, (
   assert.deepEqual(M.findBlock(model, `t1`).config, { source: `cell`, text: `hello`, column: `Notes`, size: `large`, align: `justify`, fill: `green` });
   assert.deepEqual(M.findBlock(model, `t2`).config, { source: `fixed`, text: ``, column: ``, size: `normal`, align: `left`, fill: `none` });
   assert.deepEqual(M.findBlock(model, `t3`).config, { source: `fixed`, text: ``, column: ``, size: `normal`, align: `left`, fill: `none` });
-  assert.deepEqual(M.findBlock(model, `c1`).config, {});
+  assert.deepEqual(M.findBlock(model, `c1`).config, { path: ``, rank: 1, caption: `` });
   const long = M.cleanConfig(`text`, { text: `x`.repeat(9000) });
   assert.equal(long.text.length, M.MAX_FIXED_TEXT);
 });
@@ -231,7 +231,7 @@ test(`changing the settings keeps the others, and a new type starts with default
   model = M.updateBlock(model, id, { config: { size: `small` } });
   assert.deepEqual(M.findBlock(model, id).config, { source: `fixed`, text: `Bonjour {Name}`, column: ``, size: `small`, align: `center`, fill: `none` });
   model = M.updateBlock(model, id, { type: `image` });
-  assert.deepEqual(M.findBlock(model, id).config, {});
+  assert.deepEqual(M.findBlock(model, id).config, { path: ``, rank: 1, caption: `` });
   model = M.updateBlock(model, id, { type: `text` });
   assert.equal(M.findBlock(model, id).config.text, ``);
 });
@@ -368,4 +368,11 @@ test(`the settings of a chart block are the settings of a table block and the se
   assert.deepEqual(M.CHART_PALETTES, options.PALETTE_KEYS);
   assert.deepEqual(M.CHART_LEGENDS, options.LEGENDS);
   assert.deepEqual(M.CHART_LABELS, options.LABELS);
+});
+
+test(`the settings of an image block are cleaned`, () => {
+  assert.deepEqual(M.cleanConfig(`image`, { path: `Site.Photo`, rank: 3, caption: `Cap {Name}`, extra: 1 }), { path: `Site.Photo`, rank: 3, caption: `Cap {Name}` });
+  assert.deepEqual(M.cleanConfig(`image`, { path: `bad name`, rank: 0, caption: 5 }), { path: ``, rank: 1, caption: `` });
+  assert.equal(M.cleanConfig(`image`, { rank: 21 }).rank, 1);
+  assert.equal(M.cleanConfig(`image`, { caption: `x`.repeat(500) }).caption.length, M.MAX_NOTE);
 });

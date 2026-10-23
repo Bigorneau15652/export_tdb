@@ -99,6 +99,7 @@ async function openExplorer(browser, baseUrl, options = {}) {
     if (route.request().url().includes(`/attachments/12/`)) return route.fulfill({ status: 404, body: `missing` });
     return route.fulfill({ body: PIXEL, contentType: `image/gif` });
   });
+  await page.route(`https://cloud.example.org/**`, (route) => route.fulfill({ body: PIXEL, contentType: `image/gif` }));
   await page.goto(`${baseUrl}/index.html`);
   await page.waitForFunction(() => typeof window.__onRecord === `function`);
   if (options.tab !== `board`) await page.click(`#tabExplorer`);

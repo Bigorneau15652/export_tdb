@@ -50,5 +50,20 @@
     }
   }
 
-  window.exportTdbAccess = { onModel, saveModel, fetchTable, writeCell };
+  // The short-lived read-only token that Grist gives for the attachments, kept until it is about to expire.
+  let attachmentToken = null;
+  const TOKEN_MARGIN_MS = 10000;
+
+  // The address from which a picture element can load the attachment `id`. Resolves to a text, or rejects when Grist
+  // gives no token.
+  async function attachmentAddress(id) {
+    const now = Date.now();
+    if (!attachmentToken || attachmentToken.expires - now < TOKEN_MARGIN_MS) {
+      const info = await grist.docApi.getAccessToken({ readOnly: true });
+      attachmentToken = { baseUrl: info.baseUrl, token: info.token, expires: now + (info.ttlMsecs || 60000) };
+    }
+    return `${attachmentToken.baseUrl}/attachments/${id}/download?auth=${attachmentToken.token}`;
+  }
+
+  window.exportTdbAccess = { onModel, saveModel, fetchTable, writeCell, attachmentAddress };
 })();

@@ -39,6 +39,25 @@
     return out;
   }
 
+  // The columns that can hold a picture: attachment columns and text columns, the own ones of the table and,
+  // for each reference column, the ones of the table it points to (`Reference.Column`). Returns [{ path, label, kind }]
+  // with `kind` `attachments` or `text`.
+  function imageChoices(schema, tableId) {
+    const table = schema.tables.get(tableId);
+    const out = [];
+    if (!table) return out;
+    const kindOf = (column) => (column.kind === `attachments` ? `attachments` : column.kind === `plain` && column.base === `Text` ? `text` : ``);
+    for (const column of table.columns) {
+      if (kindOf(column)) out.push({ path: column.id, label: column.id, kind: kindOf(column) });
+      if (column.kind === `ref` && schema.tables.has(column.target)) {
+        for (const inner of schema.tables.get(column.target).columns) {
+          if (kindOf(inner)) out.push({ path: `${column.id}.${inner.id}`, label: `${column.id} > ${inner.id}`, kind: kindOf(inner) });
+        }
+      }
+    }
+    return out;
+  }
+
   // The choices of `fieldChoices` in the order of the menus: first the own columns of the table in
   // alphabetical order, then the columns of the linked tables (`Reference > Column`), also in
   // alphabetical order. Numbers inside names are compared as numbers.
@@ -173,7 +192,7 @@
     return { nodes: walk(nodes), problems };
   }
 
-  const api = { extractFields, fieldChoices, sortChoices, tablesForPaths, formatValue, resolveField, resolveFieldFull, expandFields };
+  const api = { extractFields, fieldChoices, imageChoices, sortChoices, tablesForPaths, formatValue, resolveField, resolveFieldFull, expandFields };
   if (isNode) module.exports = api;
   else root.exportTdbFields = api;
 })(typeof window !== `undefined` ? window : globalThis);

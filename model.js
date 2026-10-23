@@ -40,6 +40,7 @@
   const INDICATOR_COLORS = [`none`, `green`, `orange`, `red`, `blue`, `grey`];
   const MAX_RULES = 4;
   const MAX_NOTE = 200;
+  const MAX_IMAGE_RANK = 20;
   const VALUE_KINDS = [`calc`, `field`, `expr`];
   const NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]{0,39}$/;
   const MAX_UNIT = 12;
@@ -149,6 +150,16 @@
     };
   }
 
+  // The settings of an image block cleaned: the column that holds the picture (a path, possibly through a
+  // reference), the rank of the picture in the cell (1 is the first) and a short caption with fields.
+  function cleanImage(raw) {
+    return {
+      path: matching(raw.path, PATH_PATTERN),
+      rank: Number.isInteger(raw.rank) && raw.rank >= 1 && raw.rank <= MAX_IMAGE_RANK ? raw.rank : 1,
+      caption: typeof raw.caption === `string` ? raw.caption.slice(0, MAX_NOTE) : ``
+    };
+  }
+
   // The settings of an indicator block cleaned: the named value that it shows, a short note under it, the size of
   // the text, the default colour and up to four rules (`ge` or `le` a limit gives a colour; the first rule met wins).
   function cleanIndicator(raw) {
@@ -199,6 +210,7 @@
     if (type === `record`) return cleanRecord(source);
     if (type === `chart`) return cleanChart(source);
     if (type === `indicator`) return cleanIndicator(source);
+    if (type === `image`) return cleanImage(source);
     if (type !== `text`) return {};
     return {
       source: oneOf(source.source, TEXT_SOURCES),
@@ -396,7 +408,7 @@
     return reflow({ ...model, page: cleanPage({ ...model.page, ...changes }) });
   }
 
-  const api = { FORMAT_VERSION, MAX_BLOCKS, MAX_TITLE, MAX_FIXED_TEXT, MAX_COLUMNS, MAX_FILTERS, MAX_GROUPS, TABLE_MODES, SLICES, FUNCTIONS, OPERATORS, SORT_BYS, TYPES, MAX_RECORD_ITEMS, RECORD_COLUMNS, MAX_VALUES, CHART_TYPES, CHART_PALETTES, CHART_LEGENDS, CHART_LABELS, INDICATOR_COLORS, MAX_RULES, MAX_NOTE, VALUE_KINDS, NAME_PATTERN, cleanValues, setValues, TEXT_SOURCES, TEXT_SIZES, TEXT_ALIGNS, FILLS, DEFAULT_SIZES, emptyModel, cleanConfig, validateModel, reflow, findBlock, addBlock, compactPages, updateBlock, moveBlock, resizeBlock, deleteBlock, setPage };
+  const api = { FORMAT_VERSION, MAX_BLOCKS, MAX_TITLE, MAX_FIXED_TEXT, MAX_COLUMNS, MAX_FILTERS, MAX_GROUPS, TABLE_MODES, SLICES, FUNCTIONS, OPERATORS, SORT_BYS, TYPES, MAX_RECORD_ITEMS, RECORD_COLUMNS, MAX_VALUES, CHART_TYPES, CHART_PALETTES, CHART_LEGENDS, CHART_LABELS, INDICATOR_COLORS, MAX_RULES, MAX_NOTE, MAX_IMAGE_RANK, VALUE_KINDS, NAME_PATTERN, cleanValues, setValues, TEXT_SOURCES, TEXT_SIZES, TEXT_ALIGNS, FILLS, DEFAULT_SIZES, emptyModel, cleanConfig, validateModel, reflow, findBlock, addBlock, compactPages, updateBlock, moveBlock, resizeBlock, deleteBlock, setPage };
   if (typeof module !== `undefined` && module.exports) module.exports = api;
   else root.exportTdbModel = api;
 })(typeof window !== `undefined` ? window : globalThis);
