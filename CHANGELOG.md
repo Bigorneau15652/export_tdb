@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.2
+
+- The button "Named values" moves next to the button "Done" at the top of the dashboard (it was at the end of the line of the tools, out of sight on a narrow screen). It shows only in the editing mode.
+- Test: the button is on the line of the Done button and hidden in the reading mode.
+
 ## 0.6.1
 
 - Named values. A new button "Named values" in the tools of the dashboard opens, in the settings panel, the editor of the values of the whole dashboard (up to 40). A named value is a figure calculated once and reused. Three kinds:
