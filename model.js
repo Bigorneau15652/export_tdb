@@ -151,12 +151,13 @@
   }
 
   // The settings of an image block cleaned: the column that holds the picture (a path, possibly through a
-  // reference), the rank of the picture in the cell (1 is the first) and a short caption with fields.
+  // reference), the rank of the picture in the cell (1 is the first) and the column whose value is the caption (a path;
+  // the key keeps its name `caption` from version 0.8.0, when it held a text: such a text is not a path and is dropped).
   function cleanImage(raw) {
     return {
       path: matching(raw.path, PATH_PATTERN),
       rank: Number.isInteger(raw.rank) && raw.rank >= 1 && raw.rank <= MAX_IMAGE_RANK ? raw.rank : 1,
-      caption: typeof raw.caption === `string` ? raw.caption.slice(0, MAX_NOTE) : ``
+      caption: matching(raw.caption, PATH_PATTERN)
     };
   }
 

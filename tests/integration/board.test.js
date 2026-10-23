@@ -1032,13 +1032,13 @@ test(`a chart needs an item, and a cross table gives one series per column`, asy
 
 const imageModel = (config, extra = {}) => ({ model: { version: 1, page: { format: `screen`, orientation: `landscape`, margin: 10 }, pages: 1, blocks: [{ id: `im1`, type: `image`, title: `Photo`, page: 0, x: 0, y: 0, w: 30, h: 20, config, ...extra }] } });
 
-test(`an attachment is shown through the token of Grist, fills the frame and has a caption with fields`, async () => {
-  const w = await openWithRow({ linked: `Buildings`, savedOptions: imageModel({ path: `Photo`, rank: 1, caption: `Photo of {Name}` }) }, 1);
+test(`an attachment is shown through the token of Grist, fills the frame and has the caption of a column`, async () => {
+  const w = await openWithRow({ linked: `Buildings`, savedOptions: imageModel({ path: `Photo`, rank: 1, caption: `Name` }) }, 1);
   await w.page.waitForFunction(() => { const img = document.querySelector(`.block[data-id="im1"] img`); return img && img.complete && img.naturalWidth > 0; });
   const src = await w.page.locator(`.block[data-id="im1"] img`).getAttribute(`src`);
   assert.match(src, /\/attachments\/11\/download\?auth=/);
   assert.equal(await w.page.locator(`.block[data-id="im1"] img`).evaluate((img) => getComputedStyle(img).objectFit), `cover`);
-  assert.match(await w.page.locator(`.block[data-id="im1"] .imageCaption`).innerText(), /Photo of Building A/);
+  assert.match(await w.page.locator(`.block[data-id="im1"] .imageCaption`).innerText(), /^Building A$/);
   assert.match(await w.page.locator(`.block[data-id="im1"] .imageTitle`).innerText(), /Photo/);
   assert.deepEqual(w.errors, []);
 });
@@ -1065,7 +1065,7 @@ test(`OneDrive links and links that are not https are refused with a message, an
   await w.selectRow(2);
   await edit(w);
   await w.page.dblclick(`.block[data-id="im1"]`, { position: { x: 20, y: 30 } });
-  await w.page.selectOption(`#boardImageRank`, `2`);
+  await w.page.fill(`#boardImageRank`, `2`);
   await w.page.waitForFunction(() => { const img = document.querySelector(`.block[data-id="im1"] img`); return img && img.complete && img.naturalWidth > 0; });
   assert.equal(await w.page.locator(`.block[data-id="im1"] img`).getAttribute(`src`), `https://cloud.example.org/index.php/s/Second/download`);
   assert.deepEqual(w.errors, []);
@@ -1081,9 +1081,10 @@ test(`the settings of an image block choose the column, the rank and the caption
   assert.ok(choices.includes(`Photo`) && choices.includes(`Link`) && choices.includes(`Site.Name`), choices.join(`|`));
   assert.ok(!choices.includes(`Year`));
   await w.page.selectOption(`#boardImageColumn`, `Photo`);
-  await w.page.fill(`#boardImageCaption`, `Caption {Name}`);
+  await w.page.selectOption(`#boardImageCaption`, `Name`);
+  await w.page.fill(`#boardImageRank`, `2`);
   await w.page.waitForFunction(() => document.querySelector(`.block[data-id="im1"] img`));
   const config = (await model(w.page)).blocks[0].config;
-  assert.deepEqual([config.path, config.rank, config.caption], [`Photo`, 1, `Caption {Name}`]);
+  assert.deepEqual([config.path, config.rank, config.caption], [`Photo`, 2, `Name`]);
   assert.deepEqual(w.errors, []);
 });

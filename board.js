@@ -219,7 +219,7 @@
       if (block.type === `indicator`) Fields.extractFields(block.config.note).forEach((path) => paths.add(path));
       if (block.type === `image`) {
         if (block.config.path) paths.add(block.config.path);
-        Fields.extractFields(block.config.caption).forEach((path) => paths.add(path));
+        if (block.config.caption) paths.add(block.config.caption);
       }
       if ((block.type === `table` || block.type === `chart`) && explainOpen && block.id === selectedId && block.config.table) Query.tablesForChoices(state.schema, state.linked, block.config.table).forEach((name) => wanted.add(name));
     }
@@ -541,11 +541,12 @@
     return { state: `picture`, picture };
   }
 
-  // The caption of an image block with its fields replaced.
+  // The caption of an image block: the value of its caption column for the selected row, or an empty text.
   function captionText(block) {
     const state = context();
-    if (!block.config.caption || !state.schema || !state.record) return block.config.caption;
-    return Fields.expandFields([{ type: `text`, value: block.config.caption }], fieldResolver()).nodes[0].value;
+    if (!block.config.caption || !state.schema || !state.record) return ``;
+    const read = Fields.resolveField(currentDataset(), state.schema, state.linked, state.record, block.config.caption, { yes: tr(`wordYes`), no: tr(`wordNo`) });
+    return read.ok ? read.text.trim() : ``;
   }
 
   // Loads a picture in an image element: an attachment through the token of Grist, a link through the addresses to
@@ -621,8 +622,9 @@
     const state = context();
     const choices = state.schema && state.linked && state.schema.tables.has(state.linked) ? Fields.sortChoices(Fields.imageChoices(state.schema, state.linked)) : [];
     setOptions(el.imageColumn, [[``, tr(`boardColumnNone`)], ...choices.map((choice) => [choice.path, choice.label])], config.path);
-    setOptions(el.imageRank, Array.from({ length: Model.MAX_IMAGE_RANK }, (_, index) => [index + 1, String(index + 1)]), config.rank);
-    setValue(el.imageCaption, config.caption);
+    const captionChoices = state.schema && state.linked && state.schema.tables.has(state.linked) ? Fields.sortChoices(Fields.fieldChoices(state.schema, state.linked)) : [];
+    setOptions(el.imageCaption, [[``, tr(`imageNoCaption`)], ...captionChoices.map((choice) => [choice.path, choice.label])], config.caption);
+    setValue(el.imageRank, String(config.rank));
     const status = imageStatus(block);
     const messages = [];
     if (!state.schema) messages.push(tr(`boardTableNotReady`));
@@ -1839,8 +1841,15 @@
   });
   el.recordColumns.addEventListener(`change`, () => changeConfig({ columns: Number(el.recordColumns.value) }));
   el.imageColumn.addEventListener(`change`, () => changeConfig({ path: el.imageColumn.value }));
-  el.imageRank.addEventListener(`change`, () => changeConfig({ rank: Number(el.imageRank.value) }));
-  el.imageCaption.addEventListener(`input`, () => changeConfig({ caption: el.imageCaption.value }));
+  el.imageRank.addEventListener(`input`, () => {
+    const rank = Number(el.imageRank.value);
+    if (Number.isInteger(rank) && rank >= 1 && rank <= Model.MAX_IMAGE_RANK) changeConfig({ rank });
+  });
+  el.imageRank.addEventListener(`change`, () => {
+    const block = selectedBlock();
+    if (block && block.type === `image`) el.imageRank.value = String(block.config.rank);
+  });
+  el.imageCaption.addEventListener(`change`, () => changeConfig({ caption: el.imageCaption.value }));
   el.recordSize.addEventListener(`change`, () => changeConfig({ size: el.recordSize.value }));
   el.merge.addEventListener(`change`, () => changeConfig({ merge: el.merge.checked }));
   el.addColumn.addEventListener(`click`, () => {
