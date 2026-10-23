@@ -484,6 +484,8 @@
       const next = document.createElement(`div`);
       next.className = `block tableBlock continuation`;
       next.dataset.flow = `1`;
+      next.dataset.parent = block.id;
+      if (block.id === selectedId) next.classList.add(`selected`);
       next.style.fontSize = node.style.fontSize;
       next.style.marginLeft = node.style.marginLeft;
       next.style.marginTop = node.style.marginTop;
@@ -1003,7 +1005,7 @@
     selectedId = id;
     panelOpen = Boolean(id) && openPanel;
     if (!panelOpen) explainOpen = false;
-    for (const node of el.canvas.querySelectorAll(`.block`)) node.classList.toggle(`selected`, node.dataset.id === id);
+    for (const node of el.canvas.querySelectorAll(`.block`)) node.classList.toggle(`selected`, (node.dataset.parent || node.dataset.id) === id);
     if (panelOpen) fillPanel();
     const before = el.scroll.clientWidth;
     syncTools();
@@ -1152,6 +1154,10 @@
       return;
     }
     if (event.target.closest(`.pencil`)) return;
+    if (node.dataset.parent) {
+      if (node.dataset.parent !== selectedId) select(node.dataset.parent, panelOpen);
+      return;
+    }
     const id = node.dataset.id;
     if (id !== selectedId) select(id, panelOpen);
     const block = Model.findBlock(model, id);
@@ -1177,7 +1183,7 @@
   el.canvas.addEventListener(`dblclick`, (event) => {
     if (!editing) return;
     const node = event.target.closest(`.block`);
-    if (node) select(node.dataset.id, true);
+    if (node) select(node.dataset.parent || node.dataset.id, true);
   });
 
   // Opens the settings with the pencil.

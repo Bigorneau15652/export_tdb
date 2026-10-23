@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.11
+
+- A double click on the rest of a long table (the blue frames on the following pages) opens the settings of that table, like a double click on its first frame. A simple click selects the table. The frames of the rest still cannot be moved, resized or deleted by themselves: only the first frame is the block.
+- Test: the double click on the rest of a long table.
+
 ## 0.5.10
 
 - Pages are now managed by the program. The buttons "Add a page" and "Remove the last page" are gone.
