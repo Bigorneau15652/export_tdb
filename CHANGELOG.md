@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.5
+
+- Table block, column lines on two rows. First row: the calculation (Somme, Moy, Min, Max, Nb, Nb dif, in a narrow menu), the two decimals buttons (the word auto is gone) and the name of the column. Second row: the column, then the buttons to move it up, down or remove it. The name field is now called Name and takes the room that is left.
+- The Learn more button is gone. The help badge of the menu "Linked to the selected row by" now has a "Learn more" link in its bubble. It opens a floating window that can be moved by its title bar and closed with its cross. The window stays open while the menu is changed and counts again the rows kept by each choice.
+- Totals: "Total line (below)" and the new "Total line (right)" are tick boxes. The line on the right adds a Total column that combines the columns of each line (sum, average, minimum, maximum or count). It is only possible when at least two columns share the same calculation, otherwise the box is greyed. With the line below, the bottom right cell is the overall total.
+- A folded menu "Filters and sort" at the bottom of the table settings holds the Filters and Sort sections with their + and - buttons. It opens by itself when a filter or a sort is set.
+- Tests: total on the right (calculation, list and grouped table), the two-row column lines, the floating window.
+
 ## 0.5.4
 
 - Table block, lighter settings panel, following the trials of 0.5.3.

@@ -511,7 +511,7 @@ test(`a table is built from the settings panel`, async () => {
   await w.page.click(`#boardAddColumn`);
   await w.page.selectOption(`.colrow:nth-child(2) .colPath`, `Area`);
   await w.page.selectOption(`.colrow:nth-child(2) .colFn`, `sum`);
-  await w.page.click(`#boardTotal`);
+  await w.page.check(`#boardTotal`);
   await w.page.waitForFunction(() => document.querySelectorAll(`.block[data-type="table"] .dt tr`).length > 1);
   const rows = await w.page.$$eval(`.block[data-type="table"] .dt tr`, (list) => list.map((row) => [...row.children].map((cell) => cell.textContent)));
   assert.deepEqual(rows[rows.length - 1], [`Total`, `75,75`]);
@@ -589,12 +589,13 @@ test(`column lines can be moved and removed and a filter keeps the right rows`, 
   const w = await openWithRow({ savedOptions: tableModel(config) }, 1);
   await edit(w);
   await w.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 20, y: 30 } });
-  await w.page.click(`.colrow:nth-child(1) .tools button:nth-of-type(4)`);
+  await w.page.click(`.colrow:nth-child(1) .colBottom button:nth-of-type(2)`);
   const order = (await model(w.page)).blocks[0].config.columns.map((c) => c.path);
   assert.deepEqual(order, [`Area`, `Number`]);
-  await w.page.click(`.colrow:nth-child(1) .tools button:nth-of-type(5)`);
+  await w.page.click(`.colrow:nth-child(1) .colBottom button:nth-of-type(3)`);
   assert.deepEqual((await model(w.page)).blocks[0].config.columns.map((c) => c.path), [`Number`]);
   assert.equal(await w.page.locator(`#boardFilterBody`).isHidden(), true);
+  await w.page.click(`#boardMore summary`);
   await w.page.click(`#boardFilterToggle`);
   assert.equal(await w.page.locator(`#boardFilterBody`).isVisible(), true);
   await w.page.selectOption(`#boardFilter1 select >> nth=0`, `Area`);
@@ -612,14 +613,14 @@ test(`the Learn more panel counts the rows kept by each choice for the selected 
   await edit(w);
   await w.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 20, y: 30 } });
   assert.equal(await w.page.locator(`#boardExplain`).isHidden(), true);
-  await w.page.click(`#boardExplainButton`);
+  await w.page.click(`#boardRowsHelp`);
+  await w.page.click(`.helpBubble .helpMore`);
   await w.page.waitForFunction(() => /Floors.Building/.test(document.getElementById(`boardExplain`).textContent) && !/cannot be counted|pas encore/.test(document.getElementById(`boardExplain`).textContent));
   const text = await w.page.locator(`#boardExplain`).innerText();
   assert.match(text, /4 (rows?|ligne)/);
   assert.match(text, /2 (row|ligne)/);
   assert.match(text, /1 (row|ligne)/);
-  assert.equal(await w.page.getAttribute(`#boardExplainButton`, `aria-expanded`), `true`);
-  await w.page.click(`#boardExplainButton`);
+  await w.page.click(`#boardExplainClose`);
   assert.equal(await w.page.locator(`#boardExplain`).isHidden(), true);
   assert.deepEqual(w.errors, []);
 });
@@ -684,5 +685,23 @@ test(`a help badge opens a bubble on click and its cross closes it`, async () =>
   await w.page.click(`#boardPanel .help`);
   await w.page.keyboard.press(`Escape`);
   assert.equal(await w.page.locator(`.helpBubble`).count(), 0);
+  assert.deepEqual(w.errors, []);
+});
+
+test(`the columns have two lines and a total can be added on the right when the calculations match`, async () => {
+  const config = { table: `Rooms`, link: `Rooms.Site`, columns: [{ path: `Area` }, { path: `Area` }] };
+  const w = await openWithRow({ savedOptions: tableModel(config) }, 1);
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 20, y: 30 } });
+  assert.equal(await w.page.locator(`.colrow:nth-child(1) .colTop .colFn`).count(), 1);
+  assert.equal(await w.page.locator(`.colrow:nth-child(1) .colBottom .colPath`).count(), 1);
+  assert.equal(await w.page.locator(`#boardTotalRight`).isDisabled(), true);
+  await w.page.selectOption(`.colrow:nth-child(1) .colFn`, `sum`);
+  await w.page.selectOption(`.colrow:nth-child(2) .colFn`, `sum`);
+  assert.equal(await w.page.locator(`#boardTotalRight`).isDisabled(), false);
+  await w.page.check(`#boardTotalRight`);
+  assert.equal((await model(w.page)).blocks[0].config.totalRight, true);
+  await w.page.click(`.colrow:nth-child(1) .colTop button:nth-of-type(2)`);
+  assert.equal((await model(w.page)).blocks[0].config.columns[0].decimals, 2);
   assert.deepEqual(w.errors, []);
 });

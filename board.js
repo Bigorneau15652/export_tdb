@@ -12,6 +12,7 @@
   const Markdown = window.exportTdbMarkdown;
   const MarkdownView = window.exportTdbMarkdownView;
   const Fields = window.exportTdbFields;
+  const Help = window.exportTdbHelp;
   const Data = window.exportTdbData;
   const { createDataset } = window.exportTdbDataset;
   const { describeStep } = window.exportTdbSchema;
@@ -34,6 +35,7 @@
   const ALIGN_KEYS = { left: `alignLeft`, center: `alignCenter`, justify: `alignJustify` };
   const FILL_KEYS = { none: `fillNone`, grey: `fillGrey`, blue: `fillBlue`, green: `fillGreen`, yellow: `fillYellow`, red: `fillRed` };
   const FN_ORDER = [`sum`, `avg`, `min`, `max`, `count`, `distinct`];
+  const FN_SHORT_KEYS = { sum: `fnSumShort`, avg: `fnAvgShort`, min: `fnMinShort`, max: `fnMaxShort`, count: `fnCountShort`, distinct: `fnDistinctShort` };
   const FN_KEYS = { sum: `fnSum`, avg: `fnAvg`, min: `fnMin`, max: `fnMax`, count: `fnCount`, distinct: `fnDistinct` };
   const QUALITY_KEYS = { summary: `labQualitySummary`, list: `labQualityList` };
   const REASON_KEYS = { choose: `boardTableChoose`, columns: `boardTableColumns`, groups: `boardTableGroups`, start: `boardTableStart`, nostart: `boardTableNoStart`, link: `boardTableLink`, notloaded: `boardTableNotLoaded` };
@@ -51,7 +53,7 @@
     text: $(`boardText`), field: $(`boardField`), size: $(`boardSize`), align: $(`boardAlign`), fill: $(`boardFill`),
     textInfo: $(`boardTextInfo`), cellState: $(`boardCellState`),
     tableBox: $(`boardTableSettings`), kind: $(`boardKind`), tableSel: $(`boardTable`), linkRow: $(`boardLinkRow`), link: $(`boardLink`), rowsHelp: $(`boardRowsHelp`),
-    explainButton: $(`boardExplainButton`), explain: $(`boardExplain`), moreLinks: $(`boardMoreLinks`),
+    explain: $(`boardExplain`), explainBody: $(`boardExplainBody`), explainHead: $(`boardExplainHead`), explainClose: $(`boardExplainClose`), more: $(`boardMore`), totalRight: $(`boardTotalRight`), moreLinks: $(`boardMoreLinks`),
     groupRow: $(`boardGroupRow`), group1: $(`boardGroup1`), merge: $(`boardMerge`),
     columnRows: $(`boardColumnRows`), addColumn: $(`boardAddColumn`), sortBy: $(`boardSortBy`), sortColumn: $(`boardSortColumn`),
     sortDir: $(`boardSortDir`), total: $(`boardTotal`), tableInfo: $(`boardTableInfo`),
@@ -608,8 +610,9 @@
     });
   }
 
-  // Builds the line of one column of the table: in a grouped table the calculation first and then the
-  // column; in a list the column first and then the function of the total line. Then the heading and the buttons.
+  // Builds the two lines of one column of the table. First line: the calculation, the two decimals
+  // buttons and the heading. Second line: the column, then the buttons to move it up or down and to
+  // remove it.
   function buildColumnRow(index, group) {
     const row = document.createElement(`div`);
     row.className = `colrow ${group ? `group` : `list`}`;
@@ -618,10 +621,10 @@
     path.className = `colPath`;
     const fn = document.createElement(`select`);
     fn.className = `colFn`;
-    const tools = document.createElement(`div`);
-    tools.className = `tools`;
-    const decimals = document.createElement(`span`);
-    decimals.className = `colDec`;
+    const top = document.createElement(`div`);
+    top.className = `colTop`;
+    const bottom = document.createElement(`div`);
+    bottom.className = `colBottom`;
     const label = document.createElement(`input`);
     label.type = `text`;
     label.className = `colLabel`;
@@ -667,11 +670,9 @@
       const now = Number.isInteger(current.decimals) ? current.decimals : block.config.decimals;
       edit({ decimals: delta > 0 ? (now < 0 ? 2 : Math.min(4, now + 1)) : (now < 0 ? 0 : Math.max(0, now - 1)) });
     };
-    tools.append(
-      label,
-      button(`\u2190.0`, `boardDecLess`, () => stepDecimals(-1)),
-      decimals,
-      button(`.00\u2192`, `boardDecMore`, () => stepDecimals(1)),
+    top.append(fn, button(`\u2190.0`, `boardDecLess`, () => stepDecimals(-1)), button(`.00\u2192`, `boardDecMore`, () => stepDecimals(1)), label);
+    bottom.append(
+      path,
       button(`\u2191`, `boardColumnUp`, () => move(-1)),
       button(`\u2193`, `boardColumnDown`, () => move(1)),
       button(`\u00d7`, `boardColumnRemove`, () => {
@@ -679,9 +680,7 @@
         if (block) changeConfig({ columns: block.config.columns.filter((_, at) => at !== index) });
       })
     );
-    if (group) row.append(fn, path, tools);
-    else row.append(path, fn, tools);
-    tools.style.gridColumn = `1 / 3`;
+    row.append(top, bottom);
     return row;
   }
 
@@ -697,7 +696,7 @@
       config.columns.forEach((_, index) => el.columnRows.appendChild(buildColumnRow(index, group)));
     }
     const numeric = numericOf(block);
-    const all = FN_ORDER.map((name) => [name, tr(FN_KEYS[name])]);
+    const all = FN_ORDER.map((name) => [name, tr(FN_SHORT_KEYS[name])]);
     config.columns.forEach((column, index) => {
       const row = el.columnRows.children[index];
       if (!row) return;
@@ -707,11 +706,9 @@
       const first = group && fn === `count` ? tr(`boardCountRows`) : tr(`boardColumnNone`);
       setOptions(row.querySelector(`.colPath`), [[``, first], ...available.map((choice) => [choice.path, choice.label])], column.path);
       const isNumber = column.path && numeric.has(column.path);
-      const functions = group ? all : [[``, tr(`fnNoTotal`)], ...all.filter(([name]) => isNumber || !NUMERIC_FUNCTIONS.includes(name))];
+      const functions = group ? all : [[``, tr(`fnNoneShort`)], ...all.filter(([name]) => isNumber || !NUMERIC_FUNCTIONS.includes(name))];
       setOptions(row.querySelector(`.colFn`), functions, fn);
       setValue(row.querySelector(`.colLabel`), column.label);
-      const shown = Number.isInteger(column.decimals) ? column.decimals : block.config.decimals;
-      row.querySelector(`.colDec`).textContent = shown < 0 ? tr(`boardDecAuto`) : String(shown);
     });
   }
 
@@ -733,7 +730,7 @@
   function renderExplain(block) {
     const state = context();
     const config = block.config;
-    el.explain.textContent = ``;
+    el.explainBody.textContent = ``;
     if (!config.table || !state.record) return;
     const dataset = currentDataset();
     const lines = Query.explainChoices(state.schema, dataset, state.linked, state.record, config.table).filter((line) => line.choice.kind !== `all`);
@@ -750,14 +747,14 @@
     }
     const outro = document.createElement(`p`);
     outro.textContent = tr(`boardExplainFixed`);
-    el.explain.append(intro, list, outro);
+    el.explainBody.append(intro, list, outro);
   }
 
   // Fills the settings of a table block and the messages about its content.
   function fillTableSettings(block) {
     const config = block.config;
     const state = context();
-    const controls = [el.kind, el.tableSel, el.link, el.group1, el.merge, el.addColumn, el.sortBy, el.sortColumn, el.sortDir, el.total, el.filterToggle, el.sortToggle, el.moreLinks, el.explainButton];
+    const controls = [el.kind, el.tableSel, el.link, el.group1, el.merge, el.addColumn, el.sortBy, el.sortColumn, el.sortDir, el.total, el.totalRight, el.filterToggle, el.sortToggle, el.moreLinks];
     controls.forEach((control) => { control.disabled = !state.schema; });
     if (!state.schema) {
       el.tableInfo.textContent = tr(`boardTableNotReady`);
@@ -787,9 +784,10 @@
       const rowsTip = tr(`tipBoardRows`) + (chosen ? ` ${tr(`boardCurrentChoice`, { detail: choiceDetail(chosen) })}` : ``);
       el.rowsHelp.dataset.tip = rowsTip;
       el.rowsHelp.setAttribute(`aria-label`, rowsTip);
-      el.explainButton.setAttribute(`aria-expanded`, String(explainOpen));
       el.explain.hidden = !explainOpen || !config.table;
       if (explainOpen && config.table) renderExplain(block);
+    } else {
+      el.explain.hidden = true;
     }
     el.groupRow.hidden = config.mode !== `group`;
     setOptions(el.group1, columnItems, config.groupBy[0] || ``);
@@ -804,9 +802,14 @@
     const sortOpen = sectionOpen.sort || sortActive(config);
     setToggle(el.filterToggle, el.filterBody, filtersOpen);
     setToggle(el.sortToggle, el.sortBody, sortOpen);
-    el.total.textContent = config.total ? `\u2212` : `+`;
-    el.total.setAttribute(`aria-pressed`, String(config.total));
-    el.total.setAttribute(`aria-label`, tr(config.total ? `boardTotalRemove` : `boardTotalAdd`));
+    el.total.checked = config.total;
+    const rightFn = Query.rightTotalFn(config);
+    el.totalRight.disabled = !rightFn;
+    el.totalRight.checked = config.totalRight && Boolean(rightFn);
+    if (el.more.dataset.block !== block.id) {
+      el.more.dataset.block = block.id;
+      el.more.open = filtersOpen || sortOpen;
+    }
     renderColumnRows(block, choices);
     renderFilters(block, choices, Fields.fieldChoices(schema, start.table));
     const messages = [];
@@ -842,9 +845,11 @@
     if (id !== selectedId) {
       sectionOpen.filters = false;
       sectionOpen.sort = false;
+      explainOpen = false;
     }
     selectedId = id;
     panelOpen = Boolean(id) && openPanel;
+    if (!panelOpen) explainOpen = false;
     for (const node of el.canvas.querySelectorAll(`.block`)) node.classList.toggle(`selected`, node.dataset.id === id);
     if (panelOpen) fillPanel();
     const before = el.scroll.clientWidth;
@@ -1169,9 +1174,31 @@
     changeConfig(start === block.config.start ? { start, link } : { start, link, filters: [] });
   });
   el.moreLinks.addEventListener(`change`, () => render({ keepFocus: true }));
-  el.explainButton.addEventListener(`click`, () => {
-    explainOpen = !explainOpen;
+  Help.setMore(el.rowsHelp, () => {
+    explainOpen = true;
     render({ keepFocus: true });
+  });
+  el.explainClose.addEventListener(`click`, () => {
+    explainOpen = false;
+    render({ keepFocus: true });
+  });
+  el.explainHead.addEventListener(`pointerdown`, (event) => {
+    if (event.target === el.explainClose) return;
+    const box = el.explain.getBoundingClientRect();
+    const dx = event.clientX - box.left;
+    const dy = event.clientY - box.top;
+    el.explainHead.setPointerCapture(event.pointerId);
+    const move = (next) => {
+      el.explain.style.left = `${Math.max(0, Math.min(next.clientX - dx, window.innerWidth - 60))}px`;
+      el.explain.style.top = `${Math.max(0, Math.min(next.clientY - dy, window.innerHeight - 40))}px`;
+      el.explain.style.right = `auto`;
+    };
+    const stop = () => {
+      el.explainHead.removeEventListener(`pointermove`, move);
+      el.explainHead.removeEventListener(`pointerup`, stop);
+    };
+    el.explainHead.addEventListener(`pointermove`, move);
+    el.explainHead.addEventListener(`pointerup`, stop);
   });
   el.group1.addEventListener(`change`, () => {
     const block = selectedBlock();
@@ -1188,10 +1215,8 @@
   el.sortBy.addEventListener(`change`, changeSort);
   el.sortColumn.addEventListener(`change`, changeSort);
   el.sortDir.addEventListener(`change`, changeSort);
-  el.total.addEventListener(`click`, () => {
-    const block = selectedBlock();
-    if (block) changeConfig({ total: !block.config.total });
-  });
+  el.total.addEventListener(`change`, () => changeConfig({ total: el.total.checked }));
+  el.totalRight.addEventListener(`change`, () => changeConfig({ totalRight: el.totalRight.checked }));
   el.filterToggle.addEventListener(`click`, () => {
     const block = selectedBlock();
     if (!block) return;

@@ -15,6 +15,7 @@
     return badge;
   }
 
+  const moreActions = new WeakMap();
   let bubble = null;
   let owner = null;
 
@@ -46,6 +47,17 @@
     cross.setAttribute(`aria-label`, t(`helpClose`));
     cross.addEventListener(`click`, () => close(true));
     bubble.append(text, cross);
+    if (moreActions.has(badge)) {
+      const more = document.createElement(`button`);
+      more.type = `button`;
+      more.className = `helpMore`;
+      more.textContent = t(`boardLearnMore`);
+      more.addEventListener(`click`, () => {
+        close(false);
+        moreActions.get(badge)();
+      });
+      bubble.append(document.createElement(`br`), more);
+    }
     document.body.appendChild(bubble);
     const box = badge.getBoundingClientRect();
     const width = bubble.offsetWidth;
@@ -71,5 +83,10 @@
     }
   });
 
-  window.exportTdbHelp = { make };
+  // Gives a badge a link "Learn more" in its bubble that runs `action`.
+  function setMore(badge, action) {
+    moreActions.set(badge, action);
+  }
+
+  window.exportTdbHelp = { make, setMore };
 })();

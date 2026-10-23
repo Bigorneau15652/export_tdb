@@ -227,3 +227,27 @@ test(`a column can impose its own decimals, otherwise the table decimals apply`,
   const result = run(`Sites`, 1, { decimals: 1, table: `Rooms`, link: `Rooms.Site`, columns: [{ path: `Area`, decimals: 2 }, { path: `Area` }, { path: `Area`, decimals: -1 }] });
   assert.deepEqual(result.rows[0], [`20,50`, `20,5`, `20,5`]);
 });
+
+test(`a total on the right adds the columns of a line when they share the same calculation`, () => {
+  const base = { mode: `group`, table: `Rooms`, link: `Rooms.Site`, total: true, totalRight: true, groupBy: [`Usage`], columns: [{ path: `Area`, fn: `sum` }, { path: `Area`, fn: `sum` }] };
+  const result = run(`Sites`, 1, base);
+  assert.equal(result.headers.length, 4);
+  assert.equal(result.headers[3].text, `Total`);
+  for (const row of result.rows) {
+    const number = (text) => Number(text.replace(/\s/g, ``).replace(`,`, `.`));
+    assert.ok(Math.abs(number(row[3]) - (number(row[1]) + number(row[2]))) < 0.011);
+  }
+  assert.equal(result.total.length, 4);
+  const mixed = run(`Sites`, 1, { ...base, columns: [{ path: `Area`, fn: `sum` }, { path: `Area`, fn: `avg` }] });
+  assert.equal(mixed.headers.length, 3);
+  assert.equal(Q.rightTotalFn({ ...base, columns: [{ path: `Area`, fn: `distinct` }, { path: `Area`, fn: `distinct` }] }), ``);
+  assert.equal(Q.rightTotalFn({ ...base, columns: [{ path: `Area`, fn: `sum` }] }), ``);
+  assert.equal(Q.rightTotalFn(base), `sum`);
+});
+
+test(`a total on the right in a list uses the columns that have a calculation`, () => {
+  const result = run(`Sites`, 1, { table: `Rooms`, link: `Rooms.Site`, total: true, totalRight: true, columns: [{ path: `Number` }, { path: `Area`, fn: `sum` }, { path: `Area`, fn: `sum` }] });
+  assert.equal(result.headers.length, 4);
+  assert.equal(result.rows[0].length, 4);
+  assert.equal(result.total.length, 4);
+});
