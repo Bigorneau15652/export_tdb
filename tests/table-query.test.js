@@ -333,3 +333,15 @@ test(`a cross table needs a calculation and both items, and counts rows when ask
   assert.equal(counts.ok, true);
   assert.deepEqual(counts.rows[2], [`Office`, `2`, ``]);
 });
+
+test(`a grouped table and a cross table give the numbers for a chart`, () => {
+  const grouped = run(`Sites`, 1, { ...GROUPED, columns: [{ path: `Area`, fn: `sum` }, { fn: `count` }] });
+  assert.deepEqual(grouped.chart.categories, [`(empty)`, `Classroom`, `Office`]);
+  assert.equal(grouped.chart.series.length, 2);
+  assert.deepEqual(grouped.chart.series[0].values, [8.25, 35, 32.5]);
+  assert.equal(grouped.chart.series[0].name, grouped.headers[1].text);
+  const cross = run(`Sites`, 1, { ...CROSS });
+  assert.deepEqual(cross.chart.categories, [`(empty)`, `Classroom`, `Office`]);
+  assert.deepEqual(cross.chart.series.map((s) => s.name), [`Ground`, `Level 1`]);
+  assert.deepEqual(cross.chart.series[0].values, [8.25, null, 32.5]);
+});

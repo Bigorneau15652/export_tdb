@@ -980,3 +980,52 @@ test(`choosing an item in columns on a table without calculation adds the calcul
   assert.match(await w.page.locator(`#boardColumnsLabel`).innerText(), /Calcul des cases|Calculation of the cells/);
   assert.deepEqual(w.errors, []);
 });
+
+const chartModel = (config, extra = {}) => ({ model: { version: 1, page: { format: `screen`, orientation: `landscape`, margin: 10 }, pages: 1, blocks: [{ id: `ch1`, type: `chart`, title: `Surfaces`, page: 0, x: 0, y: 0, w: 40, h: 20, config, ...extra }] } });
+const CHART_CONFIG = { table: `Rooms`, link: `Rooms.Site`, groupBy: [`Usage`], columns: [{ path: `Area`, fn: `sum` }] };
+
+test(`a chart is drawn in SVG inside the strict policy of the page`, async () => {
+  const w = await openWithRow({ savedOptions: chartModel({ ...CHART_CONFIG, chart: `bar`, labels: `values` }) }, 1);
+  await w.page.waitForFunction(() => document.querySelector(`.block[data-id="ch1"] .chartPlot svg`));
+  assert.equal(await w.page.locator(`.block[data-id="ch1"] .chartPlot svg`).count(), 1);
+  assert.ok((await w.page.locator(`.block[data-id="ch1"] svg path`).count()) >= 3);
+  const texts = await w.page.$$eval(`.block[data-id="ch1"] svg text`, (list) => list.map((node) => node.textContent));
+  assert.ok(texts.includes(`Classroom`) && texts.includes(`Office`), texts.join(`|`));
+  assert.match(await w.page.locator(`.block[data-id="ch1"] .chartTitle`).innerText(), /Surfaces/);
+  assert.deepEqual(w.errors, []);
+});
+
+test(`the settings of a chart choose the type, the palette, the legend and the labels`, async () => {
+  const w = await openWithRow({ savedOptions: chartModel({ ...CHART_CONFIG }) }, 1);
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="ch1"]`, { position: { x: 20, y: 10 } });
+  assert.equal(await w.page.locator(`#boardChartSettings`).isVisible(), true);
+  assert.equal(await w.page.locator(`#boardTableSettings`).isVisible(), true);
+  assert.equal(await w.page.locator(`#boardTotal`).isHidden(), true);
+  assert.equal(await w.page.locator(`#boardSlice`).isHidden(), true);
+  assert.match(await w.page.locator(`#boardTableHeading`).innerText(), /graphique|chart/i);
+  await w.page.selectOption(`#boardChartType`, `donut`);
+  await w.page.selectOption(`#boardChartPalette`, `froide`);
+  await w.page.selectOption(`#boardChartLegend`, `right`);
+  await w.page.selectOption(`#boardChartLabels`, `percent`);
+  const config = (await model(w.page)).blocks[0].config;
+  assert.deepEqual([config.chart, config.palette, config.legend, config.labels], [`donut`, `froide`, `right`, `percent`]);
+  await w.page.waitForFunction(() => document.querySelector(`.block[data-id="ch1"] .chartPlot svg`));
+  const fills = await w.page.$$eval(`.block[data-id="ch1"] svg path`, (list) => list.map((node) => node.getAttribute(`fill`)));
+  assert.ok(fills.some((fill) => /#0b3d66/i.test(fill || ``)), fills.join(`|`));
+  assert.deepEqual(w.errors, []);
+});
+
+test(`a chart needs an item, and a cross table gives one series per column`, async () => {
+  const w = await openWithRow({ savedOptions: chartModel({ table: `Rooms`, link: `Rooms.Site`, columns: [{ path: `Area`, fn: `sum` }] }) }, 1);
+  await edit(w);
+  assert.match(await w.page.locator(`.block[data-id="ch1"] .tableHint`).innerText(), /item|Item/);
+  await w.page.dblclick(`.block[data-id="ch1"]`, { position: { x: 20, y: 10 } });
+  await w.page.selectOption(`#boardGroup1`, `Usage`);
+  await w.page.selectOption(`#boardColItem`, `Floor`);
+  await w.page.waitForFunction(() => document.querySelector(`.block[data-id="ch1"] .chartPlot svg`));
+  await w.page.selectOption(`#boardChartType`, `stack`);
+  const texts = await w.page.$$eval(`.block[data-id="ch1"] svg text`, (list) => list.map((node) => node.textContent));
+  assert.ok(texts.includes(`Ground`) && texts.includes(`Level 1`), texts.join(`|`));
+  assert.deepEqual(w.errors, []);
+});
