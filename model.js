@@ -26,7 +26,9 @@
   const TABLE_MODES = [`list`, `group`];
   const FUNCTIONS = [`sum`, `avg`, `min`, `max`, `count`, `distinct`];
   const OPERATORS = [`eq`, `ne`, `gt`, `ge`, `lt`, `le`, `contains`, `empty`, `notEmpty`, `true`, `false`];
-  const SORT_BYS = [`none`, `key`, `value`, `column`];
+  const SORT_BYS = [`none`, `key`, `value`, `column`, `ref`, `manual`];
+  const MAX_ORDER = 300;
+  const MAX_ORDER_LABEL = 120;
   const MAX_COLUMNS = 12;
   const MAX_FILTERS = 3;
   const MAX_GROUPS = 2;
@@ -64,6 +66,16 @@
     return filter;
   }
 
+  // The imposed order of the labels of the groups cleaned: texts, without duplicates, within the limits.
+  function cleanOrder(raw) {
+    if (!Array.isArray(raw)) return [];
+    const out = [];
+    for (const item of raw) {
+      if (typeof item === `string` && item.length <= MAX_ORDER_LABEL && !out.includes(item) && out.length < MAX_ORDER) out.push(item);
+    }
+    return out;
+  }
+
   // The settings of a table block cleaned. The kind of table is not chosen: it is `group` when an item to
   // group by is chosen and `list` otherwise.
   function cleanTable(raw) {
@@ -84,7 +96,7 @@
         ...(Number.isInteger(item.decimals) && item.decimals >= -1 && item.decimals <= 4 ? { decimals: item.decimals } : {})
       })),
       filters: list(raw.filters, MAX_FILTERS).map(cleanFilter).filter(Boolean),
-      sort: { by: oneOf(sort.by, SORT_BYS), column: matching(sort.column, PATH_PATTERN), dir: sort.dir === `desc` ? `desc` : `asc` },
+      sort: { by: oneOf(sort.by, SORT_BYS), column: matching(sort.column, PATH_PATTERN), dir: sort.dir === `desc` ? `desc` : `asc`, order: cleanOrder(sort.order) },
       total: raw.total === true,
       totalRight: raw.totalRight === true,
       decimals: Number.isInteger(raw.decimals) && raw.decimals >= 0 && raw.decimals <= 4 ? raw.decimals : -1

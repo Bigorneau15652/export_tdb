@@ -228,7 +228,7 @@ test(`the settings of a table block are cleaned`, () => {
   assert.deepEqual(config.filters[0], { path: `Area`, op: `gt`, value: { kind: `const`, value: 10 } });
   assert.deepEqual(config.filters[1].value, { kind: `field`, path: `B.C` });
   assert.equal(config.link, `Rooms.Site>Sites.Parent`);
-  assert.deepEqual(config.sort, { by: `value`, column: `Area`, dir: `desc` });
+  assert.deepEqual(config.sort, { by: `value`, column: `Area`, dir: `desc`, order: [] });
   assert.equal(config.decimals, 2);
   assert.equal(M.cleanConfig(`table`, { link: `<x>` }).link, ``);
   assert.equal(M.cleanConfig(`table`, { link: `all` }).link, `all`);
@@ -294,4 +294,13 @@ test(`random sequences of changes always leave a valid model`, () => {
 test(`the decimals of a column are kept only between automatic (-1) and 4`, () => {
   const columns = M.cleanConfig(`table`, { columns: [{ path: `A`, decimals: 3 }, { path: `B`, decimals: -1 }, { path: `C`, decimals: 9 }, { path: `D`, decimals: `2` }, { path: `E` }] }).columns;
   assert.deepEqual(columns.map((column) => column.decimals), [3, -1, undefined, undefined, undefined]);
+});
+
+test(`the imposed order of the labels keeps texts without duplicates and the new sort kinds are accepted`, () => {
+  const sort = M.cleanConfig(`table`, { sort: { by: `manual`, order: [`RDC`, `R+1`, `RDC`, 3, `x`.repeat(500), `TT`] } }).sort;
+  assert.equal(sort.by, `manual`);
+  assert.deepEqual(sort.order, [`RDC`, `R+1`, `TT`]);
+  assert.equal(M.cleanConfig(`table`, { sort: { by: `ref` } }).sort.by, `ref`);
+  assert.equal(M.cleanConfig(`table`, { sort: { by: `nothing` } }).sort.by, M.cleanConfig(`table`, {}).sort.by);
+  assert.deepEqual(M.cleanConfig(`table`, { sort: { order: `x` } }).sort.order, []);
 });

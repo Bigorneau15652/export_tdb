@@ -57,7 +57,7 @@
     groupRow: $(`boardGroupRow`), group1: $(`boardGroup1`), merge: $(`boardMerge`),
     columnRows: $(`boardColumnRows`), addColumn: $(`boardAddColumn`), sortBy: $(`boardSortBy`), sortColumn: $(`boardSortColumn`),
     sortDir: $(`boardSortDir`), total: $(`boardTotal`), tableInfo: $(`boardTableInfo`),
-    filterToggle: $(`boardFilterToggle`), filterBody: $(`boardFilterBody`), sortToggle: $(`boardSortToggle`), sortBody: $(`boardSortBody`)
+    filterToggle: $(`boardFilterToggle`), filterBody: $(`boardFilterBody`), sortToggle: $(`boardSortToggle`), sortBody: $(`boardSortBody`), sortOrderBox: $(`boardSortOrderBox`), sortOrder: $(`boardSortOrder`)
   };
   const filterBoxes = [$(`boardFilter1`), $(`boardFilter2`), $(`boardFilter3`)];
 
@@ -712,6 +712,45 @@
     });
   }
 
+  // Shows the list of the labels of the groups in the order that the table uses, with the buttons that
+  // move a label up or down. The labels that the user ordered stay in the list even when the rows now
+  // shown do not have them (they are marked and can be removed).
+  function renderSortOrder(config, present) {
+    const saved = config.sort.order;
+    const list = [...saved, ...present.filter((label) => !present.length || !saved.includes(label))];
+    const signature = JSON.stringify([list, present]);
+    if (el.sortOrder.dataset.signature === signature) return;
+    el.sortOrder.dataset.signature = signature;
+    el.sortOrder.textContent = ``;
+    const save = (order) => changeConfig({ sort: { ...config.sort, order } });
+    const move = (index, delta) => {
+      const target = index + delta;
+      if (target < 0 || target >= list.length) return;
+      const order = list.slice();
+      [order[index], order[target]] = [order[target], order[index]];
+      save(order);
+    };
+    list.forEach((label, index) => {
+      const item = document.createElement(`li`);
+      const name = document.createElement(`span`);
+      name.className = `orderName`;
+      const absent = present.length > 0 && !present.includes(label);
+      name.textContent = absent ? `${label} ${tr(`sortAbsent`)}` : label;
+      item.appendChild(name);
+      const button = (text, key, action) => {
+        const control = document.createElement(`button`);
+        control.type = `button`;
+        control.textContent = text;
+        control.setAttribute(`aria-label`, `${tr(key)} : ${label}`);
+        control.addEventListener(`click`, action);
+        return control;
+      };
+      item.append(button(`\u2191`, `boardColumnUp`, () => move(index, -1)), button(`\u2193`, `boardColumnDown`, () => move(index, 1)));
+      if (absent) item.appendChild(button(`\u00d7`, `boardColumnRemove`, () => save(list.filter((_, at) => at !== index))));
+      el.sortOrder.appendChild(item);
+    });
+  }
+
   // Builds the three filters of the table block, only when the starting row or the table changes.
   function renderFilters(block, choices, startChoices) {
     const key = `${block.id}|${block.config.start}|${block.config.table}`;
@@ -792,12 +831,21 @@
     el.groupRow.hidden = config.mode !== `group`;
     setOptions(el.group1, columnItems, config.groupBy[0] || ``);
     el.merge.checked = config.merge;
-    const sortItems = config.mode === `list` ? [[`none`, tr(`sortNone`)], [`column`, tr(`sortByColumn`)]] : [[`key`, tr(`sortByKey`)], [`value`, tr(`sortByValue`)]];
+    const result = tableResult(block);
+    const firstItem = config.groupBy.find(Boolean);
+    const itemColumn = firstItem ? schema.tables.get(config.table).columns.find((column) => column.id === firstItem.split(`.`)[0]) : null;
+    const byRef = Boolean(itemColumn) && itemColumn.kind === `ref`;
+    const sortItems = config.mode === `list`
+      ? [[`none`, tr(`sortNone`)], [`column`, tr(`sortByColumn`)]]
+      : [[`key`, tr(`sortByKey`)], [`value`, tr(`sortByValue`)], ...(byRef ? [[`ref`, tr(`sortByRef`)]] : []), [`manual`, tr(`sortByManual`)]];
     const sortBy = sortItems.some(([value]) => value === config.sort.by) ? config.sort.by : sortItems[0][0];
     setOptions(el.sortBy, sortItems, sortBy);
     el.sortColumn.hidden = !(config.mode === `list` && sortBy === `column`);
     setOptions(el.sortColumn, [[``, tr(`sortChoose`)], ...choices.map((choice) => [choice.path, choice.label])], config.sort.column);
     setOptions(el.sortDir, [[`asc`, tr(`sortAsc`)], [`desc`, tr(`sortDesc`)]], config.sort.dir);
+    el.sortDir.parentElement.hidden = sortBy === `manual`;
+    el.sortOrderBox.hidden = !(config.mode === `group` && sortBy === `manual`);
+    if (!el.sortOrderBox.hidden) renderSortOrder(config, result.ok && config.mode === `group` ? result.rows.map((row) => row[0]) : []);
     const filtersOpen = sectionOpen.filters || config.filters.length > 0;
     const sortOpen = sectionOpen.sort || sortActive(config);
     setToggle(el.filterToggle, el.filterBody, filtersOpen);
@@ -813,7 +861,6 @@
     renderColumnRows(block, choices);
     renderFilters(block, choices, Fields.fieldChoices(schema, start.table));
     const messages = [];
-    const result = tableResult(block);
     if (result.ok) {
       messages.push(tr(`boardTableCounts`, { kept: result.kept, total: result.scanned }));
       result.warnings.forEach((reason) => messages.push(tr(`boardTableFilterIgnored`, { reason })));
@@ -1151,7 +1198,7 @@
 
 
   // The settings of the table block that depend on the table are cleared when the table changes.
-  const tableReset = (fixed) => ({ start: ``, link: fixed ? `all` : ``, columns: [], groupBy: [], filters: [], sort: { by: `none`, column: ``, dir: `asc` } });
+  const tableReset = (fixed) => ({ start: ``, link: fixed ? `all` : ``, columns: [], groupBy: [], filters: [], sort: { by: `none`, column: ``, dir: `asc`, order: [] } });
   el.kind.addEventListener(`change`, () => {
     const block = selectedBlock();
     const state = context();
@@ -1211,7 +1258,10 @@
     const block = selectedBlock();
     if (block && block.config.columns.length < Model.MAX_COLUMNS) changeConfig({ columns: [...block.config.columns, { path: ``, fn: block.config.mode === `group` ? `sum` : ``, label: `` }] });
   });
-  const changeSort = () => changeConfig({ sort: { by: el.sortBy.value, column: el.sortColumn.value, dir: el.sortDir.value } });
+  const changeSort = () => {
+    const block = selectedBlock();
+    if (block) changeConfig({ sort: { ...block.config.sort, by: el.sortBy.value, column: el.sortColumn.value, dir: el.sortDir.value } });
+  };
   el.sortBy.addEventListener(`change`, changeSort);
   el.sortColumn.addEventListener(`change`, changeSort);
   el.sortDir.addEventListener(`change`, changeSort);
@@ -1234,7 +1284,7 @@
     if (!block) return;
     const open = sectionOpen.sort || sortActive(block.config);
     sectionOpen.sort = !open;
-    if (open) changeConfig({ sort: { by: block.config.mode === `list` ? `none` : `key`, column: ``, dir: `asc` } });
+    if (open) changeConfig({ sort: { by: block.config.mode === `list` ? `none` : `key`, column: ``, dir: `asc`, order: [] } });
     else render({ keepFocus: true });
   });
   el.source.addEventListener(`change`, () => changeConfig({ source: el.source.value }));

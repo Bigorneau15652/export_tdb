@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.7
+
+- Order of the lines of a grouped table, in the Sort section of the "Filters and sort" menu. New choices next to "By label" (alphabetical and numeric order) and "By value":
+  - "Order of the referenced table", offered when the item is a reference column or starts with one (for example the floors). The lines follow the order that you give to that table in Grist, which the widget reads from the manual order column that Grist sends for ordinary tables (without it, the order of the rows). The Direction menu reverses it.
+  - "Manual list": the labels found in the table are listed with arrows to move them up or down. A label that you ranked is remembered even when the rows now shown do not have it (it is marked "missing here" and can be removed with its cross). Labels that are not ranked come after, in alphabetical order.
+- The model keeps the manual order as `sort.order` and accepts the new sort kinds `ref` and `manual`; tables saved by 0.5.6 stay valid.
+- Tests: the two new orders, with and without the manual order column, and the cleaning of the manual list.
+
 ## 0.5.5
 
 - Table block, column lines on two rows. First row: the calculation (Somme, Moy, Min, Max, Nb, Nb dif, in a narrow menu), the two decimals buttons (the word auto is gone) and the name of the column. Second row: the column, then the buttons to move it up, down or remove it. The name field is now called Name and takes the room that is left.

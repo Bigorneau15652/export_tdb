@@ -89,7 +89,8 @@
   // Groups rows by one or two keys and computes the measures of each group.
   //   spec.groupBy: [{ path, bucket, merge }]  (bucket: year or month for a date; merge: one group for equal labels)
   //   spec.measures: [{ fn, path }]      (fn: sum, avg, min, max, count, distinct)
-  //   spec.sort: { by: `key` | `value`, measure: 0, dir: `asc` | `desc`, order: [labels...] }
+  //   spec.sort: { by: `key` | `value` | `ref`, measure: 0, dir: `asc` | `desc`, order: [labels...], rankOf: (row) => number | null }
+  //   (`ref` sorts the groups by the smallest rank that `rankOf` gives to their rows)
   //   spec.top: { count, otherLabel }    (keeps the best groups, the others become one group)
   //   spec.emptyLabel: label of the group of rows with an empty key
   // Returns { rows: [{ keys, values, count }], totals: [value per measure over all rows], count } or { error }.
@@ -108,9 +109,15 @@
       if (!buckets.has(id)) buckets.set(id, { keys: parts.map((p) => p.label), rows: [] });
       buckets.get(id).rows.push(row);
     }
+    const rankOf = spec.sort && spec.sort.by === `ref` && typeof spec.sort.rankOf === `function` ? spec.sort.rankOf : null;
+    const rankOfGroup = (rows) => Math.min(Infinity, ...rows.map((row) => {
+      const rank = rankOf(row);
+      return rank === null || rank === undefined ? Infinity : rank;
+    }));
     let result = [...buckets.entries()].map(([id, bucket]) => ({
       id,
       keys: bucket.keys, count: bucket.rows.length,
+      ...(rankOf ? { rank: rankOfGroup(bucket.rows) } : {}),
       values: (spec.measures || []).map((m, i) => measureRows(dataset, measures.list[i], m, bucket.rows))
     }));
     result = sortGroups(result, spec.sort);
@@ -130,6 +137,10 @@
         return index < 0 ? options.order.length : index;
       };
       return out.sort((a, b) => rank(a.keys[0]) - rank(b.keys[0]) || compareLabels(a.keys.join(` `), b.keys.join(` `)));
+    }
+    if (options.by === `ref`) {
+      const compare = (a, b) => (a.rank === b.rank ? 0 : a.rank < b.rank ? -1 : 1);
+      return out.sort((a, b) => sign * compare(a, b) || compareLabels(a.keys.join(` `), b.keys.join(` `)));
     }
     if (options.by === `value`) {
       const at = options.measure || 0;
