@@ -81,7 +81,7 @@ test(`too many blocks are cut with a warning`, () => {
   assertValid(model);
 });
 
-test(`a new block takes the first free place and is refused when no page has room`, () => {
+test(`a new block takes the first free place and a page is added when no page has room`, () => {
   let model = M.emptyModel();
   const first = M.addBlock(model, `text`);
   model = first.model;
@@ -89,22 +89,29 @@ test(`a new block takes the first free place and is refused when no page has roo
   const second = M.addBlock(model, `text`);
   assert.deepEqual([second.model.blocks[1].x, second.model.blocks[1].y], [model.blocks[0].w, 0]);
   model = second.model;
-  let refused = null;
-  for (let i = 0; i < 30 && !refused; i += 1) {
+  let added = null;
+  for (let i = 0; i < 30 && !added; i += 1) {
     const result = M.addBlock(model, `table`);
-    if (!result.id) refused = result;
-    else model = result.model;
+    assert.ok(result.id);
+    if (result.model.pages > model.pages) added = result;
+    model = result.model;
   }
-  assert.ok(refused, `the page never got full`);
-  assert.equal(refused.reason, `full`);
-  assert.equal(refused.model, model);
-  assert.equal(model.pages, 1);
+  assert.ok(added, `no page was added`);
+  assert.equal(M.findBlock(added.model, added.id).page, 1);
+  assert.equal(added.model.pages, 2);
   assertValid(model);
-  const withPage = M.addPage(model);
-  const placed = M.addBlock(withPage, `table`);
-  assert.ok(placed.id);
-  assert.equal(M.findBlock(placed.model, placed.id).page, 1);
-  assert.equal(placed.model.pages, 2);
+});
+
+test(`no block can be added once the pages and the blocks are at their limit`, () => {
+  let model = M.emptyModel();
+  let last = null;
+  for (let i = 0; i < M.MAX_BLOCKS + 5 && (!last || last.id); i += 1) {
+    last = M.addBlock(model, `table`);
+    if (last.id) model = last.model;
+  }
+  assert.ok(model.pages <= 40 && model.blocks.length <= M.MAX_BLOCKS);
+  assert.ok([`full`, `limit`].includes(last.reason));
+  assertValid(model);
 });
 
 test(`an unknown type adds nothing`, () => {
@@ -114,32 +121,54 @@ test(`an unknown type adds nothing`, () => {
   assert.equal(result.reason, `type`);
 });
 
-test(`pages are added and removed by hand only, and only an empty last page can be removed`, () => {
-  let model = M.addPage(M.addPage(M.emptyModel()));
-  assert.equal(model.pages, 3);
-  const added = M.addBlock(model, `text`);
-  model = M.deleteBlock(added.model, added.id);
-  assert.equal(model.pages, 3);
-  assert.deepEqual(M.deleteBlock(M.emptyModel(), `nothing`).blocks, []);
-  let removed = M.removeLastPage(model);
-  assert.equal(removed.reason, ``);
-  assert.equal(removed.model.pages, 2);
-  removed = M.removeLastPage(removed.model);
-  assert.equal(removed.model.pages, 1);
-  assert.equal(M.removeLastPage(removed.model).reason, `only`);
-  assert.equal(M.removeLastPage(removed.model).model.pages, 1);
-  const withBlock = M.addBlock(M.addPage(M.emptyModel()), `text`);
-  const moved = M.moveBlock(withBlock.model, withBlock.id, { page: 1, x: 0, y: 0 });
-  assert.equal(M.findBlock(moved, withBlock.id).page, 1);
-  const refused = M.removeLastPage(moved);
-  assert.equal(refused.reason, `notempty`);
-  assert.equal(refused.model, moved);
+test(`a page without block is removed, the next pages move up and one page always stays`, () => {
+  let model = M.emptyModel();
+  const a = M.addBlock(model, `table`);
+  const b = M.addBlock(a.model, `table`);
+  const c = M.addBlock(b.model, `table`);
+  model = c.model;
+  assert.ok(model.pages >= 2);
+  const pageOf = (id) => M.findBlock(model, id).page;
+  const high = Math.max(pageOf(a.id), pageOf(b.id), pageOf(c.id));
+  model = M.deleteBlock(model, c.id);
+  model = M.compactPages(model, []);
+  assert.equal(model.pages, new Set([pageOf(a.id), pageOf(b.id)]).size);
+  assert.ok(Math.max(pageOf(a.id), pageOf(b.id)) <= high);
+  const none = M.compactPages(M.deleteBlock(M.deleteBlock(model, a.id), b.id), []);
+  assert.equal(none.pages, 1);
+  assert.deepEqual(M.compactPages(M.emptyModel(), []).pages, 1);
+  const gap = { ...M.emptyModel(), pages: 3, blocks: [{ ...a.model.blocks[0], page: 0 }, { ...a.model.blocks[0], id: `zz`, page: 2 }] };
+  const packed = M.compactPages(gap, []);
+  assert.equal(packed.pages, 2);
+  assert.deepEqual(packed.blocks.map((block) => block.page), [0, 1]);
+  assert.equal(M.compactPages(gap, [1]).pages, 3);
+  assert.equal(M.compactPages(gap, [5]).pages, 2);
+  const same = M.compactPages(a.model, []);
+  assert.equal(same, a.model);
 });
 
-test(`moving a block or deleting one never changes the number of pages`, () => {
-  let model = M.addPage(M.emptyModel());
+test(`a block with no title and no content still keeps its page`, () => {
+  let model = M.emptyModel();
   const a = M.addBlock(model, `text`);
-  model = M.moveBlock(a.model, a.id, { page: 1, x: 2, y: 2 });
+  let spread = { ...a.model, pages: 2, blocks: [...a.model.blocks, { ...a.model.blocks[0], id: `empty1`, page: 1 }] };
+  spread = M.compactPages(spread, []);
+  assert.equal(spread.pages, 2);
+});
+
+test(`a block can be moved to a page after the last one, which then exists`, () => {
+  const a = M.addBlock(M.emptyModel(), `text`);
+  const unchanged = M.moveBlock(a.model, a.id, { page: 1, x: 0, y: 0 });
+  assert.equal(unchanged, a.model);
+  const moved = M.moveBlock(a.model, a.id, { page: 1, x: 0, y: 0 }, 1);
+  assert.equal(M.findBlock(moved, a.id).page, 1);
+  assert.equal(moved.pages, 2);
+  assert.equal(M.moveBlock(a.model, a.id, { page: 3, x: 0, y: 0 }, 1), a.model);
+});
+
+test(`moving a block or deleting one never changes the number of pages by itself`, () => {
+  let model = M.emptyModel();
+  const a = M.addBlock(model, `text`);
+  model = M.moveBlock(a.model, a.id, { page: 1, x: 2, y: 2 }, 1);
   assert.equal(model.pages, 2);
   model = M.moveBlock(model, a.id, { page: 0, x: 0, y: 0 });
   assert.equal(model.pages, 2);
@@ -152,15 +181,13 @@ test(`moving a block towards another block goes to a valid place, and may change
   const b = M.addBlock(a.model, `text`);
   model = M.moveBlock(b.model, b.id, { page: 0, x: 0, y: 0 });
   assertValid(model);
-  model = M.addPage(model);
-  model = M.moveBlock(model, b.id, { page: 1, x: 3, y: 2 });
+  model = M.moveBlock(model, b.id, { page: 1, x: 3, y: 2 }, 1);
   assert.deepEqual([M.findBlock(model, b.id).page, M.findBlock(model, b.id).x, M.findBlock(model, b.id).y], [1, 3, 2]);
   assert.equal(M.moveBlock(model, b.id, { page: 7, x: 0, y: 0 }), model);
 });
 
 test(`changing the format puts the blocks back in place without overlap`, () => {
   let model = M.emptyModel();
-  for (let i = 0; i < 5; i += 1) model = M.addPage(model);
   for (let i = 0; i < 6; i += 1) model = M.addBlock(model, i % 2 ? `chart` : `table`).model;
   assert.equal(model.blocks.length, 6);
   for (const changes of [{ format: `a5`, orientation: `portrait` }, { format: `a3`, orientation: `landscape` }, { format: `square`, margin: 20 }, { format: `screen`, margin: 0 }]) {
@@ -280,10 +307,10 @@ test(`random sequences of changes always leave a valid model`, () => {
       const ids = model.blocks.map((block) => block.id);
       const pick = ids.length ? ids[Math.floor(next() * ids.length)] : `none`;
       if (roll < 0.25) model = M.addBlock(model, M.TYPES[Math.floor(next() * 5)]).model;
-      else if (roll < 0.4) model = M.moveBlock(model, pick, { page: Math.floor(next() * model.pages), x: Math.floor(next() * 60) - 5, y: Math.floor(next() * 40) - 5 });
+      else if (roll < 0.4) model = M.moveBlock(model, pick, { page: Math.floor(next() * (model.pages + 1)), x: Math.floor(next() * 60) - 5, y: Math.floor(next() * 40) - 5 }, model.pages);
       else if (roll < 0.55) model = M.resizeBlock(model, pick, { w: Math.floor(next() * 60), h: Math.floor(next() * 40) }, next() < 0.5);
       else if (roll < 0.65) model = M.deleteBlock(model, pick);
-      else if (roll < 0.72) model = next() < 0.6 ? M.addPage(model) : M.removeLastPage(model).model;
+      else if (roll < 0.72) model = M.compactPages(model, []);
       else if (roll < 0.82) model = M.setPage(model, { format: Object.keys(L.FORMATS)[Math.floor(next() * 5)], orientation: L.ORIENTATIONS[Math.floor(next() * 2)], margin: L.MARGINS[Math.floor(next() * 5)] });
       else model = M.validateModel(JSON.parse(JSON.stringify(model))).model;
       assertValid(model);

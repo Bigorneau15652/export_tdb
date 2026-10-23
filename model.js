@@ -227,33 +227,40 @@
     return model.blocks.find((block) => block.id === id);
   }
 
-  // Adds a block of a type at the first free place of the existing pages. No page is added: when there
-  // is no room the user adds a page. Returns { model, id, reason } (id is null and reason is `full` when
-  // no page has room, `limit` when the number of blocks is reached, `type` for an unknown type).
+  // Adds a block of a type at the first free place of the existing pages. When no page has room, a page is
+  // added for it. Returns { model, id, reason } (id is null and reason is `full` when there is no room
+  // and no page can be added, `limit` when the number of blocks is reached, `type` for an unknown type).
   function addBlock(model, type) {
     if (!TYPES.includes(type)) return { model, id: null, reason: `type` };
     if (model.blocks.length >= MAX_BLOCKS) return { model, id: null, reason: `limit` };
     const grid = gridOf(model.page);
     const size = clampSize(DEFAULT_SIZES[type], grid);
-    const spot = findFreeSpot(model.blocks, size, model.pages, grid);
+    let spot = findFreeSpot(model.blocks, size, model.pages, grid);
+    let pages = model.pages;
+    if (!spot && pages < MAX_PAGES) {
+      spot = { page: pages, x: 0, y: 0 };
+      pages += 1;
+    }
     if (!spot) return { model, id: null, reason: `full` };
     const id = newId(model.blocks);
     const block = { id, type, title: ``, ...spot, ...size, config: cleanConfig(type, {}) };
-    return { model: { ...model, blocks: [...model.blocks, block] }, id, reason: `` };
+    return { model: { ...model, pages, blocks: [...model.blocks, block] }, id, reason: `` };
   }
 
-  // Adds an empty page at the end.
-  function addPage(model) {
-    if (model.pages >= MAX_PAGES) return model;
-    return { ...model, pages: model.pages + 1 };
-  }
-
-  // Removes the last page when it is empty. Returns { model, reason }: the reason is empty when the page
-  // was removed, `only` when it is the only page and `notempty` when it still holds blocks.
-  function removeLastPage(model) {
-    if (model.pages <= 1) return { model, reason: `only` };
-    if (model.blocks.some((block) => block.page === model.pages - 1)) return { model, reason: `notempty` };
-    return { model: { ...model, pages: model.pages - 1 }, reason: `` };
+  // Removes the pages that hold no block, so that no blank page stays: the blocks of the following pages
+  // move up and the pages are numbered again. The pages of the list `keep` (the pages that the rest of a
+  // long table uses) stay even without a block. A model without block keeps one page.
+  function compactPages(model, keep) {
+    const used = new Set(model.blocks.map((block) => block.page));
+    for (const page of keep || []) {
+      if (page >= 0 && page < model.pages) used.add(page);
+    }
+    const sorted = [...used].sort((a, b) => a - b);
+    const pages = Math.max(1, sorted.length);
+    const same = pages === model.pages && sorted.every((page, index) => page === index);
+    if (same) return model;
+    const renumbered = new Map(sorted.map((page, index) => [page, index]));
+    return { ...model, pages, blocks: model.blocks.map((block) => ({ ...block, page: renumbered.get(block.page) })) };
   }
 
   // Changes the title, the type or the settings of a block. A new type starts with default settings.
@@ -270,14 +277,17 @@
     return { ...model, blocks: model.blocks.map((item) => (item.id === id ? next : item)) };
   }
 
-  // Moves a block towards a wanted place { page, x, y }: it goes to the valid place closest to it.
-  // When the wanted page has no room for it, the model is returned unchanged.
-  function moveBlock(model, id, wanted) {
+  // Moves a block towards a wanted place { page, x, y }: it goes to the valid place closest to it. The
+  // wanted page can be a page after the last one, up to `lastPage` (the pages that are drawn, empty ones
+  // included): the pages up to it then exist. When the wanted page has no room for it, the model is
+  // returned unchanged.
+  function moveBlock(model, id, wanted, lastPage) {
     const block = findBlock(model, id);
-    if (!block || wanted.page < 0 || wanted.page >= model.pages) return model;
+    const limit = Math.min(MAX_PAGES - 1, Math.max(model.pages - 1, Number.isInteger(lastPage) ? lastPage : 0));
+    if (!block || wanted.page < 0 || wanted.page > limit) return model;
     const spot = resolveMove(model.blocks, block, wanted, gridOf(model.page));
     if (!spot) return model;
-    return { ...model, blocks: model.blocks.map((item) => (item.id === id ? { ...item, ...spot } : item)) };
+    return { ...model, pages: Math.max(model.pages, spot.page + 1), blocks: model.blocks.map((item) => (item.id === id ? { ...item, ...spot } : item)) };
   }
 
   // Resizes a block towards a wanted size { w, h }: it gets the valid size closest to it.
@@ -288,7 +298,7 @@
     return { ...model, blocks: model.blocks.map((item) => (item.id === id ? { ...item, ...size } : item)) };
   }
 
-  // Removes a block. The pages stay as they are, even when one becomes empty.
+  // Removes a block. A page that becomes empty is removed later by `compactPages`.
   function deleteBlock(model, id) {
     return { ...model, blocks: model.blocks.filter((block) => block.id !== id) };
   }
@@ -298,7 +308,7 @@
     return reflow({ ...model, page: cleanPage({ ...model.page, ...changes }) });
   }
 
-  const api = { FORMAT_VERSION, MAX_BLOCKS, MAX_TITLE, MAX_FIXED_TEXT, MAX_COLUMNS, MAX_FILTERS, MAX_GROUPS, TABLE_MODES, FUNCTIONS, OPERATORS, SORT_BYS, TYPES, TEXT_SOURCES, TEXT_SIZES, TEXT_ALIGNS, FILLS, DEFAULT_SIZES, emptyModel, cleanConfig, validateModel, reflow, findBlock, addBlock, addPage, removeLastPage, updateBlock, moveBlock, resizeBlock, deleteBlock, setPage };
+  const api = { FORMAT_VERSION, MAX_BLOCKS, MAX_TITLE, MAX_FIXED_TEXT, MAX_COLUMNS, MAX_FILTERS, MAX_GROUPS, TABLE_MODES, FUNCTIONS, OPERATORS, SORT_BYS, TYPES, TEXT_SOURCES, TEXT_SIZES, TEXT_ALIGNS, FILLS, DEFAULT_SIZES, emptyModel, cleanConfig, validateModel, reflow, findBlock, addBlock, compactPages, updateBlock, moveBlock, resizeBlock, deleteBlock, setPage };
   if (typeof module !== `undefined` && module.exports) module.exports = api;
   else root.exportTdbModel = api;
 })(typeof window !== `undefined` ? window : globalThis);

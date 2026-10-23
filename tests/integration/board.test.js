@@ -85,31 +85,42 @@ test(`adding blocks places them one after the other and saves the model`, async 
   assert.deepEqual(w.errors, []);
 });
 
-test(`a block that does not fit is refused until a page is added by hand, and the last page is removed only when empty`, async () => {
+test(`pages are added when a block does not fit and removed when they are empty, without any button`, async () => {
   const w = await openBoard();
   await edit(w);
+  assert.equal(await w.page.locator(`#boardAddPage`).count(), 0);
+  assert.equal(await w.page.locator(`#boardRemovePage`).count(), 0);
   for (let i = 0; i < 4; i += 1) await addBlock(w, `table`);
+  assert.ok((await model(w.page)).pages >= 2);
+  const pages = (await model(w.page)).pages;
+  assert.equal(await w.page.locator(`.page`).count(), pages + 1);
+  assert.equal(await w.page.locator(`.page.newPage`).count(), 1);
+  const lastPage = pages - 1;
+  for (let guard = 0; guard < 6; guard += 1) {
+    const onLast = (await model(w.page)).blocks.filter((b) => b.page === lastPage);
+    if (!onLast.length) break;
+    await w.page.click(`.block[data-id="${onLast[0].id}"]`, { position: { x: 20, y: 20 } });
+    await w.page.keyboard.press(`Delete`);
+    await w.page.click(`#boardConfirmYes`);
+  }
+  assert.equal((await model(w.page)).pages, pages - 1);
+  assert.equal(await w.page.locator(`.page`).count(), pages);
+  assert.deepEqual(w.errors, []);
+});
+
+test(`dropping a block on the empty page at the end creates that page`, async () => {
+  const w = await openBoard({ savedOptions: SAVED });
+  await edit(w);
   assert.equal((await model(w.page)).pages, 1);
-  assert.match(await w.page.locator(`#boardNotice`).innerText(), /Plus de place|No room left/);
-  assert.equal(await w.page.locator(`.page`).count(), 1);
-  await w.page.click(`#boardAddPage`);
-  assert.equal(await w.page.locator(`.page`).count(), 2);
-  await addBlock(w, `table`);
-  assert.equal((await model(w.page)).blocks.find((b) => b.page === 1) !== undefined, true);
-  await w.page.click(`#boardRemovePage`);
-  assert.equal((await model(w.page)).pages, 2);
-  assert.match(await w.page.locator(`#boardNotice`).innerText(), /contient des blocs|holds blocks/);
-  const moved = (await model(w.page)).blocks.find((b) => b.page === 1);
-  await w.page.click(`.block[data-id="${moved.id}"]`, { position: { x: 20, y: 20 } });
-  await w.page.keyboard.press(`Delete`);
-  await w.page.click(`#boardConfirmYes`);
-  assert.equal((await model(w.page)).pages, 2);
-  await w.page.click(`#boardRemovePage`);
-  assert.equal((await model(w.page)).pages, 1);
-  assert.equal(await w.page.locator(`.page`).count(), 1);
-  await w.page.click(`#boardRemovePage`);
-  assert.match(await w.page.locator(`#boardNotice`).innerText(), /au moins une page|At least one page/);
-  assert.equal((await model(w.page)).pages, 1);
+  const first = await box(w.page, `.block[data-id="aaa1"]`);
+  const ghost = await box(w.page, `.page.newPage`);
+  await w.page.mouse.move(first.x + 20, first.y + 30);
+  await w.page.mouse.down();
+  await w.page.mouse.move(ghost.x + 80, ghost.y + 80, { steps: 8 });
+  await w.page.mouse.up();
+  const saved = await model(w.page);
+  assert.equal(saved.pages, 2);
+  assert.equal(saved.blocks.find((b) => b.id === `aaa1`).page, 1);
   assert.deepEqual(w.errors, []);
 });
 
@@ -728,7 +739,7 @@ test(`the lines of a grouped table can follow the referenced table or a manual l
   assert.deepEqual(w.errors, []);
 });
 
-test(`a long table continues on the next page with its heading and says when a page is missing`, async () => {
+test(`a long table continues on the next page with its heading, which is drawn even when the model has no such page`, async () => {
   const config = { mode: `list`, table: `Rooms`, link: `Rooms.Site`, columns: [{ path: `Number` }], flow: true };
   const build = (pages) => ({ model: { version: 1, page: { format: `screen`, orientation: `landscape`, margin: 10 }, pages, blocks: [{ id: `tb1`, type: `table`, title: `Surfaces`, page: 0, x: 0, y: 0, w: 30, h: 4, config }] } });
   const w = await openWithRow({ savedOptions: build(2) }, 1);
@@ -739,9 +750,14 @@ test(`a long table continues on the next page with its heading and says when a p
   assert.equal(await w.page.locator(`.page[data-page="1"] .continuation .dt thead th`).first().innerText(), await w.page.locator(`.page[data-page="0"] .dt thead th`).first().innerText());
   assert.deepEqual(w.errors, []);
   const short = await openWithRow({ savedOptions: build(1) }, 1);
-  await short.page.waitForFunction(() => document.querySelectorAll(`.block.tableBlock .dt tbody tr`).length < 4);
+  await short.page.waitForFunction(() => document.querySelectorAll(`.page[data-page="1"] .continuation .dt tbody tr`).length > 0);
+  assert.equal((await model(short.page)).pages, 1);
+  assert.equal(await short.page.locator(`.page`).count(), 2);
+  const frame = await short.page.locator(`.page[data-page="1"] .continuation`).boundingBox();
+  const wholePage = await short.page.locator(`.page[data-page="1"]`).boundingBox();
+  assert.ok(frame.height < wholePage.height / 2, `the frame of the rest takes the height of its rows`);
   await edit(short);
-  await short.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 10, y: 10 } });
-  assert.match(await short.page.locator(`#boardTableInfo`).innerText(), /Ajouter une page|Add a page/);
+  assert.equal(await short.page.locator(`.page.newPage`).count(), 1);
+  assert.equal(await short.page.locator(`.page`).count(), 3);
   assert.deepEqual(short.errors, []);
 });

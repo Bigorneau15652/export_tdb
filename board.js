@@ -45,7 +45,7 @@
   const $ = (id) => document.getElementById(id);
   const el = {
     panel: $(`panelBoard`), notice: $(`boardNotice`), edit: $(`boardEdit`), tools: $(`boardTools`), help: $(`boardHelp`),
-    addType: $(`boardAddType`), add: $(`boardAdd`), addPage: $(`boardAddPage`), removePage: $(`boardRemovePage`), format: $(`boardFormat`),
+    addType: $(`boardAddType`), add: $(`boardAdd`), format: $(`boardFormat`),
     orientation: $(`boardOrientation`), margin: $(`boardMargin`), zoomOut: $(`boardZoomOut`), zoomFit: $(`boardZoomFit`),
     zoomIn: $(`boardZoomIn`), saveState: $(`boardSaveState`), confirm: $(`boardConfirm`), confirmText: $(`boardConfirmText`),
     confirmYes: $(`boardConfirmYes`), confirmNo: $(`boardConfirmNo`), scroll: $(`boardScroll`), canvas: $(`boardCanvas`),
@@ -250,7 +250,7 @@
       render(options);
       return;
     }
-    model = next;
+    model = Model.compactPages(next, flowPages());
     if (selectedId && !Model.findBlock(model, selectedId)) selectedId = null;
     render(options);
     scheduleSave();
@@ -400,14 +400,68 @@
     return node;
   }
 
-  // What the last drawing found about the long tables: for each block, the rows that fit nowhere and the
-  // number of pages that follow its first page and that it uses.
+  // What the last drawing found about the long tables: for each block, the rows that fit nowhere, the
+  // number of pages that follow its first page and that it uses, and the list of these pages.
   const flowInfo = new Map();
 
+  // The pages that the rest of long tables uses, from the last drawing: they stay even without a block.
+  function flowPages() {
+    const pages = new Set();
+    for (const info of flowInfo.values()) info.used.forEach((page) => pages.add(page));
+    return [...pages];
+  }
+
+  // Builds the element of a page (its label is written later, when the number of pages is known).
+  function makePage(index, empty) {
+    const size = Layout.pageSizeMm(model.page.format, model.page.orientation);
+    const margin = Layout.gridOf(model.page).margin;
+    const wrap = document.createElement(`section`);
+    wrap.className = `pageWrap`;
+    const label = document.createElement(`div`);
+    label.className = `pageLabel`;
+    const page = document.createElement(`div`);
+    page.className = `page`;
+    page.dataset.page = String(index);
+    page.style.width = `${size.w * mmPx}px`;
+    page.style.height = `${size.h * mmPx}px`;
+    const area = document.createElement(`div`);
+    area.className = `area`;
+    area.style.left = `${margin * mmPx}px`;
+    area.style.top = `${margin * mmPx}px`;
+    area.style.right = `${margin * mmPx}px`;
+    area.style.bottom = `${margin * mmPx}px`;
+    page.appendChild(area);
+    if (!empty) {
+      for (const block of model.blocks) {
+        if (block.page !== index) continue;
+        const node = buildBlock(block);
+        node.style.marginLeft = `${margin * mmPx}px`;
+        node.style.marginTop = `${margin * mmPx}px`;
+        page.appendChild(node);
+      }
+    }
+    wrap.append(label, page);
+    el.canvas.appendChild(wrap);
+    return page;
+  }
+
+  // The element of the page `index`, with the pages before it when they do not exist yet (the pages that
+  // only a long table uses are drawn but not saved).
+  function pageElement(index) {
+    let found = el.canvas.querySelector(`.page[data-page="${index}"]`);
+    for (let next = el.canvas.querySelectorAll(`.page`).length; !found && next <= index; next += 1) {
+      const page = makePage(next, true);
+      if (next === index) found = page;
+    }
+    return found;
+  }
+
   // Cuts the table of a block whose option `flow` is on: the rows that do not fit in its frame move to
-  // the free places of the following pages, with the title (followed by "(continued)") and the heading
-  // again. The heights of the rows are measured in the page, so the cut follows the real layout.
-  function applyFlow(block, node) {
+  // the free places of the following pages (pages are drawn when needed), with the title (followed by
+  // "(continued)") and the heading again. Each frame of the rest of the table takes the height of its
+  // rows, so that the rest of the page stays free. The heights of the rows are measured in the page, so the
+  // cut follows the real layout. `taken` lists the frames already placed by other tables.
+  function applyFlow(block, node, taken) {
     const table = node.querySelector(`table.dt`);
     const rows = [...table.tBodies[0].rows];
     if (!node.clientHeight || !rows.length) return;
@@ -415,17 +469,18 @@
     const style = getComputedStyle(node);
     const padding = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
     const overhead = table.offsetTop - parseFloat(style.paddingTop) + table.tHead.offsetHeight;
-    const regions = Flow.regionsAfter(model.blocks, block, model.pages, Layout.gridOf(model.page));
-    const rooms = regions.map((region) => region.h * STEP_MM * mmPx - padding - overhead);
-    const split = Flow.splitRows(rows.map((row) => row.offsetHeight), node.clientHeight - padding - overhead, rooms);
+    const stepPx = STEP_MM * mmPx;
+    const regions = Flow.regionsAfter([...model.blocks, ...taken], block, Layout.MAX_PAGES, Layout.gridOf(model.page));
+    const heights = rows.map((row) => row.offsetHeight);
+    const rooms = regions.map((region) => region.h * stepPx - padding - overhead);
+    const split = Flow.splitRows(heights, node.clientHeight - padding - overhead, rooms);
     rows.slice(split.chunks[0].end).forEach((row) => row.remove());
     let last = node;
-    let pages = 0;
+    const used = new Set();
     split.chunks.slice(1).forEach((chunk, index) => {
       if (chunk.end <= chunk.start) return;
       const region = regions[index];
-      const page = el.canvas.querySelector(`.page[data-page="${region.page}"]`);
-      if (!page) return;
+      const page = pageElement(region.page);
       const next = document.createElement(`div`);
       next.className = `block tableBlock continuation`;
       next.dataset.flow = `1`;
@@ -444,52 +499,28 @@
       const body = part.createTBody();
       rows.slice(chunk.start, chunk.end).forEach((row) => body.appendChild(row));
       next.appendChild(part);
-      place(next, { x: block.x, y: region.y, w: block.w, h: region.h });
+      const content = padding + overhead + heights.slice(chunk.start, chunk.end).reduce((sum, height) => sum + height, 0);
+      const steps = Math.min(region.h, Math.max(Layout.MIN_SIZE, Math.ceil(content / stepPx)));
+      const rect = { x: block.x, y: region.y, w: block.w, h: steps };
+      place(next, rect);
       page.appendChild(next);
+      taken.push({ id: `${block.id}:${region.page}:${region.y}`, page: region.page, ...rect });
+      used.add(region.page);
       last = next;
-      pages = Math.max(pages, region.page - block.page);
     });
     node.classList.toggle(`overflowing`, split.leftover > 0 && last === node);
     last.classList.toggle(`overflowing`, split.leftover > 0);
-    flowInfo.set(block.id, { leftover: split.leftover, pages });
+    const pages = used.size ? Math.max(...used) - block.page : 0;
+    flowInfo.set(block.id, { leftover: split.leftover, pages, used: [...used] });
   }
 
   // Draws every page with its blocks. With `focus` the selected block gets the keyboard focus again.
   function render(options = {}) {
     const hadFocus = Boolean(options.keepFocus) && el.canvas.contains(document.activeElement);
     computeScale();
-    const size = Layout.pageSizeMm(model.page.format, model.page.orientation);
-    const margin = Layout.gridOf(model.page).margin;
     el.canvas.textContent = ``;
     el.canvas.classList.toggle(`editing`, editing);
-    for (let index = 0; index < model.pages; index += 1) {
-      const wrap = document.createElement(`section`);
-      wrap.className = `pageWrap`;
-      const label = document.createElement(`div`);
-      label.className = `pageLabel`;
-      label.textContent = tr(`boardPageLabel`, { n: index + 1, total: model.pages });
-      const page = document.createElement(`div`);
-      page.className = `page`;
-      page.dataset.page = String(index);
-      page.style.width = `${size.w * mmPx}px`;
-      page.style.height = `${size.h * mmPx}px`;
-      const area = document.createElement(`div`);
-      area.className = `area`;
-      area.style.left = `${margin * mmPx}px`;
-      area.style.top = `${margin * mmPx}px`;
-      area.style.right = `${margin * mmPx}px`;
-      area.style.bottom = `${margin * mmPx}px`;
-      page.appendChild(area);
-      for (const block of model.blocks) {
-        if (block.page !== index) continue;
-        const node = buildBlock(block);
-        node.style.marginLeft = `${margin * mmPx}px`;
-        node.style.marginTop = `${margin * mmPx}px`;
-        page.appendChild(node);
-      }
-      wrap.append(label, page);
-      el.canvas.appendChild(wrap);
-    }
+    for (let index = 0; index < model.pages; index += 1) makePage(index, false);
     if (!model.blocks.length && !editing) {
       const hint = document.createElement(`p`);
       hint.className = `hint`;
@@ -497,11 +528,18 @@
       el.canvas.appendChild(hint);
     }
     flowInfo.clear();
+    const taken = [];
     for (const block of model.blocks) {
       if (block.type !== `table` || !block.config.flow) continue;
       const node = el.canvas.querySelector(`.block[data-id="${block.id}"]`);
-      if (node && node.querySelector(`table.dt`)) applyFlow(block, node);
+      if (node && node.querySelector(`table.dt`)) applyFlow(block, node, taken);
     }
+    const count = el.canvas.querySelectorAll(`.page`).length;
+    if (editing && count < Layout.MAX_PAGES) makePage(count, true).classList.add(`newPage`);
+    el.canvas.querySelectorAll(`.pageWrap`).forEach((wrap, index) => {
+      const label = wrap.querySelector(`.pageLabel`);
+      label.textContent = wrap.querySelector(`.page.newPage`) ? tr(`boardNewPage`) : tr(`boardPageLabel`, { n: index + 1, total: count });
+    });
     for (const node of el.canvas.querySelectorAll(`.block.textBlock:not(.continuation), .block.tableBlock:not(.continuation)`)) {
       if (node.dataset.flow) continue;
       node.classList.toggle(`overflowing`, node.scrollHeight > node.clientHeight + 2);
@@ -1081,7 +1119,7 @@
     stopDrag();
     if (!finished || !finished.started) return;
     if (!finished.last) render({ focus: true });
-    else if (finished.kind === `move`) commit(Model.moveBlock(model, finished.id, finished.last.wanted), { focus: true });
+    else if (finished.kind === `move`) commit(Model.moveBlock(model, finished.id, finished.last.wanted, el.canvas.querySelectorAll(`.page`).length - 1), { focus: true });
     else commit(Model.resizeBlock(model, finished.id, finished.last.wanted, finished.last.keep), { focus: true });
   }
 
@@ -1191,7 +1229,7 @@
   function addBlock() {
     const result = Model.addBlock(model, el.addType.value);
     if (!result.id) {
-      el.notice.textContent = tr(result.reason === `full` ? `boardFull` : `boardLimit`);
+      el.notice.textContent = tr(`boardLimit`);
       el.notice.hidden = false;
       return;
     }
@@ -1229,26 +1267,6 @@
 
   el.edit.addEventListener(`click`, () => setEditing(!editing));
   el.add.addEventListener(`click`, addBlock);
-  el.addPage.addEventListener(`click`, () => {
-    const next = Model.addPage(model);
-    if (next === model) {
-      el.notice.textContent = tr(`boardLimit`);
-      el.notice.hidden = false;
-      return;
-    }
-    el.notice.hidden = true;
-    commit(next);
-  });
-  el.removePage.addEventListener(`click`, () => {
-    const result = Model.removeLastPage(model);
-    if (result.reason) {
-      el.notice.textContent = tr(result.reason === `only` ? `boardOnlyPage` : `boardPageNotEmpty`);
-      el.notice.hidden = false;
-      return;
-    }
-    el.notice.hidden = true;
-    commit(result.model);
-  });
   const pageChange = () => commit(Model.setPage(model, { format: el.format.value, orientation: el.orientation.value, margin: Number(el.margin.value) }));
   el.format.addEventListener(`change`, pageChange);
   el.orientation.addEventListener(`change`, pageChange);
