@@ -740,7 +740,7 @@ test(`the lines of a grouped table can follow the referenced table or a manual l
 });
 
 test(`a long table continues on the next page with its heading, which is drawn even when the model has no such page`, async () => {
-  const config = { mode: `list`, table: `Rooms`, link: `Rooms.Site`, columns: [{ path: `Number` }], flow: true };
+  const config = { mode: `list`, table: `Rooms`, link: `Rooms.Site`, columns: [{ path: `Number` }] };
   const build = (pages) => ({ model: { version: 1, page: { format: `screen`, orientation: `landscape`, margin: 10 }, pages, blocks: [{ id: `tb1`, type: `table`, title: `Surfaces`, page: 0, x: 0, y: 0, w: 30, h: 4, config }] } });
   const w = await openWithRow({ savedOptions: build(2) }, 1);
   await w.page.waitForFunction(() => document.querySelectorAll(`.page[data-page="1"] .continuation .dt tbody tr`).length > 0);
@@ -763,7 +763,7 @@ test(`a long table continues on the next page with its heading, which is drawn e
 });
 
 test(`a double click on the rest of a long table opens the settings of that table`, async () => {
-  const config = { mode: `list`, table: `Rooms`, link: `Rooms.Site`, columns: [{ path: `Number` }], flow: true };
+  const config = { mode: `list`, table: `Rooms`, link: `Rooms.Site`, columns: [{ path: `Number` }] };
   const saved = { model: { version: 1, page: { format: `screen`, orientation: `landscape`, margin: 10 }, pages: 1, blocks: [{ id: `tb1`, type: `table`, title: `Surfaces`, page: 0, x: 0, y: 0, w: 30, h: 4, config }] } };
   const w = await openWithRow({ savedOptions: saved }, 1);
   await edit(w);
@@ -775,5 +775,14 @@ test(`a double click on the rest of a long table opens the settings of that tabl
   assert.equal(await w.page.locator(`#boardTableSettings`).isVisible(), true);
   assert.equal(await w.page.locator(`.block[data-id="tb1"].selected`).count(), 1);
   assert.equal((await model(w.page)).blocks.length, 1);
+  assert.deepEqual(w.errors, []);
+});
+
+test(`every table continues on the next pages by itself and the settings have no tick box for it`, async () => {
+  const config = { mode: `list`, table: `Rooms`, link: `Rooms.Site`, columns: [{ path: `Number` }] };
+  const saved = { model: { version: 1, page: { format: `screen`, orientation: `landscape`, margin: 10 }, pages: 1, blocks: [{ id: `tb1`, type: `table`, title: `Surfaces`, page: 0, x: 0, y: 0, w: 30, h: 4, config }] } };
+  const w = await openWithRow({ savedOptions: saved }, 1);
+  await w.page.waitForFunction(() => document.querySelectorAll(`.page[data-page="1"] .continuation .dt tbody tr`).length > 0);
+  assert.equal(await w.page.locator(`#boardFlow`).count(), 0);
   assert.deepEqual(w.errors, []);
 });
