@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.0
+
+- New block type "Sheet" (the identity band of a sheet). It shows the row selected in Grist as a grid of information, each one a small label above its value. In the settings: the list of information (a column of the linked table or of a table it points to, written `Reference > Column`, with an optional label that replaces the name of the column, and arrows to move or remove it), the number of columns of the grid (1 to 4) and the size of the text. The values are read with the same module as the fields of the text blocks (numbers, dates, references and lists shown as text, never as HTML).
+- New pure module `record.js` (cells of a record block) with Node tests; the model has the new type `record` with the settings `items`, `columns` and `size`.
+- The tables that the sheets cross are loaded like those of the fields of the text blocks. An unreadable information is reported in the settings and its cell stays empty.
+- Tests: cleaning of the settings, the cells through a reference, an unknown column, the display and the settings in the page.
+
 ## 0.5.12
 
 - Long tables are now automatic: the tick box "Long table: continue on the following pages" is gone and every table block continues on the following pages when its rows do not fit in its frame. The setting `flow` of the model is dropped; tables saved by 0.5.11 stay valid (the key is ignored).

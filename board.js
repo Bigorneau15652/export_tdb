@@ -13,6 +13,7 @@
   const Markdown = window.exportTdbMarkdown;
   const MarkdownView = window.exportTdbMarkdownView;
   const Fields = window.exportTdbFields;
+  const Record = window.exportTdbRecord;
   const Help = window.exportTdbHelp;
   const Data = window.exportTdbData;
   const { createDataset } = window.exportTdbDataset;
@@ -24,7 +25,7 @@
   const ZOOMS = [0.5, 0.75, 1, 1.25, 1.5, 2];
   const DRAG_DISTANCE = 4;
   const SAVE_DELAY_MS = 400;
-  const TYPE_KEYS = { text: `typeText`, table: `typeTable`, chart: `typeChart`, image: `typeImage`, indicator: `typeIndicator` };
+  const TYPE_KEYS = { text: `typeText`, table: `typeTable`, record: `typeRecord`, chart: `typeChart`, image: `typeImage`, indicator: `typeIndicator` };
   const FORMAT_KEYS = { screen: `formatScreen`, a3: `formatA3`, a4: `formatA4`, a5: `formatA5`, square: `formatSquare` };
   const ORIENTATION_KEYS = { landscape: `orientationLandscape`, portrait: `orientationPortrait` };
   const WARNING_KEYS = { version: `boardWarnVersion`, invalid: `boardWarnInvalid`, blocks: `boardWarnBlocks` };
@@ -50,7 +51,7 @@
     zoomIn: $(`boardZoomIn`), saveState: $(`boardSaveState`), confirm: $(`boardConfirm`), confirmText: $(`boardConfirmText`),
     confirmYes: $(`boardConfirmYes`), confirmNo: $(`boardConfirmNo`), scroll: $(`boardScroll`), canvas: $(`boardCanvas`),
     side: $(`boardPanel`), titleRow: $(`boardTitleRow`), title: $(`boardTitle`), remove: $(`boardDelete`), close: $(`boardClose`), refresh: $(`boardRefresh`),
-    textBox: $(`boardTextSettings`), source: $(`boardSource`), columnRow: $(`boardColumnRow`), column: $(`boardColumn`),
+    textBox: $(`boardTextSettings`), recordBox: $(`boardRecordSettings`), recordRows: $(`boardRecordRows`), recordAdd: $(`boardRecordAdd`), recordColumns: $(`boardRecordColumns`), recordSize: $(`boardRecordSize`), recordInfo: $(`boardRecordInfo`), source: $(`boardSource`), columnRow: $(`boardColumnRow`), column: $(`boardColumn`),
     text: $(`boardText`), field: $(`boardField`), size: $(`boardSize`), align: $(`boardAlign`), fill: $(`boardFill`),
     textInfo: $(`boardTextInfo`), cellState: $(`boardCellState`),
     tableBox: $(`boardTableSettings`), kind: $(`boardKind`), tableSel: $(`boardTable`), linkRow: $(`boardLinkRow`), link: $(`boardLink`), rowsHelp: $(`boardRowsHelp`),
@@ -170,6 +171,7 @@
     for (const block of model.blocks) {
       if (block.type === `text`) Fields.extractFields(sourceText(block)).forEach((path) => paths.add(path));
       if (block.type === `table`) Query.tablesFor(state.schema, state.linked, block.config).forEach((name) => wanted.add(name));
+      if (block.type === `record`) Record.recordPaths(block.config).forEach((path) => paths.add(path));
       if (block.type === `table` && explainOpen && block.id === selectedId && block.config.table) Query.tablesForChoices(state.schema, state.linked, block.config.table).forEach((name) => wanted.add(name));
     }
     // A row that the loaded table does not hold yet (added since it was loaded): load the table again, once.
@@ -318,6 +320,137 @@
     return table;
   }
 
+  // Fills the element of a record block: its title and its grid of information, each one a small label above
+  // its value, or a hint in the editing mode when nothing is chosen yet.
+  function buildRecordBody(node, block) {
+    const config = block.config;
+    node.classList.add(`recordBlock`);
+    node.style.fontSize = `${TEXT_MM[config.size] * mmPx}px`;
+    if (block.title) {
+      const title = document.createElement(`div`);
+      title.className = `recordTitle`;
+      title.textContent = block.title;
+      node.appendChild(title);
+    }
+    const state = context();
+    const shown = state.schema && state.record ? Record.recordCells(state.schema, currentDataset(), state.linked, state.record, config, { yes: tr(`wordYes`), no: tr(`wordNo`) }) : null;
+    if (!shown || !shown.cells.length) {
+      if (editing) {
+        const hint = document.createElement(`p`);
+        hint.className = `tableHint`;
+        hint.textContent = config.items.some((item) => item.path) ? tr(`boardRecordWaiting`) : tr(`boardRecordEmpty`);
+        node.appendChild(hint);
+      }
+      return;
+    }
+    const grid = document.createElement(`div`);
+    grid.className = `recordGrid`;
+    grid.style.gridTemplateColumns = `repeat(${config.columns}, minmax(0, 1fr))`;
+    for (const cell of shown.cells) {
+      const item = document.createElement(`div`);
+      item.className = `recordCell`;
+      const label = document.createElement(`div`);
+      label.className = `recordLabel`;
+      label.textContent = cell.label;
+      const value = document.createElement(`div`);
+      value.className = `recordValue`;
+      value.textContent = cell.text;
+      item.append(label, value);
+      grid.appendChild(item);
+    }
+    node.appendChild(grid);
+  }
+
+  // Fills the settings of a record block: one line per information (the column, its label and the buttons
+  // that move or remove it), the number of columns of the grid and the size of the text.
+  function fillRecordSettings(block) {
+    const config = block.config;
+    const state = context();
+    const choices = state.schema && state.linked && state.schema.tables.has(state.linked) ? Fields.sortChoices(Fields.fieldChoices(state.schema, state.linked)) : [];
+    el.recordAdd.disabled = !state.schema || config.items.length >= Model.MAX_RECORD_ITEMS;
+    const key = `${block.id}|${config.items.length}|${state.linked}|${choices.length}`;
+    if (key !== recordRowsFor) {
+      recordRowsFor = key;
+      el.recordRows.textContent = ``;
+      config.items.forEach((_, index) => el.recordRows.appendChild(buildRecordRow(index)));
+    }
+    config.items.forEach((item, index) => {
+      const row = el.recordRows.children[index];
+      if (!row) return;
+      setOptions(row.querySelector(`.colPath`), [[``, tr(`boardColumnNone`)], ...choices.map((choice) => [choice.path, choice.label])], item.path);
+      setValue(row.querySelector(`.colLabel`), item.label);
+    });
+    setOptions(el.recordColumns, Model.RECORD_COLUMNS.map((count) => [count, String(count)]), config.columns);
+    setOptions(el.recordSize, Model.TEXT_SIZES.map((name) => [name, tr(SIZE_KEYS[name])]), config.size);
+    const shown = state.schema && state.record ? Record.recordCells(state.schema, currentDataset(), state.linked, state.record, config, { yes: tr(`wordYes`), no: tr(`wordNo`) }) : null;
+    const messages = [];
+    if (!state.schema) messages.push(tr(`boardTableNotReady`));
+    else if (shown && shown.problems.length) messages.push(tr(`boardRecordProblems`, { fields: shown.problems.join(`, `) }));
+    const node = el.canvas.querySelector(`.block[data-id="${block.id}"]`);
+    if (node && node.classList.contains(`overflowing`)) messages.push(tr(`boardRecordOverflow`));
+    el.recordInfo.textContent = messages.join(` `);
+    el.recordInfo.className = messages.length ? `warning` : `hint`;
+  }
+
+  // The structure for which the lines of the record settings were built.
+  let recordRowsFor = ``;
+
+  // Builds the two lines of one information of a record block: the column and its label, then the buttons.
+  function buildRecordRow(index) {
+    const row = document.createElement(`div`);
+    row.className = `colrow list`;
+    const top = document.createElement(`div`);
+    top.className = `colTop`;
+    const bottom = document.createElement(`div`);
+    bottom.className = `colBottom`;
+    const path = document.createElement(`select`);
+    path.className = `colPath`;
+    const label = document.createElement(`input`);
+    label.type = `text`;
+    label.className = `colLabel`;
+    label.maxLength = 60;
+    label.placeholder = tr(`boardColumnLabel`);
+    label.setAttribute(`aria-label`, tr(`boardColumnLabel`));
+    const button = (text, name, action) => {
+      const item = document.createElement(`button`);
+      item.type = `button`;
+      item.textContent = text;
+      item.setAttribute(`aria-label`, tr(name));
+      item.addEventListener(`click`, action);
+      return item;
+    };
+    const edit = (patch) => {
+      const block = selectedBlock();
+      if (!block) return;
+      const items = block.config.items.map((item) => ({ ...item }));
+      items[index] = { ...items[index], ...patch };
+      changeConfig({ items });
+    };
+    const move = (delta) => {
+      const block = selectedBlock();
+      if (!block) return;
+      const items = block.config.items.map((item) => ({ ...item }));
+      const target = index + delta;
+      if (target < 0 || target >= items.length) return;
+      [items[index], items[target]] = [items[target], items[index]];
+      changeConfig({ items });
+    };
+    path.addEventListener(`change`, () => edit({ path: path.value }));
+    label.addEventListener(`input`, () => edit({ label: label.value }));
+    top.append(path);
+    bottom.append(
+      label,
+      button(`\u2191`, `boardColumnUp`, () => move(-1)),
+      button(`\u2193`, `boardColumnDown`, () => move(1)),
+      button(`\u00d7`, `boardColumnRemove`, () => {
+        const block = selectedBlock();
+        if (block) changeConfig({ items: block.config.items.filter((_, at) => at !== index) });
+      })
+    );
+    row.append(top, bottom);
+    return row;
+  }
+
   // Fills the element of a table block: its title and its table, or a hint in the editing mode.
   function buildTableBody(node, block) {
     node.classList.add(`tableBlock`);
@@ -372,6 +505,8 @@
       buildTextBody(node, block);
     } else if (block.type === `table`) {
       buildTableBody(node, block);
+    } else if (block.type === `record`) {
+      buildRecordBody(node, block);
     } else {
       const kind = document.createElement(`div`);
       kind.className = `blockType`;
@@ -542,7 +677,7 @@
       const label = wrap.querySelector(`.pageLabel`);
       label.textContent = wrap.querySelector(`.page.newPage`) ? tr(`boardNewPage`) : tr(`boardPageLabel`, { n: index + 1, total: count });
     });
-    for (const node of el.canvas.querySelectorAll(`.block.textBlock:not(.continuation), .block.tableBlock:not(.continuation)`)) {
+    for (const node of el.canvas.querySelectorAll(`.block.textBlock:not(.continuation), .block.tableBlock:not(.continuation), .block.recordBlock`)) {
       if (node.dataset.flow) continue;
       node.classList.toggle(`overflowing`, node.scrollHeight > node.clientHeight + 2);
     }
@@ -690,7 +825,7 @@
   // Changes the settings of the selected block (text or table) and draws again.
   function changeConfig(changes) {
     const block = selectedBlock();
-    if (block && (block.type === `text` || block.type === `table`)) commit(Model.updateBlock(model, block.id, { config: changes }));
+    if (block && (block.type === `text` || block.type === `table` || block.type === `record`)) commit(Model.updateBlock(model, block.id, { config: changes }));
   }
 
   // The paths of the columns that hold numbers, for the table of the selected table block.
@@ -992,6 +1127,8 @@
     if (block.type === `table`) fillTableSettings(block);
     el.textBox.hidden = block.type !== `text`;
     if (block.type === `text`) fillTextSettings(block);
+    el.recordBox.hidden = block.type !== `record`;
+    if (block.type === `record`) fillRecordSettings(block);
   }
 
   // Selects a block (or none) and opens or closes its settings.
@@ -1344,6 +1481,12 @@
     const group = Boolean(el.group1.value);
     changeConfig({ groupBy: [el.group1.value], sort: { ...block.config.sort, by: group ? `key` : `none` }, columns: fitColumns(block, group) });
   });
+  el.recordAdd.addEventListener(`click`, () => {
+    const block = selectedBlock();
+    if (block && block.config.items.length < Model.MAX_RECORD_ITEMS) changeConfig({ items: [...block.config.items, { path: ``, label: `` }] });
+  });
+  el.recordColumns.addEventListener(`change`, () => changeConfig({ columns: Number(el.recordColumns.value) }));
+  el.recordSize.addEventListener(`change`, () => changeConfig({ size: el.recordSize.value }));
   el.merge.addEventListener(`change`, () => changeConfig({ merge: el.merge.checked }));
   el.addColumn.addEventListener(`click`, () => {
     const block = selectedBlock();
