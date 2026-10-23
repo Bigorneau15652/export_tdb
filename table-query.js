@@ -299,11 +299,52 @@
     return { headers, rows: body, total, truncated: order.length > shown.length };
   }
 
+  // The rank of each row of the table that a reference column points to, in the order that the user gave to
+  // that table in Grist (its manual order column when Grist sends it, otherwise the order of the rows).
+  function targetRanks(target) {
+    const manual = target.column(`manualSort`);
+    const indexes = target.ids.map((_, index) => index);
+    if (Array.isArray(manual)) indexes.sort((a, b) => (Number(manual[a]) - Number(manual[b])) || (a - b));
+    const ranks = new Map();
+    indexes.forEach((index, rank) => ranks.set(target.ids[index], rank));
+    return ranks;
+  }
+
+  // A function that gives a row of the table of the block the rank of its first group in the order of the
+  // table that the first column of the item points to, or null when the item does not start with a
+  // reference column or that table is not loaded.
+  function refRankOf(dataset, config) {
+    const path = config.groupBy.find(Boolean);
+    if (!path) return null;
+    const first = dataset.resolvePath(config.table, path.split(`.`)[0]);
+    if (first.error || first.column.kind !== `ref`) return null;
+    const target = dataset.table(first.column.target);
+    if (!target) return null;
+    const ranks = targetRanks(target);
+    return (row) => {
+      const raw = dataset.valueAt(first, row);
+      return ranks.has(raw) ? ranks.get(raw) : null;
+    };
+  }
+
+  // The sort of a grouped table for the aggregation: by label, by value, in the order of the table of the
+  // item (`ref`) or in the list of labels that the user gave (`manual`).
+  function groupSort(dataset, config) {
+    const { by, dir, order } = config.sort;
+    if (by === `value`) return { by: `value`, measure: 0, dir };
+    if (by === `manual`) return { by: `key`, dir: `asc`, order };
+    if (by === `ref`) {
+      const rankOf = refRankOf(dataset, config);
+      if (rankOf) return { by: `ref`, dir, rankOf };
+    }
+    return { by: `key`, dir };
+  }
+
   // The result of a grouping: one line per group with the keys and the measures.
   function groupResult(dataset, config, rows, words) {
     const measures = config.columns.filter((column) => column.path || column.fn === `count`).map((column) => ({ fn: column.fn || `sum`, path: column.path || undefined, label: column.label, decimals: decimalsOf(column, config) }));
     const groupBy = config.groupBy.filter(Boolean).map((path) => ({ path, merge: config.merge }));
-    const sort = config.sort.by === `value` ? { by: `value`, measure: 0, dir: config.sort.dir } : { by: `key`, dir: config.sort.dir };
+    const sort = groupSort(dataset, config);
     const result = aggregate.groupRows(dataset, config.table, rows, { groupBy, measures, sort, emptyLabel: words.empty });
     if (result.error) return { error: result.error };
     const headers = [

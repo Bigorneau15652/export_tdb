@@ -705,3 +705,21 @@ test(`the columns have two lines and a total can be added on the right when the 
   assert.equal((await model(w.page)).blocks[0].config.columns[0].decimals, 2);
   assert.deepEqual(w.errors, []);
 });
+
+test(`the lines of a grouped table can follow the referenced table or a manual list`, async () => {
+  const config = { table: `Rooms`, link: `Rooms.Site`, groupBy: [`Usage`], columns: [{ path: `Area`, fn: `sum` }] };
+  const w = await openWithRow({ savedOptions: tableModel(config) }, 1);
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 20, y: 30 } });
+  assert.equal(await w.page.locator(`#boardSortBy option[value="ref"]`).count(), 1);
+  await w.page.selectOption(`#boardSortBy`, `manual`);
+  await w.page.waitForFunction(() => document.querySelectorAll(`#boardSortOrder li`).length >= 2);
+  const first = await w.page.locator(`#boardSortOrder li .orderName`).first().innerText();
+  await w.page.click(`#boardSortOrder li:nth-child(1) button:nth-of-type(2)`);
+  const order = (await model(w.page)).blocks[0].config.sort.order;
+  assert.equal(order[1], first);
+  assert.equal((await model(w.page)).blocks[0].config.sort.by, `manual`);
+  await w.page.selectOption(`#boardSortBy`, `ref`);
+  assert.equal((await model(w.page)).blocks[0].config.sort.by, `ref`);
+  assert.deepEqual(w.errors, []);
+});

@@ -251,3 +251,28 @@ test(`a total on the right in a list uses the columns that have a calculation`, 
   assert.equal(result.rows[0].length, 4);
   assert.equal(result.total.length, 4);
 });
+
+const withUsages = (extra) => {
+  const { createDataset } = require(`../dataset.js`);
+  return createDataset(schema, { ...demo.data, Usages: { ...demo.data.Usages, ...extra } });
+};
+const runWith = (data, changes) => Q.runTable(schema, data, `Sites`, record(`Sites`, 1), config(changes), WORDS);
+const GROUPED = { mode: `group`, table: `Rooms`, link: `Rooms.Site`, groupBy: [`Usage`], columns: [{ path: `Area`, fn: `sum` }] };
+
+test(`the items follow the order of the table that they point to, then the labels, or an imposed list`, () => {
+  const labels = (result) => result.rows.map((row) => row[0]);
+  assert.deepEqual(labels(runWith(dataset, GROUPED)), [`(empty)`, `Classroom`, `Office`]);
+  const asSent = withUsages({ manualSort: [1, 2] });
+  assert.deepEqual(labels(runWith(asSent, { ...GROUPED, sort: { by: `ref` } })), [`Office`, `Classroom`, `(empty)`]);
+  const reversed = withUsages({ manualSort: [2, 1] });
+  assert.deepEqual(labels(runWith(reversed, { ...GROUPED, sort: { by: `ref` } })), [`Classroom`, `Office`, `(empty)`]);
+  assert.deepEqual(labels(runWith(withUsages({}), { ...GROUPED, sort: { by: `ref` } })), [`Office`, `Classroom`, `(empty)`]);
+  assert.deepEqual(labels(runWith(asSent, { ...GROUPED, sort: { by: `ref`, dir: `desc` } })), [`(empty)`, `Classroom`, `Office`]);
+  assert.deepEqual(labels(runWith(dataset, { ...GROUPED, sort: { by: `manual`, order: [`Office`, `Absent`, `Classroom`] } })), [`Office`, `Classroom`, `(empty)`]);
+  assert.deepEqual(labels(runWith(dataset, { ...GROUPED, sort: { by: `manual`, order: [`Classroom`] } })), [`Classroom`, `(empty)`, `Office`]);
+});
+
+test(`an item that is not a reference keeps the alphabetical order when the order of a table is asked`, () => {
+  const result = runWith(dataset, { ...GROUPED, groupBy: [`Number`], sort: { by: `ref` } });
+  assert.deepEqual(result.rows.map((row) => row[0]), [`A-001`, `A-002`, `B-001`, `B-002`]);
+});

@@ -150,3 +150,10 @@ input[type="number"]:focus-visible, input[type="text"]:focus-visible { outline: 
 .explainClose { width: 28px; height: 28px; padding: 0; border: 1px solid #52606d; border-radius: 4px; background: #ffffff; color: #1f2933; font: inherit; font-size: 18px; line-height: 1; cursor: pointer; }
 .explainClose:focus-visible { outline: 3px solid #f2b705; }
 .explainWindow .explain { margin: 0; border: none; border-radius: 0 0 8px 8px; overflow: auto; }
+
+/* Version 0.5.7: list of labels in a chosen order. */
+.orderList { margin: 4px 0; padding: 0; list-style: none; }
+.orderList li { display: flex; align-items: center; gap: 4px; margin: 3px 0; padding: 2px 4px; border: 1px solid #cbd2d9; border-radius: 4px; }
+.orderList .orderName { flex: 1 1 0; min-width: 0; overflow-wrap: anywhere; font-size: 13px; }
+.orderList button { min-width: 26px; min-height: 26px; padding: 0 5px; border: 1px solid #52606d; border-radius: 4px; background: #e4e7eb; color: #1f2933; font: inherit; font-size: 12px; cursor: pointer; }
+.orderList button:focus-visible { outline: 3px solid #f2b705; }
