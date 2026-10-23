@@ -56,7 +56,7 @@
     zoomIn: $(`boardZoomIn`), saveState: $(`boardSaveState`), confirm: $(`boardConfirm`), confirmText: $(`boardConfirmText`),
     confirmYes: $(`boardConfirmYes`), confirmNo: $(`boardConfirmNo`), scroll: $(`boardScroll`), canvas: $(`boardCanvas`),
     side: $(`boardPanel`), titleRow: $(`boardTitleRow`), title: $(`boardTitle`), remove: $(`boardDelete`), close: $(`boardClose`), refresh: $(`boardRefresh`),
-    textBox: $(`boardTextSettings`), indicatorBox: $(`boardIndicatorSettings`), indicatorBody: $(`boardIndicatorBody`), valuesBox: $(`boardValuesSettings`), valuesList: $(`boardValuesList`), valuesAdd: $(`boardValuesAdd`), valuesButton: $(`boardValuesButton`), heading: $(`boardPanelHeading`), recordBox: $(`boardRecordSettings`), recordRows: $(`boardRecordRows`), recordAdd: $(`boardRecordAdd`), recordColumns: $(`boardRecordColumns`), recordSize: $(`boardRecordSize`), recordInfo: $(`boardRecordInfo`), source: $(`boardSource`), columnRow: $(`boardColumnRow`), column: $(`boardColumn`),
+    textBox: $(`boardTextSettings`), crossBox: $(`boardCrossBox`), crossMore: $(`boardCrossMore`), colItem: $(`boardColItem`), slice: $(`boardSlice`), colSort: $(`boardColSort`), indicatorBox: $(`boardIndicatorSettings`), indicatorBody: $(`boardIndicatorBody`), valuesBox: $(`boardValuesSettings`), valuesList: $(`boardValuesList`), valuesAdd: $(`boardValuesAdd`), valuesButton: $(`boardValuesButton`), heading: $(`boardPanelHeading`), recordBox: $(`boardRecordSettings`), recordRows: $(`boardRecordRows`), recordAdd: $(`boardRecordAdd`), recordColumns: $(`boardRecordColumns`), recordSize: $(`boardRecordSize`), recordInfo: $(`boardRecordInfo`), source: $(`boardSource`), columnRow: $(`boardColumnRow`), column: $(`boardColumn`),
     text: $(`boardText`), field: $(`boardField`), size: $(`boardSize`), align: $(`boardAlign`), fill: $(`boardFill`),
     textInfo: $(`boardTextInfo`), cellState: $(`boardCellState`),
     tableBox: $(`boardTableSettings`), kind: $(`boardKind`), tableSel: $(`boardTable`), linkRow: $(`boardLinkRow`), link: $(`boardLink`), rowsHelp: $(`boardRowsHelp`),
@@ -550,7 +550,11 @@
     }
     const result = tableResult(block);
     if (result.ok) {
-      node.appendChild(drawTable(result));
+      (result.slices || [result]).forEach((slice, at) => {
+        const part = drawTable(slice);
+        if (at) part.classList.add(`sliceNext`);
+        node.appendChild(part);
+      });
     } else if (editing) {
       const hint = document.createElement(`p`);
       hint.className = `tableHint`;
@@ -758,7 +762,7 @@
     for (const block of model.blocks) {
       if (block.type !== `table`) continue;
       const node = el.canvas.querySelector(`.block[data-id="${block.id}"]`);
-      if (node && node.querySelector(`table.dt`)) applyFlow(block, node, taken);
+      if (node && node.querySelectorAll(`table.dt`).length === 1) applyFlow(block, node, taken);
     }
     const count = el.canvas.querySelectorAll(`.page`).length;
     if (editing && count < Layout.MAX_PAGES) makePage(count, true).classList.add(`newPage`);
@@ -1020,7 +1024,7 @@
   // kind of table changes.
   function renderColumnRows(block, choices) {
     const config = block.config;
-    const group = config.mode === `group`;
+    const group = config.mode !== `list`;
     const key = `${block.id}|${config.table}|${config.mode}|${config.columns.length}`;
     if (key !== columnsFor) {
       columnsFor = key;
@@ -1032,6 +1036,7 @@
     config.columns.forEach((column, index) => {
       const row = el.columnRows.children[index];
       if (!row) return;
+      row.hidden = config.mode === `cross` && index > 0;
       const fn = column.fn || (group ? `sum` : ``);
       const needsNumbers = NUMERIC_FUNCTIONS.includes(fn);
       const available = group && needsNumbers ? choices.filter((choice) => numeric.has(choice.path)) : choices;
@@ -1160,8 +1165,15 @@
     } else {
       el.explain.hidden = true;
     }
-    el.groupRow.hidden = config.mode !== `group`;
+    el.groupRow.hidden = config.mode === `list`;
     setOptions(el.group1, columnItems, config.groupBy[0] || ``);
+    el.crossBox.hidden = !config.groupBy[0];
+    el.crossMore.hidden = config.mode !== `cross`;
+    el.addColumn.hidden = config.mode === `cross`;
+    setOptions(el.colItem, [[``, tr(`boardColItemNone`)], ...choices.map((choice) => [choice.path, choice.label])], config.colItem);
+    const colColumn = config.colItem ? schema.tables.get(config.table).columns.find((column) => column.id === config.colItem.split(`.`)[0]) : null;
+    setOptions(el.colSort, [[`key`, tr(`colSortKey`)], ...(colColumn && colColumn.kind === `ref` ? [[`ref`, tr(`colSortRef`)]] : [])], config.colSort);
+    setOptions(el.slice, Model.SLICES.map((count) => [count, count ? tr(`sliceN`, { n: count }) : tr(`sliceAll`)]), config.slice);
     el.merge.checked = config.merge;
     const result = tableResult(block);
     const firstItem = config.groupBy.find(Boolean);
@@ -1169,15 +1181,15 @@
     const byRef = Boolean(itemColumn) && itemColumn.kind === `ref`;
     const sortItems = config.mode === `list`
       ? [[`none`, tr(`sortNone`)], [`column`, tr(`sortByColumn`)]]
-      : [[`key`, tr(`sortByKey`)], [`value`, tr(`sortByValue`)], ...(byRef ? [[`ref`, tr(`sortByRef`)]] : []), [`manual`, tr(`sortByManual`)]];
+      : [[`key`, tr(`sortByKey`)], ...(config.mode === `cross` ? [] : [[`value`, tr(`sortByValue`)]]), ...(byRef ? [[`ref`, tr(`sortByRef`)]] : []), [`manual`, tr(`sortByManual`)]];
     const sortBy = sortItems.some(([value]) => value === config.sort.by) ? config.sort.by : sortItems[0][0];
     setOptions(el.sortBy, sortItems, sortBy);
     el.sortColumn.hidden = !(config.mode === `list` && sortBy === `column`);
     setOptions(el.sortColumn, [[``, tr(`sortChoose`)], ...choices.map((choice) => [choice.path, choice.label])], config.sort.column);
     setOptions(el.sortDir, [[`asc`, tr(`sortAsc`)], [`desc`, tr(`sortDesc`)]], config.sort.dir);
     el.sortDir.parentElement.hidden = sortBy === `manual`;
-    el.sortOrderBox.hidden = !(config.mode === `group` && sortBy === `manual`);
-    if (!el.sortOrderBox.hidden) renderSortOrder(config, result.ok && config.mode === `group` ? result.rows.map((row) => row[0]) : []);
+    el.sortOrderBox.hidden = !(config.mode !== `list` && sortBy === `manual`);
+    if (!el.sortOrderBox.hidden) renderSortOrder(config, result.ok && config.mode !== `list` ? result.rows.map((row) => row[0]) : []);
     const filtersOpen = sectionOpen.filters || config.filters.length > 0;
     const sortOpen = sectionOpen.sort || sortActive(config);
     setToggle(el.filterToggle, el.filterBody, filtersOpen);
@@ -1552,7 +1564,7 @@
 
 
   // The settings of the table block that depend on the table are cleared when the table changes.
-  const tableReset = (fixed) => ({ start: ``, link: fixed ? `all` : ``, columns: [], groupBy: [], filters: [], sort: { by: `none`, column: ``, dir: `asc`, order: [] } });
+  const tableReset = (fixed) => ({ start: ``, link: fixed ? `all` : ``, columns: [], groupBy: [], colItem: ``, filters: [], sort: { by: `none`, column: ``, dir: `asc`, order: [] } });
   el.kind.addEventListener(`change`, () => {
     const block = selectedBlock();
     const state = context();
@@ -1605,8 +1617,11 @@
     const block = selectedBlock();
     if (!block) return;
     const group = Boolean(el.group1.value);
-    changeConfig({ groupBy: [el.group1.value], sort: { ...block.config.sort, by: group ? `key` : `none` }, columns: fitColumns(block, group) });
+    changeConfig({ groupBy: [el.group1.value], colItem: group ? block.config.colItem : ``, sort: { ...block.config.sort, by: group ? `key` : `none` }, columns: fitColumns(block, group) });
   });
+  el.colItem.addEventListener(`change`, () => changeConfig({ colItem: el.colItem.value }));
+  el.slice.addEventListener(`change`, () => changeConfig({ slice: Number(el.slice.value) }));
+  el.colSort.addEventListener(`change`, () => changeConfig({ colSort: el.colSort.value }));
   el.recordAdd.addEventListener(`click`, () => {
     const block = selectedBlock();
     if (block && block.config.items.length < Model.MAX_RECORD_ITEMS) changeConfig({ items: [...block.config.items, { path: ``, label: `` }] });
@@ -1616,7 +1631,7 @@
   el.merge.addEventListener(`change`, () => changeConfig({ merge: el.merge.checked }));
   el.addColumn.addEventListener(`click`, () => {
     const block = selectedBlock();
-    if (block && block.config.columns.length < Model.MAX_COLUMNS) changeConfig({ columns: [...block.config.columns, { path: ``, fn: block.config.mode === `group` ? `sum` : ``, label: `` }] });
+    if (block && block.config.columns.length < Model.MAX_COLUMNS) changeConfig({ columns: [...block.config.columns, { path: ``, fn: block.config.mode !== `list` ? `sum` : ``, label: `` }] });
   });
   const changeSort = () => {
     const block = selectedBlock();

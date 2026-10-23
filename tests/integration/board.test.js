@@ -942,3 +942,26 @@ test(`the settings of an indicator choose the value, the note and the rules`, as
   assert.equal(await w.page.locator(`.indRule`).count(), 0);
   assert.deepEqual(w.errors, []);
 });
+
+test(`an item in columns makes a cross table that can be cut into slices`, async () => {
+  const config = { table: `Rooms`, link: `Rooms.Site`, groupBy: [`Usage`], merge: true, columns: [{ path: `Area`, fn: `sum` }] };
+  const w = await openWithRow({ savedOptions: tableModel(config) }, 1);
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 20, y: 30 } });
+  assert.equal(await w.page.locator(`#boardCrossBox`).isVisible(), true);
+  assert.equal(await w.page.locator(`#boardCrossMore`).isHidden(), true);
+  await w.page.selectOption(`#boardColItem`, `Floor`);
+  await w.page.waitForFunction(() => document.querySelectorAll(`.block[data-id="tb1"] .dt th`).length === 3);
+  const headers = await w.page.$$eval(`.block[data-id="tb1"] .dt th`, (list) => list.map((cell) => cell.textContent));
+  assert.deepEqual(headers, [`Usage`, `Ground`, `Level 1`]);
+  assert.equal(await w.page.locator(`#boardCrossMore`).isVisible(), true);
+  assert.equal(await w.page.locator(`#boardAddColumn`).isHidden(), true);
+  assert.equal((await model(w.page)).blocks[0].config.mode, `cross`);
+  await w.page.selectOption(`#boardColItem`, `Number`);
+  await w.page.selectOption(`#boardSlice`, `3`);
+  await w.page.waitForFunction(() => document.querySelectorAll(`.block[data-id="tb1"] table.dt`).length === 2);
+  await w.page.selectOption(`#boardColItem`, ``);
+  await w.page.waitForFunction(() => document.querySelectorAll(`.block[data-id="tb1"] table.dt`).length === 1);
+  assert.equal((await model(w.page)).blocks[0].config.mode, `group`);
+  assert.deepEqual(w.errors, []);
+});
