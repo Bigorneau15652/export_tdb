@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.6.1
+
+- Named values. A new button "Named values" in the tools of the dashboard opens, in the settings panel, the editor of the values of the whole dashboard (up to 40). A named value is a figure calculated once and reused. Three kinds:
+  - Calculation on a table: the table, the way to choose its rows for the selected row (the same sentences as a table block, or the whole table), the function (Somme, Moy, Min, Max, Nb, Nb dif), the column (only numbers for sum, average, minimum and maximum; any column or the number of rows for the counts) and up to two filters.
+  - Column of the selected row, also through a reference (`Reference > Column`): a number when the column holds numbers, otherwise a text.
+  - Expression: a calculation with other values written between braces, such as `{part} / {total} * 100` (four operations, parentheses and the minus sign, read by a small parser and never run as code). A division by zero or a missing value gives a dash. Values can be defined in any order; a loop, an unknown name, a duplicate name or an empty name is reported on the card.
+- Each value has a unit and a number of decimals for its text, and its card shows the result for the selected row, or the reason why there is none.
+- In a text block, `{name}` gives the text of the value (number with its unit). A value takes priority over a column of the same name. The menu "Insert a field" lists the values ("Value: name").
+- New pure module `named.js` (calculation of the values, tables to load) and `values-panel.js` (the editor), a new function `runValue` in `table-query.js`, and `expr.js` is now loaded by the page. The model has a new list `values`; models saved by 0.6.0 stay valid.
+- Tests: cleaning of the values, calculations with filters and counts, columns, expressions, errors, tables to load, and the editor and the use in a text in the page.
+
 ## 0.6.0
 
 - New block type "Sheet" (the identity band of a sheet). It shows the row selected in Grist as a grid of information, each one a small label above its value. In the settings: the list of information (a column of the linked table or of a table it points to, written `Reference > Column`, with an optional label that replaces the name of the column, and arrows to move or remove it), the number of columns of the grid (1 to 4) and the size of the text. The values are read with the same module as the fields of the text blocks (numbers, dates, references and lists shown as text, never as HTML).

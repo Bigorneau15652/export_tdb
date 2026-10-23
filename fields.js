@@ -124,7 +124,7 @@
   // The text of one field for the selected row `record` of the table `tableId`. The first column is
   // read in the record or in the loaded table (see rawValue), the following ones in the loaded tables. Returns
   // { ok: true, text } or { ok: false, reason } (`unknown` column, `notloaded` table, `norow`).
-  function resolveField(dataset, schema, tableId, record, path, words) {
+  function resolveFieldFull(dataset, schema, tableId, record, path, words) {
     const parts = String(path).split(`.`);
     const table = schema.tables.get(tableId);
     const column = table ? table.columns.find((c) => c.id === parts[0]) : null;
@@ -132,7 +132,7 @@
     const cell = rawValue(dataset, table, record, column);
     if (!cell.found) return { ok: false, reason: `notloaded` };
     const raw = cell.raw;
-    if (parts.length === 1) return { ok: true, text: formatValue(column, raw, dataset, words) };
+    if (parts.length === 1) return { ok: true, text: formatValue(column, raw, dataset, words), raw, column };
     if (column.kind !== `ref`) return { ok: false, reason: `unknown` };
     if (!raw) return { ok: true, text: `` };
     const target = dataset.table(column.target);
@@ -141,7 +141,14 @@
     if (index < 0) return { ok: true, text: `` };
     const resolved = dataset.resolvePath(column.target, parts.slice(1).join(`.`));
     if (resolved.error) return { ok: false, reason: resolved.error.includes(`not loaded`) ? `notloaded` : `unknown` };
-    return { ok: true, text: formatValue(resolved.column, dataset.valueAt(resolved, index), dataset, words) };
+    const last = dataset.valueAt(resolved, index);
+    return { ok: true, text: formatValue(resolved.column, last, dataset, words), raw: last, column: resolved.column };
+  }
+
+  // The same as resolveFieldFull for the callers that only need the text: { ok: true, text } or { ok: false, reason }.
+  function resolveField(dataset, schema, tableId, record, path, words) {
+    const read = resolveFieldFull(dataset, schema, tableId, record, path, words);
+    return read.ok ? { ok: true, text: read.text } : read;
   }
 
   // Replaces the fields in the plain text nodes of a tree of Markdown nodes. `resolve(path)` gives
@@ -166,7 +173,7 @@
     return { nodes: walk(nodes), problems };
   }
 
-  const api = { extractFields, fieldChoices, sortChoices, tablesForPaths, formatValue, resolveField, expandFields };
+  const api = { extractFields, fieldChoices, sortChoices, tablesForPaths, formatValue, resolveField, resolveFieldFull, expandFields };
   if (isNode) module.exports = api;
   else root.exportTdbFields = api;
 })(typeof window !== `undefined` ? window : globalThis);

@@ -823,3 +823,67 @@ test(`a record block can be added from the tools`, async () => {
   assert.equal(await w.page.locator(`.block[data-type="record"]`).count(), 1);
   assert.deepEqual(w.errors, []);
 });
+
+const VALUES_MODEL = (values, blocks) => ({ model: { version: 1, page: { format: `screen`, orientation: `landscape`, margin: 10 }, pages: 1, blocks, values } });
+const AREA_VALUE = { name: `area`, kind: `calc`, table: `Rooms`, start: ``, link: `Rooms.Site`, fn: `sum`, path: `Area`, unit: `m²`, decimals: 1 };
+
+test(`a named value is used in a text with its name between braces`, async () => {
+  const text = { source: `fixed`, text: `Surface : {area}`, size: `normal`, align: `left`, fill: `none` };
+  const w = await openWithRow({ savedOptions: VALUES_MODEL([AREA_VALUE], [{ id: `tx1`, type: `text`, title: ``, page: 0, x: 0, y: 0, w: 30, h: 6, config: text }]) }, 1);
+  await w.page.waitForFunction(() => /75,8/.test(document.querySelector(`.block[data-id="tx1"]`).textContent));
+  assert.match(await w.page.locator(`.block[data-id="tx1"]`).innerText(), /Surface : 75,8.m²/);
+  assert.deepEqual(w.errors, []);
+});
+
+test(`the named values are edited in the panel and an expression uses another value`, async () => {
+  const w = await openWithRow({ savedOptions: VALUES_MODEL([AREA_VALUE], []) }, 1);
+  await edit(w);
+  await w.page.click(`#boardValuesButton`);
+  assert.equal(await w.page.locator(`#boardValuesSettings`).isVisible(), true);
+  assert.equal(await w.page.locator(`#boardTableSettings`).isHidden(), true);
+  await w.page.waitForFunction(() => /= 75,8/.test(document.querySelector(`.valueCard .valueResult`).textContent));
+  await w.page.click(`#boardValuesAdd`);
+  assert.equal(await w.page.locator(`.valueCard`).count(), 2);
+  await w.page.fill(`.valueCard:nth-child(2) .valueName`, `double`);
+  await w.page.selectOption(`.valueCard:nth-child(2) .valueKind`, `expr`);
+  await w.page.fill(`.valueCard:nth-child(2) .valueExpr`, `{area} * 2`);
+  await w.page.waitForFunction(() => /= 151,5/.test(document.querySelectorAll(`.valueCard .valueResult`)[1].textContent));
+  const saved = (await model(w.page)).values;
+  assert.deepEqual([saved[1].name, saved[1].kind, saved[1].expr], [`double`, `expr`, `{area} * 2`]);
+  await w.page.fill(`.valueCard:nth-child(2) .valueExpr`, `{nothing} * 2`);
+  await w.page.waitForFunction(() => /Pas de résultat|No result/.test(document.querySelectorAll(`.valueCard .valueResult`)[1].textContent));
+  await w.page.click(`.valueCard:nth-child(2) .valueRemove`);
+  assert.equal(await w.page.locator(`.valueCard`).count(), 1);
+  assert.deepEqual(w.errors, []);
+});
+
+test(`the fields menu of a text offers the named values`, async () => {
+  const text = { source: `fixed`, text: ``, size: `normal`, align: `left`, fill: `none` };
+  const w = await openWithRow({ savedOptions: VALUES_MODEL([AREA_VALUE], [{ id: `tx1`, type: `text`, title: ``, page: 0, x: 0, y: 0, w: 30, h: 6, config: text }]) }, 1);
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="tx1"]`, { position: { x: 20, y: 10 } });
+  const options = await w.page.$$eval(`#boardField option`, (list) => list.map((option) => option.value));
+  assert.ok(options.includes(`area`));
+  await w.page.selectOption(`#boardField`, `area`);
+  assert.equal(await w.page.inputValue(`#boardText`), `{area}`);
+  assert.deepEqual(w.errors, []);
+});
+
+test(`a calculation is built with the table, the rows, the function and the column`, async () => {
+  const w = await openWithRow({ savedOptions: VALUES_MODEL([], []) }, 1);
+  await edit(w);
+  await w.page.click(`#boardValuesButton`);
+  await w.page.click(`#boardValuesAdd`);
+  await w.page.fill(`.valueCard .valueName`, `total`);
+  await w.page.selectOption(`.valueCard .valueTable`, `Rooms`);
+  const links = await w.page.$$eval(`.valueCard .valueLink option`, (list) => list.map((option) => option.value));
+  assert.ok(links.includes(`|Rooms.Site`), JSON.stringify(links));
+  await w.page.selectOption(`.valueCard .valueLink`, `|Rooms.Site`);
+  await w.page.selectOption(`.valueCard .valueFn`, `sum`);
+  await w.page.selectOption(`.valueCard .valuePath`, `Area`);
+  await w.page.waitForFunction(() => /= 75,75/.test(document.querySelector(`.valueCard .valueResult`).textContent));
+  const value = (await model(w.page)).values[0];
+  assert.deepEqual([value.table, value.link, value.fn, value.path], [`Rooms`, `Rooms.Site`, `sum`, `Area`]);
+  assert.equal(await w.page.locator(`.valueCard .valueFilters fieldset`).count(), 2);
+  assert.deepEqual(w.errors, []);
+});

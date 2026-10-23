@@ -378,7 +378,25 @@
     return { ok: true, ...outcome, kept: filtered.rows.length, scanned: chosen.rows.length, warnings: filtered.errors };
   }
 
-  const api = { MAX_ROWS, chainKey, listStarts, listTables, listLinks, listAllTables, listChoices, listDynamicTables, numericPaths, tablesForChoices, explainChoices, tablesFor, rightTotalPossible, runTable };
+  // The result of a named value of the kind calculation, for the selected row `record` of the table `linked`:
+  // one number from the rows of a table (chosen like those of a table block) with a function (sum, average,
+  // minimum, maximum, count or number of different values) on a column. `calc` holds table, start, link, filters,
+  // fn and path. Returns { ok: true, number, kept } or { ok: false, reason } (`choose`, `start`, `nostart`, `link`,
+  // `notloaded` or `error`).
+  function runValue(schema, dataset, linked, record, calc) {
+    if (!record || !calc.table || !calc.link || !schema.tables.has(calc.table)) return { ok: false, reason: `choose` };
+    if (!dataset.table(calc.table)) return { ok: false, reason: `notloaded` };
+    if (!calc.path && calc.fn !== `count`) return { ok: false, reason: `choose` };
+    const chosen = selectRows(schema, dataset, linked, record, calc);
+    if (chosen.problem) return { ok: false, reason: chosen.problem };
+    const context = { dataset, linked: chosen.start.table, selectedId: chosen.startId };
+    const filtered = rowset.applyFilters(chosen.rows, calc.table, calc.filters.map(toRowsetFilter), context);
+    const grouped = aggregate.groupRows(dataset, calc.table, filtered.rows, { groupBy: [], measures: [{ fn: calc.fn, path: calc.path || undefined }], emptyLabel: `` });
+    if (grouped.error) return { ok: false, reason: `error`, detail: grouped.error };
+    return { ok: true, number: grouped.totals[0], kept: filtered.rows.length };
+  }
+
+  const api = { MAX_ROWS, runValue, chainKey, listStarts, listTables, listLinks, listAllTables, listChoices, listDynamicTables, numericPaths, tablesForChoices, explainChoices, tablesFor, rightTotalPossible, runTable };
   if (isNode) module.exports = api;
   else root.exportTdbTableQuery = api;
 })(typeof window !== `undefined` ? window : globalThis);

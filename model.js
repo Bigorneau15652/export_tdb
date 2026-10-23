@@ -31,6 +31,11 @@
   const MAX_ORDER_LABEL = 120;
   const MAX_COLUMNS = 12;
   const MAX_RECORD_ITEMS = 24;
+  const MAX_VALUES = 40;
+  const VALUE_KINDS = [`calc`, `field`, `expr`];
+  const NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]{0,39}$/;
+  const MAX_UNIT = 12;
+  const MAX_EXPRESSION = 500;
   const RECORD_COLUMNS = [1, 2, 3, 4];
   const MAX_FILTERS = 3;
   const MAX_GROUPS = 2;
@@ -41,7 +46,7 @@
 
   // A model with one empty page: screen format, landscape, 10 mm margins.
   function emptyModel() {
-    return { version: FORMAT_VERSION, page: { format: `screen`, orientation: `landscape`, margin: DEFAULT_MARGIN }, pages: 1, blocks: [] };
+    return { version: FORMAT_VERSION, page: { format: `screen`, orientation: `landscape`, margin: DEFAULT_MARGIN }, pages: 1, blocks: [], values: [] };
   }
 
   // A value that must be one of the allowed ones, or the first allowed one.
@@ -119,6 +124,31 @@
       columns: RECORD_COLUMNS.includes(raw.columns) ? raw.columns : 2,
       size: TEXT_SIZES.includes(raw.size) ? raw.size : `normal`
     };
+  }
+
+  // The named values of the dashboard cleaned. A value has a name (empty while it is being typed), a kind
+  // (`calc` a calculation on a table, `field` a column of the selected row, `expr` an expression of other
+  // values), a unit and decimals for its text, and the settings of its kind.
+  function cleanValues(raw) {
+    const list = Array.isArray(raw) ? raw : [];
+    return list.slice(0, MAX_VALUES).filter((item) => item && typeof item === `object`).map((item) => ({
+      name: matching(item.name, NAME_PATTERN),
+      kind: oneOf(item.kind, VALUE_KINDS),
+      unit: typeof item.unit === `string` ? item.unit.slice(0, MAX_UNIT) : ``,
+      decimals: Number.isInteger(item.decimals) && item.decimals >= 0 && item.decimals <= 4 ? item.decimals : -1,
+      table: matching(item.table, COLUMN_PATTERN),
+      start: matching(item.start, PATH_PATTERN),
+      link: item.link === `self` || item.link === `all` ? item.link : matching(item.link, LINK_PATTERN),
+      filters: (Array.isArray(item.filters) ? item.filters : []).slice(0, MAX_FILTERS).map(cleanFilter).filter(Boolean),
+      fn: oneOf(item.fn, FUNCTIONS),
+      path: matching(item.path, PATH_PATTERN),
+      expr: typeof item.expr === `string` ? item.expr.slice(0, MAX_EXPRESSION) : ``
+    }));
+  }
+
+  // Replaces the named values of the model by the cleaned list.
+  function setValues(model, values) {
+    return { ...model, values: cleanValues(values) };
   }
 
   // The settings of a block cleaned for its type. The text and table blocks have settings; the other
@@ -234,7 +264,7 @@
       });
     }
     const pages = whole(raw.pages, 1, MAX_PAGES, 1);
-    const model = reflow({ version: FORMAT_VERSION, page, pages, blocks });
+    const model = reflow({ version: FORMAT_VERSION, page, pages, blocks, values: cleanValues(raw.values) });
     return { model, warnings: [...new Set(warnings)], locked: false };
   }
 
@@ -324,7 +354,7 @@
     return reflow({ ...model, page: cleanPage({ ...model.page, ...changes }) });
   }
 
-  const api = { FORMAT_VERSION, MAX_BLOCKS, MAX_TITLE, MAX_FIXED_TEXT, MAX_COLUMNS, MAX_FILTERS, MAX_GROUPS, TABLE_MODES, FUNCTIONS, OPERATORS, SORT_BYS, TYPES, MAX_RECORD_ITEMS, RECORD_COLUMNS, TEXT_SOURCES, TEXT_SIZES, TEXT_ALIGNS, FILLS, DEFAULT_SIZES, emptyModel, cleanConfig, validateModel, reflow, findBlock, addBlock, compactPages, updateBlock, moveBlock, resizeBlock, deleteBlock, setPage };
+  const api = { FORMAT_VERSION, MAX_BLOCKS, MAX_TITLE, MAX_FIXED_TEXT, MAX_COLUMNS, MAX_FILTERS, MAX_GROUPS, TABLE_MODES, FUNCTIONS, OPERATORS, SORT_BYS, TYPES, MAX_RECORD_ITEMS, RECORD_COLUMNS, MAX_VALUES, VALUE_KINDS, NAME_PATTERN, cleanValues, setValues, TEXT_SOURCES, TEXT_SIZES, TEXT_ALIGNS, FILLS, DEFAULT_SIZES, emptyModel, cleanConfig, validateModel, reflow, findBlock, addBlock, compactPages, updateBlock, moveBlock, resizeBlock, deleteBlock, setPage };
   if (typeof module !== `undefined` && module.exports) module.exports = api;
   else root.exportTdbModel = api;
 })(typeof window !== `undefined` ? window : globalThis);

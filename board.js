@@ -14,6 +14,8 @@
   const MarkdownView = window.exportTdbMarkdownView;
   const Fields = window.exportTdbFields;
   const Record = window.exportTdbRecord;
+  const Named = window.exportTdbNamed;
+  const ValuesPanel = window.exportTdbValuesPanel;
   const Help = window.exportTdbHelp;
   const Data = window.exportTdbData;
   const { createDataset } = window.exportTdbDataset;
@@ -51,7 +53,7 @@
     zoomIn: $(`boardZoomIn`), saveState: $(`boardSaveState`), confirm: $(`boardConfirm`), confirmText: $(`boardConfirmText`),
     confirmYes: $(`boardConfirmYes`), confirmNo: $(`boardConfirmNo`), scroll: $(`boardScroll`), canvas: $(`boardCanvas`),
     side: $(`boardPanel`), titleRow: $(`boardTitleRow`), title: $(`boardTitle`), remove: $(`boardDelete`), close: $(`boardClose`), refresh: $(`boardRefresh`),
-    textBox: $(`boardTextSettings`), recordBox: $(`boardRecordSettings`), recordRows: $(`boardRecordRows`), recordAdd: $(`boardRecordAdd`), recordColumns: $(`boardRecordColumns`), recordSize: $(`boardRecordSize`), recordInfo: $(`boardRecordInfo`), source: $(`boardSource`), columnRow: $(`boardColumnRow`), column: $(`boardColumn`),
+    textBox: $(`boardTextSettings`), valuesBox: $(`boardValuesSettings`), valuesList: $(`boardValuesList`), valuesAdd: $(`boardValuesAdd`), valuesButton: $(`boardValuesButton`), heading: $(`boardPanelHeading`), recordBox: $(`boardRecordSettings`), recordRows: $(`boardRecordRows`), recordAdd: $(`boardRecordAdd`), recordColumns: $(`boardRecordColumns`), recordSize: $(`boardRecordSize`), recordInfo: $(`boardRecordInfo`), source: $(`boardSource`), columnRow: $(`boardColumnRow`), column: $(`boardColumn`),
     text: $(`boardText`), field: $(`boardField`), size: $(`boardSize`), align: $(`boardAlign`), fill: $(`boardFill`),
     textInfo: $(`boardTextInfo`), cellState: $(`boardCellState`),
     tableBox: $(`boardTableSettings`), kind: $(`boardKind`), tableSel: $(`boardTable`), linkRow: $(`boardLinkRow`), link: $(`boardLink`), rowsHelp: $(`boardRowsHelp`),
@@ -68,6 +70,8 @@
   let editing = false;
   let selectedId = null;
   let panelOpen = false;
+  // True while the settings panel shows the named values instead of a block.
+  let valuesOpen = false;
   let zoomIndex = ZOOMS.indexOf(1);
   let drag = null;
   let saveTimer = null;
@@ -158,8 +162,26 @@
     if (!state.schema || !state.record) return { nodes: tree, problems: [], empty };
     const words = { yes: tr(`wordYes`), no: tr(`wordNo`) };
     const dataset = currentDataset();
-    const result = Fields.expandFields(tree, (path) => Fields.resolveField(dataset, state.schema, state.linked, state.record, path, words));
+    const named = namedValues().byName;
+    const result = Fields.expandFields(tree, (path) => {
+      const value = path.includes(`.`) ? null : named.get(path);
+      if (value) return value.error ? { ok: false, reason: `named` } : { ok: true, text: value.text };
+      return Fields.resolveField(dataset, state.schema, state.linked, state.record, path, words);
+    });
     return { nodes: result.nodes, problems: result.problems, empty };
+  }
+
+  // The result of the named values for the selected row, kept until the data, the row or the values change.
+  let namedMemo = null;
+  function namedValues() {
+    const state = context();
+    if (!state.schema || !state.record) return { byName: new Map(), list: [] };
+    const dataset = currentDataset();
+    const key = JSON.stringify(model.values);
+    if (namedMemo && namedMemo.dataset === dataset && namedMemo.record === state.record && namedMemo.key === key && namedMemo.linked === state.linked) return namedMemo.result;
+    const result = Named.evaluateValues(state.schema, dataset, state.linked, state.record, model.values, { yes: tr(`wordYes`), no: tr(`wordNo`) });
+    namedMemo = { dataset, record: state.record, key, linked: state.linked, result };
+    return result;
   }
 
   // Loads the tables that the text blocks and the table blocks need, then draws again.
@@ -181,6 +203,7 @@
       Data.drop(state.linked);
     }
     Fields.tablesForPaths(state.schema, state.linked, [...paths]).forEach((name) => wanted.add(name));
+    Named.tablesForValues(state.schema, state.linked, model.values).forEach((name) => wanted.add(name));
     const names = [...wanted].filter((name) => !Data.tables().has(name) && !failedTables.has(name));
     if (!names.length) return;
     loadingData = true;
@@ -682,7 +705,7 @@
       node.classList.toggle(`overflowing`, node.scrollHeight > node.clientHeight + 2);
     }
     syncTools();
-    if (panelOpen) fillPanel();
+    if (panelOpen || valuesOpen) fillPanel();
     requestData();
     if ((options.focus || hadFocus) && selectedId) {
       const node = el.canvas.querySelector(`.block[data-id="${selectedId}"]`);
@@ -696,7 +719,8 @@
     el.edit.disabled = locked;
     el.tools.hidden = !editing;
     el.help.hidden = !editing;
-    const showPanel = editing && panelOpen && Boolean(selectedBlock());
+    const showPanel = editing && (valuesOpen || (panelOpen && Boolean(selectedBlock())));
+    el.valuesButton.setAttribute(`aria-expanded`, String(valuesOpen));
     el.side.hidden = !showPanel;
     $(`boardLayout`).classList.toggle(`withPanel`, showPanel);
     el.format.value = model.page.format;
@@ -712,17 +736,21 @@
   }
 
   // The schema for which the lists of columns of the panel were built.
+  let listsNames = ``;
   let listsFor = null;
 
   // Builds the lists that depend on the document: the text columns and the fields that can be inserted.
   function fillDynamicLists() {
     const state = context();
-    if (listsFor === state.schema) return;
+    const names = model.values.map((item) => item.name).filter(Boolean).join(`|`);
+    if (listsFor === state.schema && listsNames === names) return;
     listsFor = state.schema;
+    listsNames = names;
     const columns = writableColumns().map((column) => [column.id, column.id]);
     fillSelect(el.column, [[``, tr(`boardColumnNone`)], ...columns], ``);
     const fields = state.schema && state.linked ? Fields.fieldChoices(state.schema, state.linked).map((choice) => [choice.path, choice.label]) : [];
-    fillSelect(el.field, [[``, tr(`boardFieldPlaceholder`)], ...fields], ``);
+    const valueItems = model.values.filter((item) => item.name).map((item) => [item.name, tr(`valueFieldLabel`, { name: item.name })]);
+    fillSelect(el.field, [[``, tr(`boardFieldPlaceholder`)], ...fields, ...valueItems], ``);
   }
 
   // Fills the settings of a text block and the messages about its text.
@@ -1119,6 +1147,18 @@
 
   // Fills the settings panel with the selected block.
   function fillPanel() {
+    el.valuesBox.hidden = !valuesOpen;
+    el.heading.textContent = valuesOpen ? tr(`boardValuesTitle`) : tr(`boardPanelTitle`);
+    el.remove.hidden = valuesOpen;
+    if (valuesOpen) {
+      el.titleRow.hidden = true;
+      el.tableBox.hidden = true;
+      el.textBox.hidden = true;
+      el.recordBox.hidden = true;
+      el.valuesAdd.disabled = model.values.length >= Model.MAX_VALUES;
+      valuesPanel.render();
+      return;
+    }
     const block = selectedBlock();
     if (!block) return;
     setValue(el.title, block.title);
@@ -1133,6 +1173,7 @@
 
   // Selects a block (or none) and opens or closes its settings.
   function select(id, openPanel) {
+    if (id) valuesOpen = false;
     if (id !== selectedId) {
       sectionOpen.filters = false;
       sectionOpen.sort = false;
@@ -1142,7 +1183,7 @@
     panelOpen = Boolean(id) && openPanel;
     if (!panelOpen) explainOpen = false;
     for (const node of el.canvas.querySelectorAll(`.block`)) node.classList.toggle(`selected`, (node.dataset.parent || node.dataset.id) === id);
-    if (panelOpen) fillPanel();
+    if (panelOpen || valuesOpen) fillPanel();
     const before = el.scroll.clientWidth;
     syncTools();
     if (el.scroll.clientWidth !== before) render();
@@ -1420,7 +1461,22 @@
     if (selectedId) commit(Model.updateBlock(model, selectedId, { title: el.title.value }));
   });
   el.remove.addEventListener(`click`, askDelete);
-  el.close.addEventListener(`click`, () => select(selectedId, false));
+  el.close.addEventListener(`click`, () => {
+    valuesOpen = false;
+    select(selectedId, false);
+  });
+  el.valuesButton.addEventListener(`click`, () => {
+    valuesOpen = !valuesOpen;
+    if (valuesOpen) {
+      selectedId = null;
+      panelOpen = false;
+      for (const node of el.canvas.querySelectorAll(`.block.selected`)) node.classList.remove(`selected`);
+    }
+    render();
+  });
+  el.valuesAdd.addEventListener(`click`, () => {
+    if (model.values.length < Model.MAX_VALUES) commit(Model.setValues(model, [...model.values, { name: ``, kind: `calc` }]));
+  });
   el.confirmYes.addEventListener(`click`, confirmDelete);
   el.confirmNo.addEventListener(`click`, cancelDelete);
 
@@ -1601,6 +1657,17 @@
   window.addEventListener(`pagehide`, flushCell);
   document.addEventListener(`visibilitychange`, () => {
     if (document.visibilityState === `hidden`) flushCell();
+  });
+
+  const valuesPanel = ValuesPanel.create({
+    list: el.valuesList,
+    getValues: () => model.values,
+    setValues: (list) => commit(Model.setValues(model, list)),
+    context,
+    results: namedValues,
+    linkLabel: choiceLabel,
+    Fields,
+    Query
   });
 
   fillTools();
