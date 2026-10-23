@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.1
+
+- Legend of the charts: the text is smaller, long names break onto several lines and the legend no longer scrolls. The room it takes is reserved, so the legend never overlaps the drawing: a legend on the right keeps the pie or the bars to its left, a legend at the top or the bottom keeps them below or above it, and the legend always stays inside the block.
+- Tests: the breaking of long names and the room kept for the legend.
+
 ## 0.7.0
 
 - The block "Chart" draws charts in SVG, so that they stay sharp in print and in the PDF. Seven kinds: grouped columns, stacked columns, horizontal bars, stacked horizontal bars, line, pie and donut (area, scatter and treemap charts come later).

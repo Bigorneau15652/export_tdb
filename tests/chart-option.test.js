@@ -71,7 +71,7 @@ test(`a pie or a donut uses the first series, with a hole for the donut`, () => 
   const pie = C.buildOption(config({ chart: `pie`, labels: `percent` }), data, helpers);
   assert.equal(pie.series.length, 1);
   assert.deepEqual(pie.series[0].data, [{ name: `A`, value: 1 }, { name: `B`, value: 2 }]);
-  assert.equal(pie.series[0].radius, `68%`);
+  assert.equal(typeof pie.series[0].radius, `number`);
   assert.equal(pie.series[0].label.formatter({ name: `A`, percent: 33.3333, value: 1 }), `A\n33.3 %`);
   const donut = C.buildOption(config({ chart: `donut` }), data, helpers);
   assert.equal(Array.isArray(donut.series[0].radius), true);
@@ -99,4 +99,19 @@ test(`the option is plain data: no script and no unknown palette`, () => {
   assert.deepEqual(option.color, C.PALETTES.franche);
   const text = JSON.stringify(option);
   assert.ok(!/<|javascript:/i.test(text));
+});
+
+test(`a long legend breaks its names and keeps the drawing clear of it`, () => {
+  const long = { categories: [`A very long name of a category that goes on and on and on`, `Another quite long name of a category`, `Short`, `Fourth one`], series: [{ name: `S`, values: [1, 2, 3, 4] }] };
+  const sized = { ...helpers, width: 400, height: 300 };
+  const right = C.buildOption(config({ chart: `donut`, legend: `right` }), long, sized);
+  assert.ok(right.legend.formatter(long.categories[0]).includes(`\n`));
+  const pie = right.series[0];
+  assert.ok(pie.center[0] + pie.radius[1] <= 400 - 40);
+  const bottom = C.buildOption(config({ chart: `donut`, legend: `bottom` }), long, sized);
+  assert.ok(bottom.series[0].center[1] + bottom.series[0].radius[1] < 300 - 30);
+  const several = { categories: [`X`, `Y`], series: long.categories.map((name) => ({ name, values: [1, 2] })) };
+  const bars = C.buildOption(config({ chart: `bar`, legend: `top` }), several, sized);
+  assert.ok(bars.grid.top > 40);
+  assert.equal(bars.legend.type, `plain`);
 });
