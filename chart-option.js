@@ -10,7 +10,7 @@
     froide: [`#0b3d66`, `#2b73a8`, `#00828a`, `#2f9e8f`, `#4d7a2c`, `#6a5acd`, `#3b4f8c`, `#5a6773`, `#7a8f2c`, `#1a7f5a`]
   };
   const PALETTE_KEYS = Object.keys(PALETTES);
-  const CHART_TYPES = [`bar`, `stack`, `barh`, `barhStack`, `line`, `pie`, `donut`];
+  const CHART_TYPES = [`bar`, `stack`, `barh`, `barhStack`, `line`, `area`, `pie`, `donut`, `treemap`, `scatter`];
   const LEGENDS = [`none`, `top`, `bottom`, `right`];
   const LABELS = [`none`, `values`, `percent`];
   const TEXT_COLOR = `#1f2933`;
@@ -83,18 +83,24 @@
   }
 
   // The options for ECharts, or null when there is nothing to draw. `config` holds chart, palette, legend and
-  // labels; `data` is { categories, series: [{ name, values }] }; `helpers` holds `fontSize` (pixels) and
-  // `format(number, decimals)` (the French way to write a number) and `decimals`.
+  // labels; `data` is { categories, series: [{ name, values }] }, or for a scatter chart { xName, yName, series: [{ name,
+  // points: [[x, y]] }] }; `helpers` holds `fontSize` (pixels) and `format(number, decimals)` (the French way to write a
+  // number) and `decimals`.
   function buildOption(config, data, helpers) {
-    if (!data || !data.categories.length || !data.series.length) return null;
+    const scatter = config.chart === `scatter`;
+    if (!data || !Array.isArray(data.series) || !data.series.length) return null;
+    if (scatter ? !data.series.some((one) => one.points.length) : !Array.isArray(data.categories) || !data.categories.length) return null;
     const fontSize = helpers.fontSize;
     const decimals = helpers.decimals;
     const format = (value, forced) => helpers.format(value, forced === undefined ? decimals : forced);
     const width = helpers.width || 600;
     const height = helpers.height || 300;
+    const treemap = config.chart === `treemap`;
     const isPie = config.chart === `pie` || config.chart === `donut`;
-    const names = isPie ? data.categories : data.series.map((one) => one.name);
-    const legend = legendOf(config.legend, names, width, height, fontSize);
+    const names = isPie || treemap ? data.categories : data.series.map((one) => one.name);
+    // A treemap writes the names in its rectangles and a single series of points needs no legend.
+    const legendPlace = treemap || (scatter && data.series.length < 2) ? `none` : config.legend;
+    const legend = legendOf(legendPlace, names, width, height, fontSize);
     const reserve = legend.reserve;
     const base = {
       animation: false,
@@ -103,6 +109,34 @@
       textStyle: { fontFamily: `sans-serif`, fontSize, color: TEXT_COLOR },
       legend: legend.option
     };
+    if (scatter) {
+      const padding = fontSize * 1.8;
+      const axis = (name, extra) => ({ type: `value`, scale: true, name, nameLocation: `middle`, nameGap: fontSize * 2.6, nameTextStyle: { color: TEXT_COLOR, fontSize }, axisLabel: { color: TEXT_COLOR, fontSize, formatter: (number) => format(number) }, axisLine: { lineStyle: { color: LINE_COLOR } }, splitLine: { lineStyle: { color: `#e4e7eb` } }, ...extra });
+      return {
+        ...base,
+        grid: { left: 8 + padding, right: 16 + reserve.right, top: 12 + reserve.top, bottom: 8 + reserve.bottom + padding, containLabel: true },
+        xAxis: axis(data.xName || ``, {}),
+        yAxis: axis(data.yName || ``, { nameGap: fontSize * 3.4 }),
+        series: data.series.map((one) => ({ type: `scatter`, name: one.name, data: one.points, symbolSize: fontSize * 0.8, itemStyle: { opacity: 0.85 }, emphasis: { disabled: true } }))
+      };
+    }
+    if (treemap) {
+      const series = data.series[0];
+      const colors = PALETTES[config.palette] || PALETTES.franche;
+      const items = data.categories.map((name, at) => ({ name, value: numberOf(series.values[at]) || 0 })).filter((item) => item.value > 0);
+      if (!items.length) return null;
+      const sum = items.reduce((total, item) => total + item.value, 0);
+      const text = (params) => (config.labels === `percent` ? `${params.name}\n${format(params.value / sum * 100, 1)} %` : config.labels === `values` ? `${params.name}\n${format(params.value)}` : params.name);
+      return {
+        ...base,
+        series: [{
+          type: `treemap`, left: 0, top: 0, right: 0, bottom: 0, roam: false, nodeClick: false, breadcrumb: { show: false }, squareRatio: 1,
+          label: { show: true, color: `#ffffff`, fontSize, fontWeight: `bold`, formatter: text, overflow: `truncate` },
+          itemStyle: { borderColor: `#ffffff`, borderWidth: 2, gapWidth: 2 }, emphasis: { disabled: true },
+          data: items.map((item, at) => ({ ...item, itemStyle: { color: colors[at % colors.length] } }))
+        }]
+      };
+    }
     if (config.chart === `pie` || config.chart === `donut`) {
       const series = data.series[0];
       const areaWidth = width - reserve.right;
@@ -119,9 +153,10 @@
       };
     }
     const horizontal = config.chart === `barh` || config.chart === `barhStack`;
-    const stacked = config.chart === `stack` || config.chart === `barhStack`;
-    const type = config.chart === `line` ? `line` : `bar`;
-    const category = { type: `category`, data: data.categories, axisLabel: { color: TEXT_COLOR, fontSize, hideOverlap: true }, axisLine: { lineStyle: { color: LINE_COLOR } }, axisTick: { show: false }, ...(horizontal ? { inverse: true } : {}) };
+    const area = config.chart === `area`;
+    const stacked = config.chart === `stack` || config.chart === `barhStack` || area;
+    const type = config.chart === `line` || area ? `line` : `bar`;
+    const category = { type: `category`, ...(area ? { boundaryGap: false } : {}), data: data.categories, axisLabel: { color: TEXT_COLOR, fontSize, hideOverlap: true }, axisLine: { lineStyle: { color: LINE_COLOR } }, axisTick: { show: false }, ...(horizontal ? { inverse: true } : {}) };
     const value = { type: `value`, axisLabel: { color: TEXT_COLOR, fontSize, formatter: (number) => format(number) }, splitLine: { lineStyle: { color: `#e4e7eb` } } };
     return {
       ...base,
@@ -130,8 +165,9 @@
       yAxis: horizontal ? category : value,
       series: data.series.map((one) => ({
         type, name: one.name, data: one.values.map(numberOf), ...(stacked ? { stack: `total` } : {}),
-        label: labelOf(config.labels === `percent` ? `values` : config.labels, fontSize, format, false),
-        emphasis: { disabled: true }, ...(type === `line` ? { symbol: `circle`, symbolSize: fontSize * 0.6, lineStyle: { width: 2 } } : {})
+        label: area ? { show: false } : labelOf(config.labels === `percent` ? `values` : config.labels, fontSize, format, false),
+        emphasis: { disabled: true },
+        ...(area ? { symbol: `none`, lineStyle: { width: 1 }, areaStyle: { opacity: 0.85 } } : type === `line` ? { symbol: `circle`, symbolSize: fontSize * 0.6, lineStyle: { width: 2 } } : {})
       }))
     };
   }

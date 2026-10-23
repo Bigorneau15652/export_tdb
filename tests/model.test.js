@@ -377,3 +377,8 @@ test(`the settings of an image block are cleaned`, () => {
   assert.equal(M.cleanConfig(`image`, { rank: 21 }).rank, 1);
   assert.equal(M.cleanConfig(`image`, { caption: `Photo of {Name}` }).caption, ``);
 });
+
+test(`the new kinds of chart are kept and an unknown one is not`, () => {
+  for (const kind of [`area`, `treemap`, `scatter`]) assert.equal(M.cleanConfig(`chart`, { chart: kind }).chart, kind);
+  assert.equal(M.cleanConfig(`chart`, { chart: `radar` }).chart, `bar`);
+});

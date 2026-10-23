@@ -1174,3 +1174,40 @@ test(`a new named value starts with the type of the previous one`, async () => {
   assert.equal((await model(w.page)).values[1].kind, `field`);
   assert.deepEqual(w.errors, []);
 });
+
+test(`area and treemap charts are drawn from a grouped table`, async () => {
+  const area = await openWithRow({ savedOptions: chartModel({ ...CHART_CONFIG, chart: `area` }) }, 1);
+  await area.page.waitForFunction(() => document.querySelector(`.block[data-id="ch1"] .chartPlot svg path`));
+  assert.ok((await area.page.locator(`.block[data-id="ch1"] .chartPlot svg path`).count()) >= 2);
+  assert.deepEqual(area.errors, []);
+  const treemap = await openWithRow({ savedOptions: chartModel({ ...CHART_CONFIG, chart: `treemap`, labels: `values` }) }, 1);
+  await treemap.page.waitForFunction(() => document.querySelector(`.block[data-id="ch1"] .chartPlot svg`));
+  const texts = await treemap.page.$$eval(`.block[data-id="ch1"] svg text`, (list) => list.map((node) => node.textContent).join(`|`));
+  assert.match(texts, /Office|Classroom/);
+  assert.equal(await treemap.page.locator(`.block[data-id="ch1"] svg`).count(), 1);
+  assert.deepEqual(treemap.errors, []);
+});
+
+test(`a scatter chart is drawn from the first two columns of a list and explains itself in the settings`, async () => {
+  const w = await openWithRow({ savedOptions: chartModel({ table: `Rooms`, link: `Rooms.Site`, columns: [{ path: `Area` }, { path: `Seats` }], chart: `scatter` }) }, 1);
+  await w.page.waitForFunction(() => document.querySelector(`.block[data-id="ch1"] .chartPlot svg`));
+  const texts = await w.page.$$eval(`.block[data-id="ch1"] svg text`, (list) => list.map((node) => node.textContent).join(`|`));
+  assert.match(texts, /Area/);
+  assert.match(texts, /Seats/);
+  assert.ok((await w.page.locator(`.block[data-id="ch1"] svg path`).count()) >= 4);
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="ch1"]`, { position: { x: 20, y: 30 } });
+  assert.match(await w.page.locator(`#boardChartInfo`).innerText(), /horizontal|horizontale/i);
+  await w.page.selectOption(`#boardChartType`, `bar`);
+  assert.match(await w.page.locator(`#boardChartInfo`).innerText(), /item|catégories|categories/i);
+  await w.page.selectOption(`#boardChartType`, `scatter`);
+  assert.equal((await model(w.page)).blocks[0].config.chart, `scatter`);
+  assert.deepEqual(w.errors, []);
+});
+
+test(`a scatter chart on a grouped table asks to remove the grouping`, async () => {
+  const w = await openWithRow({ savedOptions: chartModel({ ...CHART_CONFIG, chart: `scatter` }) }, 1);
+  await edit(w);
+  assert.match(await w.page.locator(`.block[data-id="ch1"]`).innerText(), /regroupement|grouping/i);
+  assert.deepEqual(w.errors, []);
+});
