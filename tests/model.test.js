@@ -218,6 +218,8 @@ test(`the settings of a table block are cleaned`, () => {
   });
   assert.deepEqual(Object.keys(config).sort(), [`columns`, `decimals`, `filters`, `groupBy`, `link`, `merge`, `mode`, `sort`, `start`, `table`, `total`]);
   assert.equal(config.mode, `group`);
+  assert.equal(M.cleanConfig(`table`, { mode: `group` }).mode, `list`);
+  assert.equal(M.cleanConfig(`table`, { mode: `list`, groupBy: [`Usage`] }).mode, `group`);
   assert.deepEqual(config.groupBy, [`Usage`, ``]);
   assert.equal(config.columns.length, 2);
   assert.equal(config.columns[0].label.length, 60);

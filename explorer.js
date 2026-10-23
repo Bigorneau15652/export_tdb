@@ -9,7 +9,7 @@
   const { describeColumn, describeValue } = window.exportTdbShape;
   const { buildReport } = window.exportTdbReport;
 
-  const VERSION = `0.4.2`;
+  const VERSION = `0.5.3`;
   // At most this many descendant tables are loaded to measure them and to look at their values.
   const MAX_TABLES = 12;
   const TEST_MARKER = `__export_tdb_test__`;
@@ -145,7 +145,7 @@
     const data = await grist.docApi.fetchTable(table.id);
     const ms = performance.now() - started;
     const rows = (data.id || []).length;
-    state.timings.push({ table: table.id, rows, columns: table.columns.length, ms });
+    state.timings.push({ table: table.id, rows, columns: table.columns.length, ms, manualSort: data.manualSort !== undefined });
     for (const column of table.columns) {
       const described = describeColumn(data[column.id], el.reveal.checked);
       state.shapes.push({ table: table.id, column: column.id, type: column.type, shape: described.shape, filled: described.filled, empty: described.empty });

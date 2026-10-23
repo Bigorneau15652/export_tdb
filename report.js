@@ -29,7 +29,7 @@
     for (const row of data.shapes) add(`${row.table}.${row.column} [${row.type}] ${row.shape} (${row.filled}/${row.empty})`);
     add();
     add(`5. Loading times`);
-    for (const row of data.timings) add(`${row.table}: ${row.rows} rows, ${row.columns} columns, ${Math.round(row.ms)} ms`);
+    for (const row of data.timings) add(`${row.table}: ${row.rows} rows, ${row.columns} columns, ${Math.round(row.ms)} ms${row.manualSort === undefined ? `` : `, manual order column ${row.manualSort ? `present` : `absent`}`}`);
     add();
     add(`6. Tests of the API`);
     for (const test of data.tests) add(`${test.name}: ${test.ok ? `OK` : `FAILED`}${test.detail ? ` - ${test.detail}` : ``}`);

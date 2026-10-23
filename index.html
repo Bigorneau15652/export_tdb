@@ -11,13 +11,13 @@
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'self'; script-src 'self' https://grist.numerique.gouv.fr; img-src 'self' data: blob: https:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>export_tdb</title>
-  <link rel="stylesheet" href="explorer.css?v=0.5.2">
-  <link rel="stylesheet" href="board.css?v=0.5.2">
+  <link rel="stylesheet" href="explorer.css?v=0.5.3">
+  <link rel="stylesheet" href="board.css?v=0.5.3">
   <script src="https://grist.numerique.gouv.fr/grist-plugin-api.js"></script>
 </head>
 <body>
   <main id="app">
-    <h1><span data-i18n="title"></span> <small class="version" id="version">0.5.2</small></h1>
+    <h1><span data-i18n="title"></span> <small class="version" id="version">0.5.3</small></h1>
     <div id="tabs" role="tablist">
       <button type="button" role="tab" id="tabBoard" class="tab" aria-selected="true" data-i18n="tabBoard"></button>
       <button type="button" role="tab" id="tabExplorer" class="tab" aria-selected="false" data-i18n="tabExplorer"></button>
@@ -87,29 +87,29 @@
           <div id="boardTableSettings" hidden>
             <h3 data-i18n="boardTableTitle"></h3>
             <p class="hint" data-i18n="boardTableHelp"></p>
-            <label for="boardMode"><span class="help" tabindex="0" role="img" data-i18n-tip="tipBoardMode">?</span> <span data-i18n="boardMode"></span></label>
-            <select id="boardMode"></select>
+            <label for="boardKind"><span class="help" tabindex="0" role="img" data-i18n-tip="tipBoardKind">?</span> <span data-i18n="boardKind"></span></label>
+            <select id="boardKind"></select>
             <label for="boardTable"><span class="help" tabindex="0" role="img" data-i18n-tip="tipBoardTable">?</span> <span data-i18n="boardTableLabel"></span></label>
             <select id="boardTable"></select>
-            <label for="boardLink"><span class="help" tabindex="0" role="img" data-i18n-tip="tipBoardRows">?</span> <span data-i18n="boardRows"></span></label>
-            <select id="boardLink"></select>
-            <p id="boardLinkInfo" class="hint"></p>
-            <div id="boardGroupRow" hidden>
-              <div class="pair">
-                <div>
-                  <label for="boardGroup1"><span class="help" tabindex="0" role="img" data-i18n-tip="tipGroup">?</span> <span data-i18n="labGroupBy"></span></label>
-                  <select id="boardGroup1"></select>
-                </div>
-                <div>
-                  <label for="boardGroup2"><span class="help" tabindex="0" role="img" data-i18n-tip="tipGroup2">?</span> <span data-i18n="labGroupBy2"></span></label>
-                  <select id="boardGroup2"></select>
-                </div>
+            <div id="boardLinkRow" hidden>
+              <label for="boardLink"><span class="help" tabindex="0" role="img" data-i18n-tip="tipBoardRows">?</span> <span data-i18n="boardRows"></span></label>
+              <select id="boardLink"></select>
+              <p id="boardLinkInfo" class="hint"></p>
+              <div class="row">
+                <button type="button" id="boardExplainButton" class="button secondary small" aria-expanded="false" data-i18n="boardLearnMore"></button>
+                <label class="check inline"><input type="checkbox" id="boardMoreLinks"> <span data-i18n="boardMoreLinks"></span></label>
               </div>
+              <div id="boardExplain" class="explain" hidden></div>
+            </div>
+            <label for="boardGroup1"><span class="help" tabindex="0" role="img" data-i18n-tip="tipBoardItem">?</span> <span data-i18n="boardItem"></span></label>
+            <select id="boardGroup1"></select>
+            <div id="boardGroupRow" hidden>
               <label class="check"><input type="checkbox" id="boardMerge"> <span class="help" tabindex="0" role="img" data-i18n-tip="tipMerge">?</span> <span data-i18n="boardMerge"></span></label>
             </div>
             <p class="label"><span class="help" tabindex="0" role="img" data-i18n-tip="tipBoardColumns">?</span> <span data-i18n="boardColumns"></span></p>
             <div id="boardColumnRows"></div>
             <button type="button" id="boardAddColumn" class="button secondary small" data-i18n="boardAddColumn"></button>
+            <label class="check"><input type="checkbox" id="boardTotal"> <span class="help" tabindex="0" role="img" data-i18n-tip="tipBoardTotal">?</span> <span data-i18n="boardTotal"></span></label>
             <details id="boardMore">
               <summary data-i18n="boardMore"></summary>
               <fieldset class="filter" id="boardFilter1"></fieldset>
@@ -126,13 +126,8 @@
                 </div>
               </div>
               <select id="boardSortColumn" aria-label="Colonne de tri"></select>
-              <div class="pair">
-                <div>
-                  <label for="boardDecimals"><span class="help" tabindex="0" role="img" data-i18n-tip="tipBoardDecimals">?</span> <span data-i18n="boardDecimals"></span></label>
-                  <select id="boardDecimals"></select>
-                </div>
-                <label class="check"><input type="checkbox" id="boardTotal"> <span class="help" tabindex="0" role="img" data-i18n-tip="tipBoardTotal">?</span> <span data-i18n="boardTotal"></span></label>
-              </div>
+              <label for="boardDecimals"><span class="help" tabindex="0" role="img" data-i18n-tip="tipBoardDecimals">?</span> <span data-i18n="boardDecimals"></span></label>
+              <select id="boardDecimals"></select>
             </details>
             <p id="boardTableInfo" class="hint" role="status"></p>
           </div>
@@ -254,28 +249,28 @@
     </div>
   </main>
 
-  <script src="shared/i18n.js?v=0.5.2"></script>
-  <script src="schema.js?v=0.5.2"></script>
-  <script src="shape.js?v=0.5.2"></script>
-  <script src="report.js?v=0.5.2"></script>
-  <script src="values.js?v=0.5.2"></script>
-  <script src="dataset.js?v=0.5.2"></script>
-  <script src="rowset.js?v=0.5.2"></script>
-  <script src="aggregate.js?v=0.5.2"></script>
-  <script src="format.js?v=0.5.2"></script>
-  <script src="explorer.js?v=0.5.2"></script>
-  <script src="help.js?v=0.5.2"></script>
-  <script src="filter-ui.js?v=0.5.2"></script>
-  <script src="lab.js?v=0.5.2"></script>
-  <script src="layout.js?v=0.5.2"></script>
-  <script src="model.js?v=0.5.2"></script>
-  <script src="grist-access.js?v=0.5.2"></script>
-  <script src="markdown.js?v=0.5.2"></script>
-  <script src="fields.js?v=0.5.2"></script>
-  <script src="data-cache.js?v=0.5.2"></script>
-  <script src="markdown-view.js?v=0.5.2"></script>
-  <script src="table-query.js?v=0.5.2"></script>
-  <script src="board.js?v=0.5.2"></script>
-  <script src="tabs.js?v=0.5.2"></script>
+  <script src="shared/i18n.js?v=0.5.3"></script>
+  <script src="schema.js?v=0.5.3"></script>
+  <script src="shape.js?v=0.5.3"></script>
+  <script src="report.js?v=0.5.3"></script>
+  <script src="values.js?v=0.5.3"></script>
+  <script src="dataset.js?v=0.5.3"></script>
+  <script src="rowset.js?v=0.5.3"></script>
+  <script src="aggregate.js?v=0.5.3"></script>
+  <script src="format.js?v=0.5.3"></script>
+  <script src="explorer.js?v=0.5.3"></script>
+  <script src="help.js?v=0.5.3"></script>
+  <script src="filter-ui.js?v=0.5.3"></script>
+  <script src="lab.js?v=0.5.3"></script>
+  <script src="layout.js?v=0.5.3"></script>
+  <script src="model.js?v=0.5.3"></script>
+  <script src="grist-access.js?v=0.5.3"></script>
+  <script src="markdown.js?v=0.5.3"></script>
+  <script src="fields.js?v=0.5.3"></script>
+  <script src="data-cache.js?v=0.5.3"></script>
+  <script src="markdown-view.js?v=0.5.3"></script>
+  <script src="table-query.js?v=0.5.3"></script>
+  <script src="board.js?v=0.5.3"></script>
+  <script src="tabs.js?v=0.5.3"></script>
 </body>
 </html>

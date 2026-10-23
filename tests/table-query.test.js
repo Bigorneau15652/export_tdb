@@ -80,7 +80,8 @@ test(`nothing chosen gives a request to choose, and a missing table is reported`
   assert.deepEqual(run(`Sites`, 1, { table: `Rooms` }), { ok: false, reason: `choose` });
   assert.equal(Q.runTable(schema, require(`../dataset.js`).createDataset(schema, {}), `Sites`, record(`Sites`, 1), config({ table: `Rooms`, link: `all`, columns: [{ path: `Area` }] }), WORDS).reason, `notloaded`);
   assert.equal(run(`Sites`, 1, { table: `Rooms`, link: `Rooms.Site` }).reason, `columns`);
-  assert.equal(run(`Sites`, 1, { mode: `group`, table: `Rooms`, link: `Rooms.Site`, columns: [{ path: `Area` }] }).reason, `groups`);
+  assert.equal(run(`Sites`, 1, { table: `Rooms`, link: `Rooms.Site`, groupBy: [`Usage`], columns: [{ path: `Number` }, { path: `` }] }).ok, true);
+  assert.equal(run(`Sites`, 1, { table: `Rooms`, link: `Rooms.Site`, groupBy: [`Usage`], columns: [{ path: `` }] }).reason, `groups`);
   assert.equal(run(`Sites`, 1, { table: `Rooms`, link: `Rooms.Nope`, columns: [{ path: `Area` }] }).reason, `link`);
 });
 
@@ -191,4 +192,33 @@ test(`random configurations never throw`, () => {
       if (result.ok) assert.ok(result.rows.every((row) => row.length === result.headers.length));
     }
   }
+});
+
+test(`a dynamic table can show the table of the selected row, the tables that point to it and the tables of its items`, () => {
+  const rooms = Q.listDynamicTables(schema, `Rooms`);
+  assert.deepEqual(rooms.map((t) => `${t.group}:${t.table}`), [`own:Rooms`, `related:Buildings`, `related:Floors`, `related:Sites`, `related:Usages`]);
+  const sites = Q.listDynamicTables(schema, `Sites`);
+  assert.deepEqual(sites.filter((t) => t.group === `own`).map((t) => t.table), [`Buildings`, `Floors`, `Rooms`, `Sites`]);
+  assert.ok(!sites.some((t) => t.table === `Notes`));
+  const summary = Q.listDynamicTables(schema, `Usages`);
+  assert.ok(summary.some((t) => t.group === `summary` && t.table === `Rooms_summary_Usage`));
+});
+
+test(`the numeric columns are the numbers and the columns of type Any, also through references`, () => {
+  const numeric = Q.numericPaths(schema, `Rooms`);
+  assert.ok(numeric.has(`Area`) && numeric.has(`Seats`) && numeric.has(`Building.Year`));
+  assert.ok(!numeric.has(`Number`) && !numeric.has(`Building`) && !numeric.has(`Building.Name`) && !numeric.has(`Tags`));
+});
+
+test(`every choice of rows says how many rows it keeps for the selected row`, () => {
+  const lines = Q.explainChoices(schema, dataset, `Rooms`, record(`Rooms`, 1), `Floors`);
+  const byValue = Object.fromEntries(lines.map((line) => [line.choice.value, line.kept]));
+  assert.equal(byValue[`Floor|self`], 1);
+  assert.equal(byValue[`Building|Floors.Building`], 2);
+  assert.equal(byValue[`|all`], 4);
+  assert.ok(lines.every((line) => line.total === 4));
+  const unloaded = Q.explainChoices(schema, require(`../dataset.js`).createDataset(schema, {}), `Rooms`, record(`Rooms`, 1), `Floors`);
+  assert.ok(unloaded.every((line) => line.kept === null));
+  const needed = Q.tablesForChoices(schema, `Rooms`, `Floors`).sort();
+  assert.deepEqual(needed, [`Buildings`, `Floors`, `Rooms`, `Sites`]);
 });

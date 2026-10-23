@@ -33,6 +33,7 @@
   const SIZE_KEYS = { small: `sizeSmall`, normal: `sizeNormal`, large: `sizeLarge` };
   const ALIGN_KEYS = { left: `alignLeft`, center: `alignCenter`, justify: `alignJustify` };
   const FILL_KEYS = { none: `fillNone`, grey: `fillGrey`, blue: `fillBlue`, green: `fillGreen`, yellow: `fillYellow`, red: `fillRed` };
+  const FN_ORDER = [`sum`, `avg`, `min`, `max`, `count`, `distinct`];
   const FN_KEYS = { sum: `fnSum`, avg: `fnAvg`, min: `fnMin`, max: `fnMax`, count: `fnCount`, distinct: `fnDistinct` };
   const QUALITY_KEYS = { summary: `labQualitySummary`, list: `labQualityList` };
   const REASON_KEYS = { choose: `boardTableChoose`, columns: `boardTableColumns`, groups: `boardTableGroups`, start: `boardTableStart`, nostart: `boardTableNoStart`, link: `boardTableLink`, notloaded: `boardTableNotLoaded` };
@@ -49,8 +50,9 @@
     textBox: $(`boardTextSettings`), source: $(`boardSource`), columnRow: $(`boardColumnRow`), column: $(`boardColumn`),
     text: $(`boardText`), field: $(`boardField`), size: $(`boardSize`), align: $(`boardAlign`), fill: $(`boardFill`),
     textInfo: $(`boardTextInfo`), cellState: $(`boardCellState`),
-    tableBox: $(`boardTableSettings`), mode: $(`boardMode`), tableSel: $(`boardTable`), link: $(`boardLink`), linkInfo: $(`boardLinkInfo`),
-    groupRow: $(`boardGroupRow`), group1: $(`boardGroup1`), group2: $(`boardGroup2`), merge: $(`boardMerge`),
+    tableBox: $(`boardTableSettings`), kind: $(`boardKind`), tableSel: $(`boardTable`), linkRow: $(`boardLinkRow`), link: $(`boardLink`), linkInfo: $(`boardLinkInfo`),
+    explainButton: $(`boardExplainButton`), explain: $(`boardExplain`), moreLinks: $(`boardMoreLinks`),
+    groupRow: $(`boardGroupRow`), group1: $(`boardGroup1`), merge: $(`boardMerge`),
     columnRows: $(`boardColumnRows`), addColumn: $(`boardAddColumn`), sortBy: $(`boardSortBy`), sortColumn: $(`boardSortColumn`),
     sortDir: $(`boardSortDir`), decimals: $(`boardDecimals`), total: $(`boardTotal`), tableInfo: $(`boardTableInfo`)
   };
@@ -164,6 +166,7 @@
     for (const block of model.blocks) {
       if (block.type === `text`) Fields.extractFields(sourceText(block)).forEach((path) => paths.add(path));
       if (block.type === `table`) Query.tablesFor(state.schema, state.linked, block.config).forEach((name) => wanted.add(name));
+      if (block.type === `table` && explainOpen && block.id === selectedId && block.config.table) Query.tablesForChoices(state.schema, state.linked, block.config.table).forEach((name) => wanted.add(name));
     }
     // A row that the loaded table does not hold yet (added since it was loaded): load the table again, once.
     const loadedLinked = Data.tables().get(state.linked);
@@ -559,6 +562,9 @@
   let filtersFor = ``;
   let columnsFor = ``;
   let filterUis = [];
+  // True while the "Learn more" panel about the rows of the table is open.
+  let explainOpen = false;
+  const NUMERIC_FUNCTIONS = [`sum`, `avg`, `min`, `max`];
 
   // Changes the settings of the selected block (text or table) and draws again.
   function changeConfig(changes) {
@@ -566,10 +572,30 @@
     if (block && (block.type === `text` || block.type === `table`)) commit(Model.updateBlock(model, block.id, { config: changes }));
   }
 
-  // Builds the line of one column of the table: path, calculation, heading and the buttons.
-  function buildColumnRow(index) {
+  // The paths of the columns that hold numbers, for the table of the selected table block.
+  function numericOf(block) {
+    const schema = context().schema;
+    return schema && block.config.table && schema.tables.has(block.config.table) ? Query.numericPaths(schema, block.config.table) : new Set();
+  }
+
+  // The columns of a table block corrected so that each calculation fits its column: a calculation on
+  // numbers needs a column of numbers (otherwise the count is used), and a grouped table has a calculation
+  // on every column.
+  function fitColumns(block, group) {
+    const numeric = numericOf(block);
+    return block.config.columns.map((column) => {
+      let fn = column.fn;
+      if (group && !fn) fn = column.path && numeric.has(column.path) ? `sum` : `count`;
+      if (NUMERIC_FUNCTIONS.includes(fn) && column.path && !numeric.has(column.path)) fn = group ? `count` : ``;
+      return { ...column, fn };
+    });
+  }
+
+  // Builds the line of one column of the table: in a grouped table the calculation first and then the
+  // column; in a list the column first and then the function of the total line. Then the heading and the buttons.
+  function buildColumnRow(index, group) {
     const row = document.createElement(`div`);
-    row.className = `colrow`;
+    row.className = `colrow ${group ? `group` : `list`}`;
     row.dataset.index = String(index);
     const path = document.createElement(`select`);
     path.className = `colPath`;
@@ -588,7 +614,6 @@
       item.type = `button`;
       item.textContent = text;
       item.setAttribute(`aria-label`, tr(key));
-      item.title = tr(key);
       item.addEventListener(`click`, action);
       return item;
     };
@@ -609,7 +634,12 @@
       changeConfig({ columns });
     };
     path.addEventListener(`change`, () => edit({ path: path.value }));
-    fn.addEventListener(`change`, () => edit({ fn: fn.value }));
+    fn.addEventListener(`change`, () => {
+      const block = selectedBlock();
+      const current = block ? block.config.columns[index] : null;
+      const needsNumbers = NUMERIC_FUNCTIONS.includes(fn.value);
+      edit(needsNumbers && current && current.path && !numericOf(block).has(current.path) ? { fn: fn.value, path: `` } : { fn: fn.value });
+    });
     label.addEventListener(`input`, () => edit({ label: label.value }));
     tools.append(
       label,
@@ -620,27 +650,36 @@
         if (block) changeConfig({ columns: block.config.columns.filter((_, at) => at !== index) });
       })
     );
-    row.append(path, fn, tools);
+    if (group) row.append(fn, path, tools);
+    else row.append(path, fn, tools);
     tools.style.gridColumn = `1 / 3`;
     return row;
   }
 
-  // Shows the column lines of the table block, rebuilding them only when their number or the table changes.
+  // Shows the column lines of the table block, rebuilding them only when their number, the table or the
+  // kind of table changes.
   function renderColumnRows(block, choices) {
     const config = block.config;
+    const group = config.mode === `group`;
     const key = `${block.id}|${config.table}|${config.mode}|${config.columns.length}`;
     if (key !== columnsFor) {
       columnsFor = key;
       el.columnRows.textContent = ``;
-      config.columns.forEach((_, index) => el.columnRows.appendChild(buildColumnRow(index)));
+      config.columns.forEach((_, index) => el.columnRows.appendChild(buildColumnRow(index, group)));
     }
-    const functions = Model.FUNCTIONS.map((name) => [name, tr(FN_KEYS[name])]);
-    const items = config.mode === `list` ? [[``, tr(`fnNoTotal`)], ...functions] : functions;
+    const numeric = numericOf(block);
+    const all = FN_ORDER.map((name) => [name, tr(FN_KEYS[name])]);
     config.columns.forEach((column, index) => {
       const row = el.columnRows.children[index];
       if (!row) return;
-      setOptions(row.querySelector(`.colPath`), [[``, tr(`boardColumnNone`)], ...choices.map((choice) => [choice.path, choice.label])], column.path);
-      setOptions(row.querySelector(`.colFn`), items, column.fn || (config.mode === `group` ? `sum` : ``));
+      const fn = column.fn || (group ? `sum` : ``);
+      const needsNumbers = NUMERIC_FUNCTIONS.includes(fn);
+      const available = group && needsNumbers ? choices.filter((choice) => numeric.has(choice.path)) : choices;
+      const first = group && fn === `count` ? tr(`boardCountRows`) : tr(`boardColumnNone`);
+      setOptions(row.querySelector(`.colPath`), [[``, first], ...available.map((choice) => [choice.path, choice.label])], column.path);
+      const isNumber = column.path && numeric.has(column.path);
+      const functions = group ? all : [[``, tr(`fnNoTotal`)], ...all.filter(([name]) => isNumber || !NUMERIC_FUNCTIONS.includes(name))];
+      setOptions(row.querySelector(`.colFn`), functions, fn);
       setValue(row.querySelector(`.colLabel`), column.label);
     });
   }
@@ -655,11 +694,39 @@
     }));
   }
 
+  // The name of a group of tables in the table menu.
+  const TABLE_GROUP_KEYS = { own: `boardTablesOwn`, related: `boardTablesRelated`, summary: `boardTablesSummary` };
+
+  // Writes the "Learn more" panel: for each way to choose the rows of the table, how many rows it keeps
+  // for the row that is selected now.
+  function renderExplain(block) {
+    const state = context();
+    const config = block.config;
+    el.explain.textContent = ``;
+    if (!config.table || !state.record) return;
+    const dataset = currentDataset();
+    const lines = Query.explainChoices(state.schema, dataset, state.linked, state.record, config.table).filter((line) => line.choice.kind !== `all`);
+    const intro = document.createElement(`p`);
+    intro.textContent = tr(`boardExplainIntro`, { table: config.table, total: lines.length && lines[0].total !== null ? lines[0].total : `?`, linked: state.linked, id: state.record.id });
+    const list = document.createElement(`ul`);
+    for (const line of lines) {
+      const item = document.createElement(`li`);
+      const name = document.createElement(`strong`);
+      name.textContent = choiceLabel(line.choice);
+      const count = line.kept === null ? tr(`boardExplainUnknown`) : tr(`boardExplainKept`, { kept: line.kept, total: line.total });
+      item.append(name, document.createTextNode(` : ${count}. ${line.choice.advanced ? `` : choiceDetail(line.choice)}`));
+      list.appendChild(item);
+    }
+    const outro = document.createElement(`p`);
+    outro.textContent = tr(`boardExplainFixed`);
+    el.explain.append(intro, list, outro);
+  }
+
   // Fills the settings of a table block and the messages about its content.
   function fillTableSettings(block) {
     const config = block.config;
     const state = context();
-    const controls = [el.mode, el.tableSel, el.link, el.group1, el.group2, el.merge, el.addColumn, el.sortBy, el.sortColumn, el.sortDir, el.decimals, el.total];
+    const controls = [el.kind, el.tableSel, el.link, el.group1, el.merge, el.addColumn, el.sortBy, el.sortColumn, el.sortDir, el.decimals, el.total, el.moreLinks, el.explainButton];
     controls.forEach((control) => { control.disabled = !state.schema; });
     if (!state.schema) {
       el.tableInfo.textContent = tr(`boardTableNotReady`);
@@ -667,22 +734,32 @@
       return;
     }
     const schema = state.schema;
+    const fixed = config.link === `all`;
     const starts = Query.listStarts(schema, state.linked);
     const start = starts.find((item) => item.key === config.start) || starts[0];
     const choices = config.table && schema.tables.has(config.table) ? Fields.fieldChoices(schema, config.table) : [];
-    const columnItems = [[``, tr(`boardColumnNone`)], ...choices.map((choice) => [choice.path, choice.label])];
-    setOptions(el.mode, [[`list`, tr(`boardModeList`)], [`group`, tr(`boardModeGroup`)]], config.mode);
-    const tables = Query.listAllTables(schema).map((entry) => [entry.table, entry.summary ? `${entry.table} ${tr(`labQualitySummary`)}` : entry.table]);
+    const columnItems = [[``, tr(`boardItemNone`)], ...choices.map((choice) => [choice.path, choice.label])];
+    setOptions(el.kind, [[`dynamic`, tr(`kindDynamic`)], [`fixed`, tr(`kindFixed`)]], fixed ? `fixed` : `dynamic`);
+    const tables = fixed
+      ? Query.listAllTables(schema).map((entry) => [entry.table, entry.summary ? `${entry.table} ${tr(`labQualitySummary`)}` : entry.table])
+      : Query.listDynamicTables(schema, state.linked).map((entry) => [entry.table, entry.table, tr(TABLE_GROUP_KEYS[entry.group])]);
     setOptions(el.tableSel, [[``, tr(`boardColumnNone`)], ...tables], config.table);
-    const rowChoices = config.table && schema.tables.has(config.table) ? Query.listChoices(schema, state.linked, config.table) : [];
-    const chosen = rowChoices.find((item) => item.start === config.start && item.link === config.link);
-    const main = rowChoices.filter((item) => !item.advanced).map((item) => [item.value, choiceLabel(item)]);
-    const advanced = rowChoices.filter((item) => item.advanced).map((item) => [item.value, choiceDetail(item), tr(`boardAdvancedLinks`)]);
-    setOptions(el.link, [[``, tr(`boardColumnNone`)], ...main, ...advanced], chosen ? chosen.value : ``);
-    el.linkInfo.textContent = chosen ? choiceDetail(chosen) : ``;
+    el.linkRow.hidden = fixed;
+    if (!fixed) {
+      const rowChoices = config.table && schema.tables.has(config.table) ? Query.listChoices(schema, state.linked, config.table).filter((item) => item.kind !== `all`) : [];
+      const chosen = rowChoices.find((item) => item.start === config.start && item.link === config.link);
+      const showAdvanced = el.moreLinks.checked || Boolean(chosen && chosen.advanced);
+      if (chosen && chosen.advanced) el.moreLinks.checked = true;
+      const main = rowChoices.filter((item) => !item.advanced).map((item) => [item.value, choiceLabel(item)]);
+      const advanced = showAdvanced ? rowChoices.filter((item) => item.advanced).map((item) => [item.value, choiceDetail(item), tr(`boardAdvancedLinks`)]) : [];
+      setOptions(el.link, [[``, tr(`boardColumnNone`)], ...main, ...advanced], chosen ? chosen.value : ``);
+      el.linkInfo.textContent = chosen ? choiceDetail(chosen) : ``;
+      el.explainButton.setAttribute(`aria-expanded`, String(explainOpen));
+      el.explain.hidden = !explainOpen || !config.table;
+      if (explainOpen && config.table) renderExplain(block);
+    }
     el.groupRow.hidden = config.mode !== `group`;
     setOptions(el.group1, columnItems, config.groupBy[0] || ``);
-    setOptions(el.group2, columnItems, config.groupBy[1] || ``);
     el.merge.checked = config.merge;
     const sortItems = config.mode === `list` ? [[`none`, tr(`sortNone`)], [`column`, tr(`sortByColumn`)]] : [[`key`, tr(`sortByKey`)], [`value`, tr(`sortByValue`)]];
     const sortBy = sortItems.some(([value]) => value === config.sort.by) ? config.sort.by : sortItems[0][0];
@@ -1032,16 +1109,21 @@
 
 
   // The settings of the table block that depend on the table are cleared when the table changes.
-  const tableReset = (mode) => ({ link: ``, columns: [], groupBy: [], filters: [], sort: { by: mode === `group` ? `key` : `none`, column: ``, dir: `asc` } });
-  el.mode.addEventListener(`change`, () => {
+  const tableReset = (fixed) => ({ start: ``, link: fixed ? `all` : ``, columns: [], groupBy: [], filters: [], sort: { by: `none`, column: ``, dir: `asc` } });
+  el.kind.addEventListener(`change`, () => {
     const block = selectedBlock();
+    const state = context();
     if (!block) return;
-    const group = el.mode.value === `group`;
-    changeConfig({ mode: el.mode.value, columns: block.config.columns.map((column) => ({ ...column, fn: group ? column.fn || `sum` : column.fn })), sort: { ...block.config.sort, by: group ? `key` : `none` } });
+    if (el.kind.value === `fixed`) {
+      changeConfig({ start: ``, link: `all` });
+      return;
+    }
+    const pool = Query.listDynamicTables(state.schema, state.linked).map((entry) => entry.table);
+    changeConfig(pool.includes(block.config.table) ? { start: ``, link: `` } : { table: ``, ...tableReset(false) });
   });
   el.tableSel.addEventListener(`change`, () => {
     const block = selectedBlock();
-    if (block) changeConfig({ table: el.tableSel.value, start: ``, ...tableReset(block.config.mode) });
+    if (block) changeConfig({ table: el.tableSel.value, ...tableReset(block.config.link === `all`) });
   });
   el.link.addEventListener(`change`, () => {
     const block = selectedBlock();
@@ -1049,8 +1131,17 @@
     const [start, link] = el.link.value ? el.link.value.split(`|`) : [``, ``];
     changeConfig(start === block.config.start ? { start, link } : { start, link, filters: [] });
   });
-  el.group1.addEventListener(`change`, () => changeConfig({ groupBy: [el.group1.value, el.group2.value] }));
-  el.group2.addEventListener(`change`, () => changeConfig({ groupBy: [el.group1.value, el.group2.value] }));
+  el.moreLinks.addEventListener(`change`, () => render({ keepFocus: true }));
+  el.explainButton.addEventListener(`click`, () => {
+    explainOpen = !explainOpen;
+    render({ keepFocus: true });
+  });
+  el.group1.addEventListener(`change`, () => {
+    const block = selectedBlock();
+    if (!block) return;
+    const group = Boolean(el.group1.value);
+    changeConfig({ groupBy: [el.group1.value], sort: { ...block.config.sort, by: group ? `key` : `none` }, columns: fitColumns(block, group) });
+  });
   el.merge.addEventListener(`change`, () => changeConfig({ merge: el.merge.checked }));
   el.addColumn.addEventListener(`click`, () => {
     const block = selectedBlock();
