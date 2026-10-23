@@ -403,7 +403,7 @@
       const height = plot.clientHeight;
       if (width < 30 || height < 30) continue;
       const decimals = block.config.columns.length && Number.isInteger(block.config.columns[0].decimals) ? block.config.columns[0].decimals : block.config.decimals;
-      const option = ChartOption.buildOption(block.config, data, { fontSize: Math.max(8, TABLE_MM * mmPx), format: Format.formatNumber, decimals });
+      const option = ChartOption.buildOption(block.config, data, { fontSize: Math.max(8, TABLE_MM * mmPx), format: Format.formatNumber, decimals, width, height });
       if (!option) continue;
       const instance = Echarts.init(plot, null, { renderer: `svg`, width, height });
       instance.setOption(option);
