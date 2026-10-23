@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.9
+
+- Long tables over several pages. A new tick box in the table settings, "Long table: continue on the following pages", is off by default. When it is on and the rows do not fit in the block, the rest of the rows moves to the top of the following pages, at the same horizontal position and with the same width, in the free places left by the other blocks of those pages (a free place shorter than four steps is not used). The heading row is repeated and the title is followed by "(continued)". The heights of the rows are measured in the page, so the cut follows the real layout, and the total line stays with the last rows.
+- The pages are not added by themselves: when the pages that exist have no room for all the rows, a message in the table settings says how many rows are missing and that a page must be added with "Add a page", and the last frame shows the red stripe of the overflow. The settings also say how many pages the table uses.
+- The continuation frames cannot be selected, moved or resized: only the first frame is the block.
+- New pure module `flow.js` (free places of the pages, cut of the rows) with Node tests, including a random test that every row is placed once and in order.
+- The model has a new key `flow` (false by default); tables saved by 0.5.8 stay valid.
+
 ## 0.5.8
 
 - Correction of the version numbers. Version 0.5.7 was published with the number 0.5.5 on its pages, so the browser kept old files from the cache and mixed them with the new ones, which could leave the menus empty. Every page, the package, the lock file and the explorer now carry 0.5.8, so the browser loads fresh files.

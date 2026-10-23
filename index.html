@@ -11,13 +11,13 @@
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'self'; script-src 'self' https://grist.numerique.gouv.fr; img-src 'self' data: blob: https:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>export_tdb</title>
-  <link rel="stylesheet" href="explorer.css?v=0.5.8">
-  <link rel="stylesheet" href="board.css?v=0.5.8">
+  <link rel="stylesheet" href="explorer.css?v=0.5.9">
+  <link rel="stylesheet" href="board.css?v=0.5.9">
   <script src="https://grist.numerique.gouv.fr/grist-plugin-api.js"></script>
 </head>
 <body>
   <main id="app">
-    <h1><span data-i18n="title"></span> <small class="version" id="version">0.5.8</small></h1>
+    <h1><span data-i18n="title"></span> <small class="version" id="version">0.5.9</small></h1>
     <div id="tabs" role="tablist">
       <button type="button" role="tab" id="tabBoard" class="tab" aria-selected="true" data-i18n="tabBoard"></button>
       <button type="button" role="tab" id="tabExplorer" class="tab" aria-selected="false" data-i18n="tabExplorer"></button>
@@ -103,6 +103,7 @@
             <button type="button" id="boardAddColumn" class="button secondary small" data-i18n="boardAddColumn"></button>
             <label class="check"><input type="checkbox" id="boardTotal"> <span class="help" tabindex="0" role="img" data-i18n-tip="tipBoardTotal">?</span> <span data-i18n="boardTotalBelow"></span></label>
             <label class="check"><input type="checkbox" id="boardTotalRight"> <span class="help" tabindex="0" role="img" data-i18n-tip="tipBoardTotalRight">?</span> <span data-i18n="boardTotalRight"></span></label>
+            <label class="check"><input type="checkbox" id="boardFlow"> <span class="help" tabindex="0" role="img" data-i18n-tip="tipBoardFlow">?</span> <span data-i18n="boardFlow"></span></label>
             <div id="boardTotalRightRow" class="colTop" hidden>
               <select id="boardTotalRightFn" aria-label="Calcul du total à droite"></select>
               <button type="button" id="boardTotalRightLess" class="stepButton" data-i18n-label="boardDecLess">&larr;.0</button>
@@ -268,28 +269,29 @@
     </div>
   </main>
 
-  <script src="shared/i18n.js?v=0.5.8"></script>
-  <script src="schema.js?v=0.5.8"></script>
-  <script src="shape.js?v=0.5.8"></script>
-  <script src="report.js?v=0.5.8"></script>
-  <script src="values.js?v=0.5.8"></script>
-  <script src="dataset.js?v=0.5.8"></script>
-  <script src="rowset.js?v=0.5.8"></script>
-  <script src="aggregate.js?v=0.5.8"></script>
-  <script src="format.js?v=0.5.8"></script>
-  <script src="explorer.js?v=0.5.8"></script>
-  <script src="help.js?v=0.5.8"></script>
-  <script src="filter-ui.js?v=0.5.8"></script>
-  <script src="lab.js?v=0.5.8"></script>
-  <script src="layout.js?v=0.5.8"></script>
-  <script src="model.js?v=0.5.8"></script>
-  <script src="grist-access.js?v=0.5.8"></script>
-  <script src="markdown.js?v=0.5.8"></script>
-  <script src="fields.js?v=0.5.8"></script>
-  <script src="data-cache.js?v=0.5.8"></script>
-  <script src="markdown-view.js?v=0.5.8"></script>
-  <script src="table-query.js?v=0.5.8"></script>
-  <script src="board.js?v=0.5.8"></script>
-  <script src="tabs.js?v=0.5.8"></script>
+  <script src="shared/i18n.js?v=0.5.9"></script>
+  <script src="schema.js?v=0.5.9"></script>
+  <script src="shape.js?v=0.5.9"></script>
+  <script src="report.js?v=0.5.9"></script>
+  <script src="values.js?v=0.5.9"></script>
+  <script src="dataset.js?v=0.5.9"></script>
+  <script src="rowset.js?v=0.5.9"></script>
+  <script src="aggregate.js?v=0.5.9"></script>
+  <script src="format.js?v=0.5.9"></script>
+  <script src="explorer.js?v=0.5.9"></script>
+  <script src="help.js?v=0.5.9"></script>
+  <script src="filter-ui.js?v=0.5.9"></script>
+  <script src="lab.js?v=0.5.9"></script>
+  <script src="layout.js?v=0.5.9"></script>
+  <script src="flow.js?v=0.5.9"></script>
+  <script src="model.js?v=0.5.9"></script>
+  <script src="grist-access.js?v=0.5.9"></script>
+  <script src="markdown.js?v=0.5.9"></script>
+  <script src="fields.js?v=0.5.9"></script>
+  <script src="data-cache.js?v=0.5.9"></script>
+  <script src="markdown-view.js?v=0.5.9"></script>
+  <script src="table-query.js?v=0.5.9"></script>
+  <script src="board.js?v=0.5.9"></script>
+  <script src="tabs.js?v=0.5.9"></script>
 </body>
 </html>
