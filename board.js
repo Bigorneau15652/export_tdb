@@ -718,6 +718,7 @@
     el.edit.textContent = editing ? tr(`boardDone`) : tr(`boardEdit`);
     el.edit.disabled = locked;
     el.tools.hidden = !editing;
+    el.valuesButton.hidden = !editing;
     el.help.hidden = !editing;
     const showPanel = editing && (valuesOpen || (panelOpen && Boolean(selectedBlock())));
     el.valuesButton.setAttribute(`aria-expanded`, String(valuesOpen));

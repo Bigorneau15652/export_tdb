@@ -887,3 +887,14 @@ test(`a calculation is built with the table, the rows, the function and the colu
   assert.equal(await w.page.locator(`.valueCard .valueFilters fieldset`).count(), 2);
   assert.deepEqual(w.errors, []);
 });
+
+test(`the named values button is next to the Done button, only in the editing mode`, async () => {
+  const w = await openBoard();
+  assert.equal(await w.page.locator(`#boardValuesButton`).isHidden(), true);
+  await edit(w);
+  assert.equal(await w.page.locator(`#boardValuesButton`).isVisible(), true);
+  const done = await box(w.page, `#boardEdit`);
+  const values = await box(w.page, `#boardValuesButton`);
+  assert.ok(Math.abs(done.y - values.y) < done.height, `on the same line as the Done button`);
+  assert.deepEqual(w.errors, []);
+});
