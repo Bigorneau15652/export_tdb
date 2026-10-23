@@ -222,3 +222,8 @@ test(`every choice of rows says how many rows it keeps for the selected row`, ()
   const needed = Q.tablesForChoices(schema, `Rooms`, `Floors`).sort();
   assert.deepEqual(needed, [`Buildings`, `Floors`, `Rooms`, `Sites`]);
 });
+
+test(`a column can impose its own decimals, otherwise the table decimals apply`, () => {
+  const result = run(`Sites`, 1, { decimals: 1, table: `Rooms`, link: `Rooms.Site`, columns: [{ path: `Area`, decimals: 2 }, { path: `Area` }, { path: `Area`, decimals: -1 }] });
+  assert.deepEqual(result.rows[0], [`20,50`, `20,5`, `20,5`]);
+});

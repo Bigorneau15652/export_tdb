@@ -193,21 +193,17 @@ test(`arrows move the selected block by one step and Delete asks before removing
   assert.deepEqual(w.errors, []);
 });
 
-test(`a double click opens the settings and the title and type are changed there`, async () => {
+test(`a double click opens the settings and the title is changed there`, async () => {
   const w = await openBoard({ savedOptions: SAVED });
   await edit(w);
   await w.page.dblclick(`.block[data-id="bbb2"]`, { position: { x: 20, y: 30 } });
   assert.equal(await w.page.locator(`#boardPanel`).isVisible(), true);
   assert.equal(await w.page.inputValue(`#boardTitle`), `Surfaces`);
   await w.page.fill(`#boardTitle`, `Présentation de l'école`);
-  await w.page.selectOption(`#boardType`, `image`);
   const block = (await model(w.page)).blocks.find((b) => b.id === `bbb2`);
   assert.equal(block.title, `Présentation de l'école`);
-  assert.equal(block.type, `image`);
   assert.match(await w.page.locator(`.block[data-id="bbb2"]`).innerText(), /Présentation de l'école/);
-  await w.page.selectOption(`#boardType`, `text`);
-  assert.equal(await w.page.locator(`#boardTitle`).isHidden(), true);
-  assert.equal(await w.page.locator(`#boardText`).isVisible(), true);
+  assert.equal(await w.page.locator(`#boardType`).count(), 0);
   assert.deepEqual(w.errors, []);
 });
 
@@ -515,7 +511,7 @@ test(`a table is built from the settings panel`, async () => {
   await w.page.click(`#boardAddColumn`);
   await w.page.selectOption(`.colrow:nth-child(2) .colPath`, `Area`);
   await w.page.selectOption(`.colrow:nth-child(2) .colFn`, `sum`);
-  await w.page.check(`#boardTotal`);
+  await w.page.click(`#boardTotal`);
   await w.page.waitForFunction(() => document.querySelectorAll(`.block[data-type="table"] .dt tr`).length > 1);
   const rows = await w.page.$$eval(`.block[data-type="table"] .dt tr`, (list) => list.map((row) => [...row.children].map((cell) => cell.textContent)));
   assert.deepEqual(rows[rows.length - 1], [`Total`, `75,75`]);
@@ -593,12 +589,14 @@ test(`column lines can be moved and removed and a filter keeps the right rows`, 
   const w = await openWithRow({ savedOptions: tableModel(config) }, 1);
   await edit(w);
   await w.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 20, y: 30 } });
-  await w.page.click(`.colrow:nth-child(1) .tools button:nth-of-type(2)`);
+  await w.page.click(`.colrow:nth-child(1) .tools button:nth-of-type(4)`);
   const order = (await model(w.page)).blocks[0].config.columns.map((c) => c.path);
   assert.deepEqual(order, [`Area`, `Number`]);
-  await w.page.click(`.colrow:nth-child(1) .tools button:nth-of-type(3)`);
+  await w.page.click(`.colrow:nth-child(1) .tools button:nth-of-type(5)`);
   assert.deepEqual((await model(w.page)).blocks[0].config.columns.map((c) => c.path), [`Number`]);
-  await w.page.click(`#boardMore summary`);
+  assert.equal(await w.page.locator(`#boardFilterBody`).isHidden(), true);
+  await w.page.click(`#boardFilterToggle`);
+  assert.equal(await w.page.locator(`#boardFilterBody`).isVisible(), true);
   await w.page.selectOption(`#boardFilter1 select >> nth=0`, `Area`);
   await w.page.selectOption(`#boardFilter1 select >> nth=1`, `gt`);
   await w.page.fill(`#boardFilter1 input[type="text"]`, `10`);
@@ -657,7 +655,7 @@ test(`the rows menu says in a short sentence which rows are kept and keeps the a
   assert.ok(!rows.some(([value]) => value === `|all`));
   assert.ok(rows.length < 8, `the menu must stay short: ${rows.length}`);
   await w.page.selectOption(`#boardLink`, `Building|Floors.Building`);
-  assert.match(await w.page.locator(`#boardLinkInfo`).innerText(), /Floors\.Building/);
+  assert.match(await w.page.locator(`#boardRowsHelp`).getAttribute(`data-tip`), /Floors\.Building/);
   await w.page.click(`.block[data-id="tb1"]`);
   assert.deepEqual(w.errors, []);
 });
@@ -672,4 +670,19 @@ test(`a help badge shows one bubble only: no native title next to the drawn one`
   const lab = await openBoard();
   await lab.page.click(`#tabLab`);
   assert.equal(await lab.page.$$eval(`#panelLab .help[title]`, (list) => list.length), 0);
+});
+
+test(`a help badge opens a bubble on click and its cross closes it`, async () => {
+  const w = await openBoard({ savedOptions: SAVED });
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="bbb2"]`, { position: { x: 20, y: 30 } });
+  await w.page.click(`#boardPanel .help`);
+  assert.equal(await w.page.locator(`.helpBubble`).count(), 1);
+  assert.ok((await w.page.locator(`.helpBubble`).innerText()).length > 3);
+  await w.page.click(`.helpBubble .helpClose`);
+  assert.equal(await w.page.locator(`.helpBubble`).count(), 0);
+  await w.page.click(`#boardPanel .help`);
+  await w.page.keyboard.press(`Escape`);
+  assert.equal(await w.page.locator(`.helpBubble`).count(), 0);
+  assert.deepEqual(w.errors, []);
 });

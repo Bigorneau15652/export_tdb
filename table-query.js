@@ -187,6 +187,11 @@
     return resolved.error ? path : resolved.column.label || resolved.column.id;
   }
 
+  // The decimals of a column: its own choice (-1 is automatic) or, when it has none, those of the table.
+  function decimalsOf(column, config) {
+    return Number.isInteger(column.decimals) && column.decimals >= -1 ? column.decimals : config.decimals;
+  }
+
   // A number as a text with the chosen decimals (counts never have decimals); null gives an empty text.
   function numberText(value, fn, decimals) {
     if (typeof value !== `number` || !Number.isFinite(value)) return ``;
@@ -240,7 +245,7 @@
       });
     }
     const shown = order.slice(0, MAX_ROWS);
-    const body = shown.map((row) => resolved.map((one) => fields.formatValue(one.column, dataset.valueAt(one, row), dataset, words, config.decimals)));
+    const body = shown.map((row) => resolved.map((one, index) => fields.formatValue(one.column, dataset.valueAt(one, row), dataset, words, decimalsOf(columns[index], config))));
     const headers = columns.map((column, index) => ({ text: column.label || pathLabel(dataset, config.table, column.path), numeric: resolved[index].column.base === `Numeric` || resolved[index].column.base === `Int` }));
     let total = null;
     if (config.total && columns.some((column) => column.fn)) {
@@ -248,7 +253,7 @@
         if (!column.fn) return index === 0 ? words.total : ``;
         const numbers = rows.map((row) => (column.fn === `distinct` ? dataset.textAt(resolved[index], row) : values.toNumber(dataset.valueAt(resolved[index], row))));
         const value = column.fn === `distinct` ? new Set(numbers.filter((text) => text !== ``)).size : aggregate.summarize(numbers, column.fn);
-        return numberText(value, column.fn, config.decimals);
+        return numberText(value, column.fn, decimalsOf(column, config));
       });
     }
     return { headers, rows: body, total, truncated: order.length > shown.length };
@@ -256,7 +261,7 @@
 
   // The result of a grouping: one line per group with the keys and the measures.
   function groupResult(dataset, config, rows, words) {
-    const measures = config.columns.filter((column) => column.path || column.fn === `count`).map((column) => ({ fn: column.fn || `sum`, path: column.path || undefined, label: column.label }));
+    const measures = config.columns.filter((column) => column.path || column.fn === `count`).map((column) => ({ fn: column.fn || `sum`, path: column.path || undefined, label: column.label, decimals: decimalsOf(column, config) }));
     const groupBy = config.groupBy.filter(Boolean).map((path) => ({ path, merge: config.merge }));
     const sort = config.sort.by === `value` ? { by: `value`, measure: 0, dir: config.sort.dir } : { by: `key`, dir: config.sort.dir };
     const result = aggregate.groupRows(dataset, config.table, rows, { groupBy, measures, sort, emptyLabel: words.empty });
@@ -266,8 +271,8 @@
       ...measures.map((measure) => ({ text: measure.label || `${words[measure.fn]}${measure.path ? ` (${pathLabel(dataset, config.table, measure.path)})` : ``}`, numeric: true }))
     ];
     const shown = result.rows.slice(0, MAX_ROWS);
-    const body = shown.map((row) => [...row.keys, ...row.values.map((value, index) => numberText(value, measures[index].fn, config.decimals))]);
-    const total = config.total ? [words.total, ...groupBy.slice(1).map(() => ``), ...result.totals.map((value, index) => numberText(value, measures[index].fn, config.decimals))] : null;
+    const body = shown.map((row) => [...row.keys, ...row.values.map((value, index) => numberText(value, measures[index].fn, measures[index].decimals))]);
+    const total = config.total ? [words.total, ...groupBy.slice(1).map(() => ``), ...result.totals.map((value, index) => numberText(value, measures[index].fn, measures[index].decimals))] : null;
     return { headers, rows: body, total, truncated: result.rows.length > shown.length };
   }
 

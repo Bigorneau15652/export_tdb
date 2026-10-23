@@ -39,6 +39,16 @@
     return out;
   }
 
+  // The choices of `fieldChoices` in the order of the menus: first the own columns of the table in
+  // alphabetical order, then the columns of the linked tables (`Reference > Column`), also in
+  // alphabetical order. Numbers inside names are compared as numbers.
+  function sortChoices(choices) {
+    const compare = (a, b) => a.label.localeCompare(b.label, `fr`, { numeric: true, sensitivity: `base` });
+    const own = choices.filter((choice) => !choice.path.includes(`.`)).sort(compare);
+    const linked = choices.filter((choice) => choice.path.includes(`.`)).sort(compare);
+    return [...own, ...linked];
+  }
+
   // The reference column `column` and the tables that its label needs: the table it points to and,
   // when the column shown there is itself a reference, the table of that one, a few levels deep.
   function labelTables(schema, column, found) {
@@ -156,7 +166,7 @@
     return { nodes: walk(nodes), problems };
   }
 
-  const api = { extractFields, fieldChoices, tablesForPaths, formatValue, resolveField, expandFields };
+  const api = { extractFields, fieldChoices, sortChoices, tablesForPaths, formatValue, resolveField, expandFields };
   if (isNode) module.exports = api;
   else root.exportTdbFields = api;
 })(typeof window !== `undefined` ? window : globalThis);

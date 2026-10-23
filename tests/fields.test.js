@@ -102,3 +102,15 @@ test(`fields are replaced only in plain text and a value cannot change the layou
   assert.equal(nodes[2].items[0][0].value, `item fine`);
   assert.equal(JSON.stringify(tree).includes(`fine`), false);
 });
+
+test(`the choices are sorted by level: own columns first, then linked columns, each in alphabetical order`, () => {
+  const sorted = F.sortChoices([
+    { path: `Site.Name`, label: `Site > Name` },
+    { path: `zeta`, label: `zeta` },
+    { path: `Alpha`, label: `Alpha` },
+    { path: `Site.Area`, label: `Site > Area` },
+    { path: `beta10`, label: `beta10` },
+    { path: `beta2`, label: `beta2` }
+  ]);
+  assert.deepEqual(sorted.map((choice) => choice.label), [`Alpha`, `beta2`, `beta10`, `zeta`, `Site > Area`, `Site > Name`]);
+});

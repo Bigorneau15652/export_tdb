@@ -127,3 +127,12 @@ input[type="number"]:focus-visible, input[type="text"]:focus-visible { outline: 
 .explain p { margin: 4px 0; }
 .explain ul { margin: 4px 0; padding-left: 16px; }
 .explain li { margin: 4px 0; }
+
+/* Version 0.5.4: sections with a + or - button, and decimals buttons. */
+#boardPanel .section { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 8px 0 4px; }
+#boardPanel .section .label { margin: 0; }
+#boardPanel .toggle { min-width: 34px; min-height: 28px; padding: 0 8px; border: 1px solid #52606d; border-radius: 4px; background: #e4e7eb; color: #1f2933; font: inherit; font-weight: 700; cursor: pointer; }
+#boardPanel .toggle:focus-visible { outline: 3px solid #f2b705; }
+.colrow .tools { flex-wrap: wrap; }
+.colrow .tools .colLabel { flex: 1 1 100%; }
+.colrow .colDec { min-width: 30px; align-self: center; text-align: center; font-size: 12px; color: #1f2933; }
