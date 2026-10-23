@@ -290,3 +290,8 @@ test(`random sequences of changes always leave a valid model`, () => {
     }
   }
 });
+
+test(`the decimals of a column are kept only between automatic (-1) and 4`, () => {
+  const columns = M.cleanConfig(`table`, { columns: [{ path: `A`, decimals: 3 }, { path: `B`, decimals: -1 }, { path: `C`, decimals: 9 }, { path: `D`, decimals: `2` }, { path: `E` }] }).columns;
+  assert.deepEqual(columns.map((column) => column.decimals), [3, -1, undefined, undefined, undefined]);
+});

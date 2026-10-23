@@ -80,7 +80,8 @@
       columns: list(raw.columns, MAX_COLUMNS).filter((item) => item && typeof item === `object`).map((item) => ({
         path: matching(item.path, PATH_PATTERN),
         fn: FUNCTIONS.includes(item.fn) ? item.fn : ``,
-        label: typeof item.label === `string` ? item.label.slice(0, MAX_LABEL) : ``
+        label: typeof item.label === `string` ? item.label.slice(0, MAX_LABEL) : ``,
+        ...(Number.isInteger(item.decimals) && item.decimals >= -1 && item.decimals <= 4 ? { decimals: item.decimals } : {})
       })),
       filters: list(raw.filters, MAX_FILTERS).map(cleanFilter).filter(Boolean),
       sort: { by: oneOf(sort.by, SORT_BYS), column: matching(sort.column, PATH_PATTERN), dir: sort.dir === `desc` ? `desc` : `asc` },

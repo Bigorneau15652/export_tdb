@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.4
+
+- Table block, lighter settings panel, following the trials of 0.5.3.
+  - The "Type" menu is gone from the settings panel: the type of a block is chosen when it is added.
+  - The example sentence under "Kind of table" is now in its help badge, written without any name from your document. The help texts no longer quote tables or columns: they are general, and the sentence that names the real tables and columns (the current choice of "Linked to the selected row by") is built from your document and shown in the help badge of that menu instead of under it.
+  - The "Item" menu and the column menus are sorted by level: first the columns of the table in alphabetical order, then the columns of the linked tables (`Reference > Column`) in alphabetical order.
+  - "Filters", "Sort" and "Total line" are three lines one after the other, each with its help badge and a + button. The + button shows the settings of the filters or of the sort (the - button removes them), and adds the total line (the - button removes it). The folded section "Filters, sort and decimals" is gone.
+  - The calculation and the number of decimals are chosen on each column line: the calculation as before, the number of decimals with two buttons like those of Grist (fewer and more decimals), with the value shown between them. The model keeps the decimals of the table as the default for the columns that have none, so tables saved by 0.5.3 stay valid.
+- Tests: sorting of the choices, decimals per column in the model and in the calculation, the + and - buttons of the panel.
+
 ## 0.5.3
 
 - Table block, simpler settings, following the first trials in Grist.

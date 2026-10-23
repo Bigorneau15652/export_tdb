@@ -46,15 +46,16 @@
     orientation: $(`boardOrientation`), margin: $(`boardMargin`), zoomOut: $(`boardZoomOut`), zoomFit: $(`boardZoomFit`),
     zoomIn: $(`boardZoomIn`), saveState: $(`boardSaveState`), confirm: $(`boardConfirm`), confirmText: $(`boardConfirmText`),
     confirmYes: $(`boardConfirmYes`), confirmNo: $(`boardConfirmNo`), scroll: $(`boardScroll`), canvas: $(`boardCanvas`),
-    side: $(`boardPanel`), titleRow: $(`boardTitleRow`), title: $(`boardTitle`), type: $(`boardType`), remove: $(`boardDelete`), close: $(`boardClose`), refresh: $(`boardRefresh`),
+    side: $(`boardPanel`), titleRow: $(`boardTitleRow`), title: $(`boardTitle`), remove: $(`boardDelete`), close: $(`boardClose`), refresh: $(`boardRefresh`),
     textBox: $(`boardTextSettings`), source: $(`boardSource`), columnRow: $(`boardColumnRow`), column: $(`boardColumn`),
     text: $(`boardText`), field: $(`boardField`), size: $(`boardSize`), align: $(`boardAlign`), fill: $(`boardFill`),
     textInfo: $(`boardTextInfo`), cellState: $(`boardCellState`),
-    tableBox: $(`boardTableSettings`), kind: $(`boardKind`), tableSel: $(`boardTable`), linkRow: $(`boardLinkRow`), link: $(`boardLink`), linkInfo: $(`boardLinkInfo`),
+    tableBox: $(`boardTableSettings`), kind: $(`boardKind`), tableSel: $(`boardTable`), linkRow: $(`boardLinkRow`), link: $(`boardLink`), rowsHelp: $(`boardRowsHelp`),
     explainButton: $(`boardExplainButton`), explain: $(`boardExplain`), moreLinks: $(`boardMoreLinks`),
     groupRow: $(`boardGroupRow`), group1: $(`boardGroup1`), merge: $(`boardMerge`),
     columnRows: $(`boardColumnRows`), addColumn: $(`boardAddColumn`), sortBy: $(`boardSortBy`), sortColumn: $(`boardSortColumn`),
-    sortDir: $(`boardSortDir`), decimals: $(`boardDecimals`), total: $(`boardTotal`), tableInfo: $(`boardTableInfo`)
+    sortDir: $(`boardSortDir`), total: $(`boardTotal`), tableInfo: $(`boardTableInfo`),
+    filterToggle: $(`boardFilterToggle`), filterBody: $(`boardFilterBody`), sortToggle: $(`boardSortToggle`), sortBody: $(`boardSortBody`)
   };
   const filterBoxes = [$(`boardFilter1`), $(`boardFilter2`), $(`boardFilter3`)];
 
@@ -558,6 +559,22 @@
     return tr(`boardDetailLinked`, { chain: choice.steps.map(describeStep).join(` ; `), where }) + note;
   }
 
+  // True while the settings of the filters and of the sort are shown although nothing is set yet.
+  const sectionOpen = { filters: false, sort: false };
+
+  // True when the sort of a table block differs from the one it has without any setting.
+  function sortActive(config) {
+    return config.mode === `list` ? config.sort.by !== `none` : config.sort.by !== `key` || config.sort.dir !== `asc`;
+  }
+
+  // Shows or hides the settings of a section and sets its + or - button.
+  function setToggle(button, body, open) {
+    body.hidden = !open;
+    button.textContent = open ? `\u2212` : `+`;
+    button.setAttribute(`aria-expanded`, String(open));
+    button.setAttribute(`aria-label`, tr(open ? `boardSectionHide` : `boardSectionShow`));
+  }
+
   // The structure for which the filters and the column lines were built.
   let filtersFor = ``;
   let columnsFor = ``;
@@ -603,6 +620,8 @@
     fn.className = `colFn`;
     const tools = document.createElement(`div`);
     tools.className = `tools`;
+    const decimals = document.createElement(`span`);
+    decimals.className = `colDec`;
     const label = document.createElement(`input`);
     label.type = `text`;
     label.className = `colLabel`;
@@ -641,8 +660,18 @@
       edit(needsNumbers && current && current.path && !numericOf(block).has(current.path) ? { fn: fn.value, path: `` } : { fn: fn.value });
     });
     label.addEventListener(`input`, () => edit({ label: label.value }));
+    const stepDecimals = (delta) => {
+      const block = selectedBlock();
+      const current = block ? block.config.columns[index] : null;
+      if (!current) return;
+      const now = Number.isInteger(current.decimals) ? current.decimals : block.config.decimals;
+      edit({ decimals: delta > 0 ? (now < 0 ? 2 : Math.min(4, now + 1)) : (now < 0 ? 0 : Math.max(0, now - 1)) });
+    };
     tools.append(
       label,
+      button(`\u2190.0`, `boardDecLess`, () => stepDecimals(-1)),
+      decimals,
+      button(`.00\u2192`, `boardDecMore`, () => stepDecimals(1)),
       button(`\u2191`, `boardColumnUp`, () => move(-1)),
       button(`\u2193`, `boardColumnDown`, () => move(1)),
       button(`\u00d7`, `boardColumnRemove`, () => {
@@ -681,6 +710,8 @@
       const functions = group ? all : [[``, tr(`fnNoTotal`)], ...all.filter(([name]) => isNumber || !NUMERIC_FUNCTIONS.includes(name))];
       setOptions(row.querySelector(`.colFn`), functions, fn);
       setValue(row.querySelector(`.colLabel`), column.label);
+      const shown = Number.isInteger(column.decimals) ? column.decimals : block.config.decimals;
+      row.querySelector(`.colDec`).textContent = shown < 0 ? tr(`boardDecAuto`) : String(shown);
     });
   }
 
@@ -726,7 +757,7 @@
   function fillTableSettings(block) {
     const config = block.config;
     const state = context();
-    const controls = [el.kind, el.tableSel, el.link, el.group1, el.merge, el.addColumn, el.sortBy, el.sortColumn, el.sortDir, el.decimals, el.total, el.moreLinks, el.explainButton];
+    const controls = [el.kind, el.tableSel, el.link, el.group1, el.merge, el.addColumn, el.sortBy, el.sortColumn, el.sortDir, el.total, el.filterToggle, el.sortToggle, el.moreLinks, el.explainButton];
     controls.forEach((control) => { control.disabled = !state.schema; });
     if (!state.schema) {
       el.tableInfo.textContent = tr(`boardTableNotReady`);
@@ -737,7 +768,7 @@
     const fixed = config.link === `all`;
     const starts = Query.listStarts(schema, state.linked);
     const start = starts.find((item) => item.key === config.start) || starts[0];
-    const choices = config.table && schema.tables.has(config.table) ? Fields.fieldChoices(schema, config.table) : [];
+    const choices = config.table && schema.tables.has(config.table) ? Fields.sortChoices(Fields.fieldChoices(schema, config.table)) : [];
     const columnItems = [[``, tr(`boardItemNone`)], ...choices.map((choice) => [choice.path, choice.label])];
     setOptions(el.kind, [[`dynamic`, tr(`kindDynamic`)], [`fixed`, tr(`kindFixed`)]], fixed ? `fixed` : `dynamic`);
     const tables = fixed
@@ -753,7 +784,9 @@
       const main = rowChoices.filter((item) => !item.advanced).map((item) => [item.value, choiceLabel(item)]);
       const advanced = showAdvanced ? rowChoices.filter((item) => item.advanced).map((item) => [item.value, choiceDetail(item), tr(`boardAdvancedLinks`)]) : [];
       setOptions(el.link, [[``, tr(`boardColumnNone`)], ...main, ...advanced], chosen ? chosen.value : ``);
-      el.linkInfo.textContent = chosen ? choiceDetail(chosen) : ``;
+      const rowsTip = tr(`tipBoardRows`) + (chosen ? ` ${tr(`boardCurrentChoice`, { detail: choiceDetail(chosen) })}` : ``);
+      el.rowsHelp.dataset.tip = rowsTip;
+      el.rowsHelp.setAttribute(`aria-label`, rowsTip);
       el.explainButton.setAttribute(`aria-expanded`, String(explainOpen));
       el.explain.hidden = !explainOpen || !config.table;
       if (explainOpen && config.table) renderExplain(block);
@@ -767,8 +800,13 @@
     el.sortColumn.hidden = !(config.mode === `list` && sortBy === `column`);
     setOptions(el.sortColumn, [[``, tr(`sortChoose`)], ...choices.map((choice) => [choice.path, choice.label])], config.sort.column);
     setOptions(el.sortDir, [[`asc`, tr(`sortAsc`)], [`desc`, tr(`sortDesc`)]], config.sort.dir);
-    setOptions(el.decimals, [[-1, tr(`decimalsAuto`)], [0, `0`], [1, `1`], [2, `2`], [3, `3`]], config.decimals);
-    el.total.checked = config.total;
+    const filtersOpen = sectionOpen.filters || config.filters.length > 0;
+    const sortOpen = sectionOpen.sort || sortActive(config);
+    setToggle(el.filterToggle, el.filterBody, filtersOpen);
+    setToggle(el.sortToggle, el.sortBody, sortOpen);
+    el.total.textContent = config.total ? `\u2212` : `+`;
+    el.total.setAttribute(`aria-pressed`, String(config.total));
+    el.total.setAttribute(`aria-label`, tr(config.total ? `boardTotalRemove` : `boardTotalAdd`));
     renderColumnRows(block, choices);
     renderFilters(block, choices, Fields.fieldChoices(schema, start.table));
     const messages = [];
@@ -792,7 +830,6 @@
     const block = selectedBlock();
     if (!block) return;
     setValue(el.title, block.title);
-    el.type.value = block.type;
     el.titleRow.hidden = block.type === `text`;
     el.tableBox.hidden = block.type !== `table`;
     if (block.type === `table`) fillTableSettings(block);
@@ -802,6 +839,10 @@
 
   // Selects a block (or none) and opens or closes its settings.
   function select(id, openPanel) {
+    if (id !== selectedId) {
+      sectionOpen.filters = false;
+      sectionOpen.sort = false;
+    }
     selectedId = id;
     panelOpen = Boolean(id) && openPanel;
     for (const node of el.canvas.querySelectorAll(`.block`)) node.classList.toggle(`selected`, node.dataset.id === id);
@@ -1057,7 +1098,6 @@
   // Fills the lists of the tools with the translated names.
   function fillTools() {
     fillSelect(el.addType, Model.TYPES.map((type) => [type, tr(TYPE_KEYS[type])]), `text`);
-    fillSelect(el.type, Model.TYPES.map((type) => [type, tr(TYPE_KEYS[type])]), `text`);
     fillSelect(el.format, Object.keys(FORMAT_KEYS).map((key) => [key, tr(FORMAT_KEYS[key])]), model.page.format);
     fillSelect(el.orientation, Layout.ORIENTATIONS.map((key) => [key, tr(ORIENTATION_KEYS[key])]), model.page.orientation);
     fillSelect(el.margin, Layout.MARGINS.map((mm) => [mm, tr(`boardMarginValue`, { mm })]), model.page.margin);
@@ -1098,9 +1138,6 @@
   el.zoomFit.addEventListener(`click`, () => zoom(0));
   el.title.addEventListener(`input`, () => {
     if (selectedId) commit(Model.updateBlock(model, selectedId, { title: el.title.value }));
-  });
-  el.type.addEventListener(`change`, () => {
-    if (selectedId) commit(Model.updateBlock(model, selectedId, { type: el.type.value }));
   });
   el.remove.addEventListener(`click`, askDelete);
   el.close.addEventListener(`click`, () => select(selectedId, false));
@@ -1151,8 +1188,30 @@
   el.sortBy.addEventListener(`change`, changeSort);
   el.sortColumn.addEventListener(`change`, changeSort);
   el.sortDir.addEventListener(`change`, changeSort);
-  el.decimals.addEventListener(`change`, () => changeConfig({ decimals: Number(el.decimals.value) }));
-  el.total.addEventListener(`change`, () => changeConfig({ total: el.total.checked }));
+  el.total.addEventListener(`click`, () => {
+    const block = selectedBlock();
+    if (block) changeConfig({ total: !block.config.total });
+  });
+  el.filterToggle.addEventListener(`click`, () => {
+    const block = selectedBlock();
+    if (!block) return;
+    const open = sectionOpen.filters || block.config.filters.length > 0;
+    sectionOpen.filters = !open;
+    if (open) {
+      filtersFor = ``;
+      changeConfig({ filters: [] });
+    } else {
+      render({ keepFocus: true });
+    }
+  });
+  el.sortToggle.addEventListener(`click`, () => {
+    const block = selectedBlock();
+    if (!block) return;
+    const open = sectionOpen.sort || sortActive(block.config);
+    sectionOpen.sort = !open;
+    if (open) changeConfig({ sort: { by: block.config.mode === `list` ? `none` : `key`, column: ``, dir: `asc` } });
+    else render({ keepFocus: true });
+  });
   el.source.addEventListener(`change`, () => changeConfig({ source: el.source.value }));
   el.column.addEventListener(`change`, () => changeConfig({ column: el.column.value }));
   el.size.addEventListener(`change`, () => changeConfig({ size: el.size.value }));
