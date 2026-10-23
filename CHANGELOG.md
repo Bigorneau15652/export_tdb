@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.6
+
+- Total line (right): the Total column has its own calculation (Somme, Moy, Min, Max, Nb or Nb dif) and its own decimals buttons, shown under the tick box once it is ticked, whatever the calculations of the columns. It only needs at least two columns. Somme, Moy, Min and Max use the numbers of the line; Nb counts the filled cells and Nb dif the different values. In a list, the numbers are taken from the columns that hold numbers (every column for Nb and Nb dif). With the line below, the bottom right cell combines the totals of the columns with the same calculation.
+- Tests: the calculations and the decimals of the total on the right, in a list and in a grouped table.
+
 ## 0.5.5
 
 - Table block, column lines on two rows. First row: the calculation (Somme, Moy, Min, Max, Nb, Nb dif, in a narrow menu), the two decimals buttons (the word auto is gone) and the name of the column. Second row: the column, then the buttons to move it up, down or remove it. The name field is now called Name and takes the room that is left.

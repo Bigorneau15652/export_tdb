@@ -53,7 +53,7 @@
     text: $(`boardText`), field: $(`boardField`), size: $(`boardSize`), align: $(`boardAlign`), fill: $(`boardFill`),
     textInfo: $(`boardTextInfo`), cellState: $(`boardCellState`),
     tableBox: $(`boardTableSettings`), kind: $(`boardKind`), tableSel: $(`boardTable`), linkRow: $(`boardLinkRow`), link: $(`boardLink`), rowsHelp: $(`boardRowsHelp`),
-    explain: $(`boardExplain`), explainBody: $(`boardExplainBody`), explainHead: $(`boardExplainHead`), explainClose: $(`boardExplainClose`), more: $(`boardMore`), totalRight: $(`boardTotalRight`), moreLinks: $(`boardMoreLinks`),
+    explain: $(`boardExplain`), explainBody: $(`boardExplainBody`), explainHead: $(`boardExplainHead`), explainClose: $(`boardExplainClose`), more: $(`boardMore`), totalRight: $(`boardTotalRight`), totalRightRow: $(`boardTotalRightRow`), totalRightFn: $(`boardTotalRightFn`), totalRightLess: $(`boardTotalRightLess`), totalRightMore: $(`boardTotalRightMore`), moreLinks: $(`boardMoreLinks`),
     groupRow: $(`boardGroupRow`), group1: $(`boardGroup1`), merge: $(`boardMerge`),
     columnRows: $(`boardColumnRows`), addColumn: $(`boardAddColumn`), sortBy: $(`boardSortBy`), sortColumn: $(`boardSortColumn`),
     sortDir: $(`boardSortDir`), total: $(`boardTotal`), tableInfo: $(`boardTableInfo`),
@@ -754,7 +754,7 @@
   function fillTableSettings(block) {
     const config = block.config;
     const state = context();
-    const controls = [el.kind, el.tableSel, el.link, el.group1, el.merge, el.addColumn, el.sortBy, el.sortColumn, el.sortDir, el.total, el.totalRight, el.filterToggle, el.sortToggle, el.moreLinks];
+    const controls = [el.kind, el.tableSel, el.link, el.group1, el.merge, el.addColumn, el.sortBy, el.sortColumn, el.sortDir, el.total, el.totalRight, el.totalRightFn, el.totalRightLess, el.totalRightMore, el.filterToggle, el.sortToggle, el.moreLinks];
     controls.forEach((control) => { control.disabled = !state.schema; });
     if (!state.schema) {
       el.tableInfo.textContent = tr(`boardTableNotReady`);
@@ -803,9 +803,11 @@
     setToggle(el.filterToggle, el.filterBody, filtersOpen);
     setToggle(el.sortToggle, el.sortBody, sortOpen);
     el.total.checked = config.total;
-    const rightFn = Query.rightTotalFn(config);
-    el.totalRight.disabled = !rightFn;
-    el.totalRight.checked = config.totalRight && Boolean(rightFn);
+    const rightOn = Query.rightTotalPossible(config);
+    el.totalRight.disabled = !rightOn;
+    el.totalRight.checked = config.totalRight && rightOn;
+    el.totalRightRow.hidden = !el.totalRight.checked;
+    setOptions(el.totalRightFn, FN_ORDER.map((name) => [name, tr(FN_SHORT_KEYS[name])]), config.totalRightFn);
     if (el.more.dataset.block !== block.id) {
       el.more.dataset.block = block.id;
       el.more.open = filtersOpen || sortOpen;
@@ -1217,6 +1219,15 @@
   el.sortDir.addEventListener(`change`, changeSort);
   el.total.addEventListener(`change`, () => changeConfig({ total: el.total.checked }));
   el.totalRight.addEventListener(`change`, () => changeConfig({ totalRight: el.totalRight.checked }));
+  el.totalRightFn.addEventListener(`change`, () => changeConfig({ totalRightFn: el.totalRightFn.value }));
+  const stepRight = (delta) => {
+    const block = selectedBlock();
+    if (!block) return;
+    const now = Number.isInteger(block.config.totalRightDecimals) ? block.config.totalRightDecimals : block.config.decimals;
+    changeConfig({ totalRightDecimals: delta > 0 ? (now < 0 ? 2 : Math.min(4, now + 1)) : (now < 0 ? 0 : Math.max(0, now - 1)) });
+  };
+  el.totalRightLess.addEventListener(`click`, () => stepRight(-1));
+  el.totalRightMore.addEventListener(`click`, () => stepRight(1));
   el.filterToggle.addEventListener(`click`, () => {
     const block = selectedBlock();
     if (!block) return;

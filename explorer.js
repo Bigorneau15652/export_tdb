@@ -9,7 +9,7 @@
   const { describeColumn, describeValue } = window.exportTdbShape;
   const { buildReport } = window.exportTdbReport;
 
-  const VERSION = `0.5.5`;
+  const VERSION = `0.5.6`;
   // At most this many descendant tables are loaded to measure them and to look at their values.
   const MAX_TABLES = 12;
   const TEST_MARKER = `__export_tdb_test__`;

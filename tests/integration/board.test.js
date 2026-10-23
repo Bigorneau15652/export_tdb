@@ -688,19 +688,23 @@ test(`a help badge opens a bubble on click and its cross closes it`, async () =>
   assert.deepEqual(w.errors, []);
 });
 
-test(`the columns have two lines and a total can be added on the right when the calculations match`, async () => {
+test(`the columns have two lines and a total on the right has its own calculation and decimals`, async () => {
   const config = { table: `Rooms`, link: `Rooms.Site`, columns: [{ path: `Area` }, { path: `Area` }] };
   const w = await openWithRow({ savedOptions: tableModel(config) }, 1);
   await edit(w);
   await w.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 20, y: 30 } });
   assert.equal(await w.page.locator(`.colrow:nth-child(1) .colTop .colFn`).count(), 1);
   assert.equal(await w.page.locator(`.colrow:nth-child(1) .colBottom .colPath`).count(), 1);
-  assert.equal(await w.page.locator(`#boardTotalRight`).isDisabled(), true);
-  await w.page.selectOption(`.colrow:nth-child(1) .colFn`, `sum`);
-  await w.page.selectOption(`.colrow:nth-child(2) .colFn`, `sum`);
   assert.equal(await w.page.locator(`#boardTotalRight`).isDisabled(), false);
+  assert.equal(await w.page.locator(`#boardTotalRightRow`).isHidden(), true);
   await w.page.check(`#boardTotalRight`);
-  assert.equal((await model(w.page)).blocks[0].config.totalRight, true);
+  assert.equal(await w.page.locator(`#boardTotalRightRow`).isVisible(), true);
+  await w.page.selectOption(`#boardTotalRightFn`, `max`);
+  await w.page.click(`#boardTotalRightMore`);
+  const saved = (await model(w.page)).blocks[0].config;
+  assert.equal(saved.totalRight, true);
+  assert.equal(saved.totalRightFn, `max`);
+  assert.equal(saved.totalRightDecimals, 2);
   await w.page.click(`.colrow:nth-child(1) .colTop button:nth-of-type(2)`);
   assert.equal((await model(w.page)).blocks[0].config.columns[0].decimals, 2);
   assert.deepEqual(w.errors, []);
