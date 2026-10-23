@@ -243,7 +243,7 @@ test(`the settings of a table block are cleaned`, () => {
     filters: [{ path: `Area`, op: `gt`, value: { kind: `const`, value: 10 } }, { path: `Area`, op: `evil` }, { path: `A`, op: `eq`, value: { kind: `field`, path: `B.C` } }, { path: `A`, op: `empty` }, { path: `A`, op: `eq` }],
     sort: { by: `value`, column: `Area`, dir: `desc` }, total: true, decimals: 2, extra: 1
   });
-  assert.deepEqual(Object.keys(config).sort(), [`columns`, `decimals`, `filters`, `groupBy`, `link`, `merge`, `mode`, `sort`, `start`, `table`, `total`, `totalRight`, `totalRightFn`]);
+  assert.deepEqual(Object.keys(config).sort(), [`colItem`, `colSort`, `columns`, `decimals`, `filters`, `groupBy`, `link`, `merge`, `mode`, `slice`, `sort`, `start`, `table`, `total`, `totalRight`, `totalRightFn`]);
   assert.equal(config.mode, `group`);
   assert.equal(M.cleanConfig(`table`, { mode: `group` }).mode, `list`);
   assert.equal(M.cleanConfig(`table`, { mode: `list`, groupBy: [`Usage`] }).mode, `group`);
@@ -343,4 +343,14 @@ test(`the settings of an indicator block are cleaned`, () => {
   assert.deepEqual(clean.rules[1], { op: `ge`, limit: null, color: `none` });
   assert.deepEqual(M.cleanConfig(`indicator`, {}), { value: ``, note: ``, size: `normal`, base: `none`, rules: [] });
   assert.equal(M.cleanConfig(`indicator`, { value: `bad name` }).value, ``);
+});
+
+test(`a table with an item in lines and an item in columns is a cross table`, () => {
+  assert.equal(M.cleanConfig(`table`, { groupBy: [`A`], colItem: `B` }).mode, `cross`);
+  assert.equal(M.cleanConfig(`table`, { groupBy: [`A`] }).mode, `group`);
+  assert.equal(M.cleanConfig(`table`, { colItem: `B` }).mode, `list`);
+  const config = M.cleanConfig(`table`, { groupBy: [`A`], colItem: `B.C`, colSort: `ref`, slice: 6 });
+  assert.deepEqual([config.colItem, config.colSort, config.slice], [`B.C`, `ref`, 6]);
+  const bad = M.cleanConfig(`table`, { colItem: `bad path`, colSort: `x`, slice: 7 });
+  assert.deepEqual([bad.colItem, bad.colSort, bad.slice], [``, `key`, 0]);
 });

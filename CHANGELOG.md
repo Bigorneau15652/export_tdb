@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.4
+
+- Cross tables. In the settings of a table block, a new menu "Item in columns (cross table)" appears under "Item". When an item is chosen there, the table becomes a cross table: the values of the item of the lines go down the left side, the values of the item in columns are along the top, and each cell holds one calculation (the first line of the columns settings, which is the only one used and is shown alone). Without an item in columns the table stays grouped, so tables saved by 0.6.3 stay valid.
+- New settings for a cross table: "Columns per slice" (all, or 3, 4, 5, 6, 8, 10 or 12) cuts a wide table into slices of at most that number of columns, stacked one under the other; each slice has its own heading line, its total line and, if asked, its Total column on the right that combines the columns of that slice with its own calculation. "Order of the columns": by label or in the order of the table that the item points to.
+- The order of the lines uses the choices of the sort section: by label (ascending or descending), in the order of the referenced table or a manual list (the choice "by value" is not offered for a cross table). The option "Merge identical labels" applies to the lines and to the columns.
+- A cross table cut in several slices is not continued on the following pages (a table in one piece still is); a cross table that is too long for its frame is reported by the overflow stripe.
+- Tests: the cross result (cells, totals, right total, slices, orders, counts, missing calculation), the cleaning of the new settings and the menus in the page.
+
 ## 0.6.3
 
 - The block "Indicator" is no longer an empty frame. It is a card with a label (the title of the block), a value in bold and an optional small note under it.

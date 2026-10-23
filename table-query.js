@@ -168,6 +168,7 @@
     const paths = [
       ...config.columns.map((column) => column.path),
       ...config.groupBy,
+      config.colItem,
       ...config.filters.map((filter) => filter.path),
       config.sort.column
     ].filter(Boolean);
@@ -201,6 +202,7 @@
 
   // True when the total on the right needs at least two columns to combine and there are not enough.
   function rightTotalPossible(config) {
+    if (config.mode === `cross`) return true;
     return config.columns.filter((column) => column.path || (config.mode === `group` && column.fn === `count`)).length >= 2;
   }
 
@@ -308,10 +310,9 @@
   // A function that gives a row of the table of the block the rank of its first group in the order of the
   // table that the first column of the item points to, or null when the item does not start with a
   // reference column or that table is not loaded.
-  function refRankOf(dataset, config) {
-    const path = config.groupBy.find(Boolean);
+  function refRankOf(dataset, tableId, path) {
     if (!path) return null;
-    const first = dataset.resolvePath(config.table, path.split(`.`)[0]);
+    const first = dataset.resolvePath(tableId, path.split(`.`)[0]);
     if (first.error || first.column.kind !== `ref`) return null;
     const target = dataset.table(first.column.target);
     if (!target) return null;
@@ -329,10 +330,65 @@
     if (by === `value`) return { by: `value`, measure: 0, dir };
     if (by === `manual`) return { by: `key`, dir: `asc`, order };
     if (by === `ref`) {
-      const rankOf = refRankOf(dataset, config);
+      const rankOf = refRankOf(dataset, config.table, config.groupBy.find(Boolean));
       if (rankOf) return { by: `ref`, dir, rankOf };
     }
     return { by: `key`, dir };
+  }
+
+  // The imposed order of the labels of an item of a cross table, or nothing when the usual order (by label, ascending)
+  // is wanted: the labels in the order of the table that the item points to (`ref`), in the list that the user gave
+  // (`manual`), or by label descending.
+  function crossOrder(dataset, tableId, rows, path, by, dir, manual, words) {
+    if (by === `manual`) return manual;
+    const resolved = dataset.resolvePath(tableId, path);
+    if (resolved.error) return undefined;
+    const rankOf = by === `ref` ? refRankOf(dataset, tableId, path) : null;
+    if (!rankOf && dir !== `desc`) return undefined;
+    const ranks = new Map();
+    for (const row of rows) {
+      const label = dataset.textAt(resolved, row) || words.empty;
+      const rank = rankOf ? rankOf(row) : null;
+      const value = rank === null ? Infinity : rank;
+      ranks.set(label, ranks.has(label) ? Math.min(ranks.get(label), value) : value);
+    }
+    const sign = dir === `desc` ? -1 : 1;
+    return [...ranks.keys()].sort((a, b) => sign * (ranks.get(a) === ranks.get(b) ? 0 : ranks.get(a) < ranks.get(b) ? -1 : 1) || sign * aggregate.compareLabels(a, b));
+  }
+
+  // The result of a cross table: the item of the lines down the side, the item of the columns along the top and one
+  // calculation (the first column of the settings) in each cell. The columns are cut into slices of `config.slice`
+  // columns (all of them when it is 0). Each slice is a table of its own with its heading line, its total line below
+  // and, when asked, a total on the right that combines the columns of that slice. Returns { headers, rows, total,
+  // slices, truncated } where the first slice is also given as headers, rows and total.
+  function crossResult(dataset, config, rows, words) {
+    const column = config.columns.find((item) => item.path || item.fn === `count`);
+    const measure = { fn: column.fn || `sum`, path: column.path || undefined };
+    const decimals = decimalsOf(column, config);
+    const rowPath = config.groupBy.find(Boolean);
+    const rowOrder = crossOrder(dataset, config.table, rows, rowPath, config.sort.by, config.sort.dir, config.sort.order, words);
+    const colOrder = crossOrder(dataset, config.table, rows, config.colItem, config.colSort, `asc`, [], words);
+    const cross = aggregate.crossTable(dataset, config.table, rows, { rowPath, colPath: config.colItem, measure, rowMerge: config.merge, colMerge: config.merge, emptyLabel: words.empty, rowOrder, colOrder });
+    if (cross.error) return { error: cross.error };
+    const shownKeys = cross.rowKeys.slice(0, MAX_ROWS);
+    const fn = config.totalRightFn;
+    const right = config.totalRight;
+    const slices = aggregate.sliceColumns(cross, config.slice || cross.colKeys.length).map((slice) => {
+      const headers = [{ text: pathLabel(dataset, config.table, rowPath), numeric: false }, ...slice.colKeys.map((key) => ({ text: key, numeric: true }))];
+      if (right) headers.push({ text: words.total, numeric: true });
+      const body = shownKeys.map((key, at) => {
+        const line = [key, ...slice.cells[at].map((value) => numberText(value, measure.fn, decimals))];
+        if (right) line.push(numberText(combine(slice.cells[at], fn), fn, rightDecimals(config)));
+        return line;
+      });
+      let total = null;
+      if (config.total) {
+        total = [words.total, ...slice.colTotals.map((value) => numberText(value, measure.fn, decimals))];
+        if (right) total.push(numberText(combine(slice.colTotals, fn), fn, rightDecimals(config)));
+      }
+      return { headers, rows: body, total };
+    });
+    return { headers: slices[0].headers, rows: slices[0].rows, total: slices[0].total, slices, truncated: cross.rowKeys.length > shownKeys.length };
   }
 
   // The result of a grouping: one line per group with the keys and the measures.
@@ -373,7 +429,7 @@
     if (chosen.problem) return { ok: false, reason: chosen.problem };
     const context = { dataset, linked: chosen.start.table, selectedId: chosen.startId };
     const filtered = rowset.applyFilters(chosen.rows, config.table, config.filters.map(toRowsetFilter), context);
-    const outcome = config.mode === `list` ? listResult(dataset, config, filtered.rows, words) : groupResult(dataset, config, filtered.rows, words);
+    const outcome = config.mode === `list` ? listResult(dataset, config, filtered.rows, words) : config.mode === `cross` ? crossResult(dataset, config, filtered.rows, words) : groupResult(dataset, config, filtered.rows, words);
     if (outcome.error) return { ok: false, reason: `error`, detail: outcome.error };
     return { ok: true, ...outcome, kept: filtered.rows.length, scanned: chosen.rows.length, warnings: filtered.errors };
   }

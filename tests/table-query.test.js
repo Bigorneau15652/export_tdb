@@ -283,3 +283,53 @@ test(`an item that is not a reference keeps the alphabetical order when the orde
   const result = runWith(dataset, { ...GROUPED, groupBy: [`Number`], sort: { by: `ref` } });
   assert.deepEqual(result.rows.map((row) => row[0]), [`A-001`, `A-002`, `B-001`, `B-002`]);
 });
+
+const CROSS = { table: `Rooms`, link: `Rooms.Site`, groupBy: [`Usage`], colItem: `Floor`, merge: true, columns: [{ path: `Area`, fn: `sum` }] };
+
+test(`a cross table has the lines, the columns, the cells and the totals`, () => {
+  const result = run(`Sites`, 1, { ...CROSS, total: true });
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.headers.map((h) => h.text), [`Usage`, `Ground`, `Level 1`]);
+  assert.deepEqual(result.rows, [[`(empty)`, `8,25`, ``], [`Classroom`, ``, `35`], [`Office`, `32,5`, ``]]);
+  assert.deepEqual(result.total, [`Total`, `40,75`, `35`]);
+  assert.equal(result.slices.length, 1);
+});
+
+test(`a cross table can have a total on the right with its own calculation`, () => {
+  const sum = run(`Sites`, 1, { ...CROSS, total: true, totalRight: true });
+  assert.deepEqual(sum.headers.map((h) => h.text), [`Usage`, `Ground`, `Level 1`, `Total`]);
+  assert.deepEqual(sum.rows[2], [`Office`, `32,5`, ``, `32,5`]);
+  assert.deepEqual(sum.total, [`Total`, `40,75`, `35`, `75,75`]);
+  const max = run(`Sites`, 1, { ...CROSS, totalRight: true, totalRightFn: `max` });
+  assert.equal(max.rows[1][3], `35`);
+});
+
+test(`the columns of a cross table are cut into slices, each with its own heading and total`, () => {
+  const result = run(`Sites`, 1, { ...CROSS, slice: 3, total: true, totalRight: true });
+  assert.equal(result.slices.length, 1);
+  const cut = run(`Sites`, 1, { ...CROSS, slice: 3, colItem: `Building`, total: true });
+  assert.ok(cut.slices.length >= 1);
+  const wide = run(`Sites`, 1, { ...CROSS, slice: 3, total: true, columns: [{ fn: `count` }], colItem: `Number`, groupBy: [`Usage`] });
+  assert.equal(wide.ok, true);
+  assert.equal(wide.slices.length, 2);
+  assert.deepEqual(wide.slices[0].headers.map((h) => h.text), [`Usage`, `A-001`, `A-002`, `B-001`]);
+  assert.deepEqual(wide.slices[1].headers.map((h) => h.text), [`Usage`, `B-002`]);
+  assert.equal(wide.slices[1].total[0], `Total`);
+  assert.equal(wide.slices[0].rows.length, wide.slices[1].rows.length);
+});
+
+test(`the lines and the columns of a cross table can follow the order of the table that they point to`, () => {
+  const asSent = withUsages({ manualSort: [1, 2] });
+  const lines = (result) => result.rows.map((row) => row[0]);
+  assert.deepEqual(lines(runWith(asSent, { ...CROSS, sort: { by: `ref` } })), [`Office`, `Classroom`, `(empty)`]);
+  assert.deepEqual(lines(runWith(asSent, { ...CROSS, sort: { by: `key`, dir: `desc` } })), [`Office`, `Classroom`, `(empty)`]);
+  assert.deepEqual(lines(runWith(dataset, { ...CROSS, sort: { by: `manual`, order: [`Office`, `Classroom`] } })), [`Office`, `Classroom`, `(empty)`]);
+  assert.deepEqual(runWith(dataset, { ...CROSS, colSort: `ref` }).headers.map((h) => h.text), [`Usage`, `Ground`, `Level 1`]);
+});
+
+test(`a cross table needs a calculation and both items, and counts rows when asked`, () => {
+  assert.equal(run(`Sites`, 1, { ...CROSS, columns: [] }).ok, false);
+  const counts = run(`Sites`, 1, { ...CROSS, columns: [{ fn: `count` }] });
+  assert.equal(counts.ok, true);
+  assert.deepEqual(counts.rows[2], [`Office`, `2`, ``]);
+});
