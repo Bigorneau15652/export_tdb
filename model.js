@@ -86,6 +86,7 @@
       filters: list(raw.filters, MAX_FILTERS).map(cleanFilter).filter(Boolean),
       sort: { by: oneOf(sort.by, SORT_BYS), column: matching(sort.column, PATH_PATTERN), dir: sort.dir === `desc` ? `desc` : `asc` },
       total: raw.total === true,
+      totalRight: raw.totalRight === true,
       decimals: Number.isInteger(raw.decimals) && raw.decimals >= 0 && raw.decimals <= 4 ? raw.decimals : -1
     };
   }

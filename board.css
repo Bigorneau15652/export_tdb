@@ -133,6 +133,20 @@ input[type="number"]:focus-visible, input[type="text"]:focus-visible { outline: 
 #boardPanel .section .label { margin: 0; }
 #boardPanel .toggle { min-width: 34px; min-height: 28px; padding: 0 8px; border: 1px solid #52606d; border-radius: 4px; background: #e4e7eb; color: #1f2933; font: inherit; font-weight: 700; cursor: pointer; }
 #boardPanel .toggle:focus-visible { outline: 3px solid #f2b705; }
-.colrow .tools { flex-wrap: wrap; }
-.colrow .tools .colLabel { flex: 1 1 100%; }
-.colrow .colDec { min-width: 30px; align-self: center; text-align: center; font-size: 12px; color: #1f2933; }
+
+/* Version 0.5.5: column lines on two rows, floating window of the Learn more link. */
+.colrow, .colrow.group, .colrow.list { display: flex; flex-direction: column; gap: 4px; }
+.colrow .colTop, .colrow .colBottom { display: flex; align-items: center; gap: 4px; }
+.colrow .colTop select { flex: 0 0 76px; min-width: 0; }
+.colrow .colTop .colLabel { flex: 1 1 0; min-width: 0; }
+.colrow .colBottom select { flex: 1 1 0; min-width: 0; }
+.colrow button { min-width: 26px; min-height: 28px; padding: 0 5px; border: 1px solid #52606d; border-radius: 4px; background: #e4e7eb; color: #1f2933; font: inherit; font-size: 12px; cursor: pointer; }
+.colrow button:focus-visible { outline: 3px solid #f2b705; }
+.helpBubble .helpMore { margin-top: 6px; padding: 0; border: none; background: transparent; color: #9fd3ff; font: inherit; text-decoration: underline; cursor: pointer; }
+.helpBubble .helpMore:focus-visible { outline: 3px solid #f2b705; }
+.explainWindow { position: fixed; top: 90px; right: 24px; z-index: 40; width: min(380px, calc(100vw - 16px)); max-height: 70vh; display: flex; flex-direction: column; border: 1px solid #52606d; border-radius: 8px; background: #ffffff; color: #1f2933; box-shadow: 0 4px 16px rgba(31, 41, 51, 0.35); }
+.explainWindow[hidden] { display: none; }
+.explainHead { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; border-radius: 8px 8px 0 0; background: #e4e7eb; cursor: move; touch-action: none; }
+.explainClose { width: 28px; height: 28px; padding: 0; border: 1px solid #52606d; border-radius: 4px; background: #ffffff; color: #1f2933; font: inherit; font-size: 18px; line-height: 1; cursor: pointer; }
+.explainClose:focus-visible { outline: 3px solid #f2b705; }
+.explainWindow .explain { margin: 0; border: none; border-radius: 0 0 8px 8px; overflow: auto; }

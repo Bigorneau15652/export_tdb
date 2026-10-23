@@ -199,6 +199,36 @@
     return format.formatNumber(value, decimals >= 0 ? decimals : undefined);
   }
 
+  const RIGHT_TOTAL_FUNCTIONS = [`sum`, `avg`, `min`, `max`, `count`];
+
+  // The columns that a total on the right adds up: in a grouped table the measures, in a list the
+  // columns that have a calculation.
+  function rightTotalColumns(config) {
+    return config.mode === `group` ? config.columns.filter((column) => column.path || column.fn === `count`) : config.columns.filter((column) => column.path && column.fn);
+  }
+
+  // The calculation of the total on the right, or an empty text when it cannot be made: it needs at
+  // least two columns that share the same calculation, one that makes sense across columns (not the
+  // number of different values).
+  function rightTotalFn(config) {
+    const columns = rightTotalColumns(config);
+    if (columns.length < 2) return ``;
+    const fns = new Set(columns.map((column) => column.fn || `sum`));
+    const fn = [...fns][0];
+    return fns.size === 1 && RIGHT_TOTAL_FUNCTIONS.includes(fn) ? fn : ``;
+  }
+
+  // One number from the numbers of a line: their sum (also for counts), average, minimum or maximum.
+  // Returns null when there is no number.
+  function combine(numbers, fn) {
+    const list = numbers.filter((number) => typeof number === `number` && Number.isFinite(number));
+    if (!list.length) return null;
+    if (fn === `avg`) return list.reduce((a, b) => a + b, 0) / list.length;
+    if (fn === `min`) return Math.min(...list);
+    if (fn === `max`) return Math.max(...list);
+    return list.reduce((a, b) => a + b, 0);
+  }
+
   // The rows of the block: all the rows, the starting row alone, or the rows linked to the starting row.
   function selectRows(schema, dataset, linked, record, config) {
     const start = listStarts(schema, linked).find((item) => item.key === config.start);
@@ -248,13 +278,23 @@
     const body = shown.map((row) => resolved.map((one, index) => fields.formatValue(one.column, dataset.valueAt(one, row), dataset, words, decimalsOf(columns[index], config))));
     const headers = columns.map((column, index) => ({ text: column.label || pathLabel(dataset, config.table, column.path), numeric: resolved[index].column.base === `Numeric` || resolved[index].column.base === `Int` }));
     let total = null;
+    const totalValues = [];
     if (config.total && columns.some((column) => column.fn)) {
       total = columns.map((column, index) => {
         if (!column.fn) return index === 0 ? words.total : ``;
         const numbers = rows.map((row) => (column.fn === `distinct` ? dataset.textAt(resolved[index], row) : values.toNumber(dataset.valueAt(resolved[index], row))));
         const value = column.fn === `distinct` ? new Set(numbers.filter((text) => text !== ``)).size : aggregate.summarize(numbers, column.fn);
+        totalValues[index] = value;
         return numberText(value, column.fn, decimalsOf(column, config));
       });
+    }
+    const rightFn = config.totalRight ? rightTotalFn(config) : ``;
+    if (rightFn) {
+      const used = columns.map((column, index) => (column.fn ? index : -1)).filter((index) => index >= 0);
+      const decimals = decimalsOf(columns[used[0]], config);
+      headers.push({ text: words.total, numeric: true });
+      shown.forEach((row, at) => body[at].push(numberText(combine(used.map((index) => values.toNumber(dataset.valueAt(resolved[index], row))), rightFn), rightFn, decimals)));
+      if (total) total.push(numberText(combine(used.map((index) => totalValues[index]), rightFn), rightFn, decimals));
     }
     return { headers, rows: body, total, truncated: order.length > shown.length };
   }
@@ -273,6 +313,12 @@
     const shown = result.rows.slice(0, MAX_ROWS);
     const body = shown.map((row) => [...row.keys, ...row.values.map((value, index) => numberText(value, measures[index].fn, measures[index].decimals))]);
     const total = config.total ? [words.total, ...groupBy.slice(1).map(() => ``), ...result.totals.map((value, index) => numberText(value, measures[index].fn, measures[index].decimals))] : null;
+    const rightFn = config.totalRight ? rightTotalFn(config) : ``;
+    if (rightFn) {
+      headers.push({ text: words.total, numeric: true });
+      shown.forEach((row, at) => body[at].push(numberText(combine(row.values, rightFn), rightFn, measures[0].decimals)));
+      if (total) total.push(numberText(combine(result.totals, rightFn), rightFn, measures[0].decimals));
+    }
     return { headers, rows: body, total, truncated: result.rows.length > shown.length };
   }
 
@@ -296,7 +342,7 @@
     return { ok: true, ...outcome, kept: filtered.rows.length, scanned: chosen.rows.length, warnings: filtered.errors };
   }
 
-  const api = { MAX_ROWS, chainKey, listStarts, listTables, listLinks, listAllTables, listChoices, listDynamicTables, numericPaths, tablesForChoices, explainChoices, tablesFor, runTable };
+  const api = { MAX_ROWS, chainKey, listStarts, listTables, listLinks, listAllTables, listChoices, listDynamicTables, numericPaths, tablesForChoices, explainChoices, tablesFor, rightTotalFn, runTable };
   if (isNode) module.exports = api;
   else root.exportTdbTableQuery = api;
 })(typeof window !== `undefined` ? window : globalThis);
