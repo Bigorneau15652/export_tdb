@@ -283,7 +283,7 @@ test(`the functions do not change the model they receive`, () => {
 
 test(`a model that is saved and read again is the same`, () => {
   let model = M.emptyModel();
-  for (let i = 0; i < 9; i += 1) model = M.addBlock(model, M.TYPES[i % 5]).model;
+  for (let i = 0; i < 9; i += 1) model = M.addBlock(model, M.TYPES[i % 6]).model;
   model = M.updateBlock(model, model.blocks[0].id, { title: `Étage d'accueil` });
   const again = M.validateModel(JSON.parse(JSON.stringify(model))).model;
   assert.deepEqual(again, model);
@@ -306,7 +306,7 @@ test(`random sequences of changes always leave a valid model`, () => {
       const roll = next();
       const ids = model.blocks.map((block) => block.id);
       const pick = ids.length ? ids[Math.floor(next() * ids.length)] : `none`;
-      if (roll < 0.25) model = M.addBlock(model, M.TYPES[Math.floor(next() * 5)]).model;
+      if (roll < 0.25) model = M.addBlock(model, M.TYPES[Math.floor(next() * 6)]).model;
       else if (roll < 0.4) model = M.moveBlock(model, pick, { page: Math.floor(next() * (model.pages + 1)), x: Math.floor(next() * 60) - 5, y: Math.floor(next() * 40) - 5 }, model.pages);
       else if (roll < 0.55) model = M.resizeBlock(model, pick, { w: Math.floor(next() * 60), h: Math.floor(next() * 40) }, next() < 0.5);
       else if (roll < 0.65) model = M.deleteBlock(model, pick);

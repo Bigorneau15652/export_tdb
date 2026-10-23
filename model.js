@@ -11,9 +11,9 @@
   const FORMAT_VERSION = 1;
   const MAX_BLOCKS = 120;
   const MAX_TITLE = 200;
-  const TYPES = [`text`, `table`, `chart`, `image`, `indicator`];
+  const TYPES = [`text`, `table`, `record`, `chart`, `image`, `indicator`];
   // Size of a new block in grid steps, by type.
-  const DEFAULT_SIZES = { text: { w: 20, h: 8 }, table: { w: 40, h: 16 }, chart: { w: 24, h: 16 }, image: { w: 20, h: 16 }, indicator: { w: 12, h: 8 } };
+  const DEFAULT_SIZES = { text: { w: 20, h: 8 }, table: { w: 40, h: 16 }, record: { w: 40, h: 8 }, chart: { w: 24, h: 16 }, image: { w: 20, h: 16 }, indicator: { w: 12, h: 8 } };
   const ID_PATTERN = /^[a-z0-9]{1,24}$/;
   // Settings of a text block: where the text comes from, its size, its alignment and a background.
   const TEXT_SOURCES = [`fixed`, `cell`];
@@ -30,6 +30,8 @@
   const MAX_ORDER = 300;
   const MAX_ORDER_LABEL = 120;
   const MAX_COLUMNS = 12;
+  const MAX_RECORD_ITEMS = 24;
+  const RECORD_COLUMNS = [1, 2, 3, 4];
   const MAX_FILTERS = 3;
   const MAX_GROUPS = 2;
   const MAX_LABEL = 60;
@@ -105,11 +107,26 @@
     };
   }
 
+  // The settings of a record block cleaned: the list of information (a column path and a label), the number
+  // of columns of the grid and the size of the text.
+  function cleanRecord(raw) {
+    const items = Array.isArray(raw.items) ? raw.items : [];
+    return {
+      items: items.slice(0, MAX_RECORD_ITEMS).filter((item) => item && typeof item === `object`).map((item) => ({
+        path: matching(item.path, PATH_PATTERN),
+        label: typeof item.label === `string` ? item.label.slice(0, MAX_LABEL) : ``
+      })),
+      columns: RECORD_COLUMNS.includes(raw.columns) ? raw.columns : 2,
+      size: TEXT_SIZES.includes(raw.size) ? raw.size : `normal`
+    };
+  }
+
   // The settings of a block cleaned for its type. The text and table blocks have settings; the other
   // types get an empty object that later versions will fill. Unknown keys are dropped.
   function cleanConfig(type, raw) {
     const source = raw && typeof raw === `object` ? raw : {};
     if (type === `table`) return cleanTable(source);
+    if (type === `record`) return cleanRecord(source);
     if (type !== `text`) return {};
     return {
       source: oneOf(source.source, TEXT_SOURCES),
@@ -307,7 +324,7 @@
     return reflow({ ...model, page: cleanPage({ ...model.page, ...changes }) });
   }
 
-  const api = { FORMAT_VERSION, MAX_BLOCKS, MAX_TITLE, MAX_FIXED_TEXT, MAX_COLUMNS, MAX_FILTERS, MAX_GROUPS, TABLE_MODES, FUNCTIONS, OPERATORS, SORT_BYS, TYPES, TEXT_SOURCES, TEXT_SIZES, TEXT_ALIGNS, FILLS, DEFAULT_SIZES, emptyModel, cleanConfig, validateModel, reflow, findBlock, addBlock, compactPages, updateBlock, moveBlock, resizeBlock, deleteBlock, setPage };
+  const api = { FORMAT_VERSION, MAX_BLOCKS, MAX_TITLE, MAX_FIXED_TEXT, MAX_COLUMNS, MAX_FILTERS, MAX_GROUPS, TABLE_MODES, FUNCTIONS, OPERATORS, SORT_BYS, TYPES, MAX_RECORD_ITEMS, RECORD_COLUMNS, TEXT_SOURCES, TEXT_SIZES, TEXT_ALIGNS, FILLS, DEFAULT_SIZES, emptyModel, cleanConfig, validateModel, reflow, findBlock, addBlock, compactPages, updateBlock, moveBlock, resizeBlock, deleteBlock, setPage };
   if (typeof module !== `undefined` && module.exports) module.exports = api;
   else root.exportTdbModel = api;
 })(typeof window !== `undefined` ? window : globalThis);

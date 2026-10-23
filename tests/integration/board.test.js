@@ -786,3 +786,40 @@ test(`every table continues on the next pages by itself and the settings have no
   assert.equal(await w.page.locator(`#boardFlow`).count(), 0);
   assert.deepEqual(w.errors, []);
 });
+
+test(`a record block shows the information of the selected row as small labels above their values`, async () => {
+  const config = { items: [{ path: `Number`, label: `Salle` }, { path: `Site.Name` }, { path: `Area` }], columns: 3, size: `normal` };
+  const saved = { model: { version: 1, page: { format: `screen`, orientation: `landscape`, margin: 10 }, pages: 1, blocks: [{ id: `rb1`, type: `record`, title: `Identité`, page: 0, x: 0, y: 0, w: 40, h: 8, config }] } };
+  const w = await openWithRow({ linked: `Rooms`, savedOptions: saved }, 1);
+  await w.page.waitForFunction(() => document.querySelectorAll(`.recordCell`).length === 3);
+  const cells = await w.page.$$eval(`.recordCell`, (list) => list.map((cell) => [cell.querySelector(`.recordLabel`).textContent, cell.querySelector(`.recordValue`).textContent]));
+  assert.deepEqual(cells[0], [`Salle`, `A-001`]);
+  assert.equal(cells[1][0], `Name`);
+  assert.ok(cells[1][1].length > 0);
+  assert.deepEqual(cells[2], [`Area`, `20,5`]);
+  assert.match(await w.page.locator(`.recordTitle`).innerText(), /Identité/);
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="rb1"]`, { position: { x: 20, y: 10 } });
+  assert.equal(await w.page.locator(`#boardRecordSettings`).isVisible(), true);
+  assert.equal(await w.page.locator(`#boardRecordRows .colrow`).count(), 3);
+  await w.page.click(`#boardRecordAdd`);
+  assert.equal(await w.page.locator(`#boardRecordRows .colrow`).count(), 4);
+  await w.page.selectOption(`#boardRecordRows .colrow:nth-child(4) .colPath`, `Number`);
+  await w.page.fill(`#boardRecordRows .colrow:nth-child(4) .colLabel`, `Autre`);
+  await w.page.click(`#boardRecordRows .colrow:nth-child(1) .colBottom button:nth-of-type(2)`);
+  await w.page.selectOption(`#boardRecordColumns`, `2`);
+  const block = (await model(w.page)).blocks[0];
+  assert.equal(block.config.columns, 2);
+  assert.equal(block.config.items.length, 4);
+  assert.equal(block.config.items[0].path, `Site.Name`);
+  assert.equal(block.config.items[3].label, `Autre`);
+  assert.deepEqual(w.errors, []);
+});
+
+test(`a record block can be added from the tools`, async () => {
+  const w = await openBoard();
+  await edit(w);
+  await addBlock(w, `record`);
+  assert.equal(await w.page.locator(`.block[data-type="record"]`).count(), 1);
+  assert.deepEqual(w.errors, []);
+});
