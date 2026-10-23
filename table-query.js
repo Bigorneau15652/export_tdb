@@ -199,34 +199,29 @@
     return format.formatNumber(value, decimals >= 0 ? decimals : undefined);
   }
 
-  const RIGHT_TOTAL_FUNCTIONS = [`sum`, `avg`, `min`, `max`, `count`];
-
-  // The columns that a total on the right adds up: in a grouped table the measures, in a list the
-  // columns that have a calculation.
-  function rightTotalColumns(config) {
-    return config.mode === `group` ? config.columns.filter((column) => column.path || column.fn === `count`) : config.columns.filter((column) => column.path && column.fn);
+  // True when the total on the right needs at least two columns to combine and there are not enough.
+  function rightTotalPossible(config) {
+    return config.columns.filter((column) => column.path || (config.mode === `group` && column.fn === `count`)).length >= 2;
   }
 
-  // The calculation of the total on the right, or an empty text when it cannot be made: it needs at
-  // least two columns that share the same calculation, one that makes sense across columns (not the
-  // number of different values).
-  function rightTotalFn(config) {
-    const columns = rightTotalColumns(config);
-    if (columns.length < 2) return ``;
-    const fns = new Set(columns.map((column) => column.fn || `sum`));
-    const fn = [...fns][0];
-    return fns.size === 1 && RIGHT_TOTAL_FUNCTIONS.includes(fn) ? fn : ``;
-  }
-
-  // One number from the numbers of a line: their sum (also for counts), average, minimum or maximum.
-  // Returns null when there is no number.
-  function combine(numbers, fn) {
-    const list = numbers.filter((number) => typeof number === `number` && Number.isFinite(number));
+  // One number from the values of a line. Sum, average, minimum and maximum use the numbers; count
+  // gives the number of values that are filled and distinct the number of different values.
+  // Returns null when there is nothing to combine.
+  function combine(items, fn) {
+    const filled = items.filter((item) => item !== null && item !== undefined && item !== `` && !(typeof item === `number` && Number.isNaN(item)));
+    if (fn === `count`) return filled.length;
+    if (fn === `distinct`) return new Set(filled).size;
+    const list = filled.filter((item) => typeof item === `number` && Number.isFinite(item));
     if (!list.length) return null;
-    if (fn === `avg`) return list.reduce((a, b) => a + b, 0) / list.length;
+    if (fn === `avg`) return list.reduce((x, y) => x + y, 0) / list.length;
     if (fn === `min`) return Math.min(...list);
     if (fn === `max`) return Math.max(...list);
-    return list.reduce((a, b) => a + b, 0);
+    return list.reduce((x, y) => x + y, 0);
+  }
+
+  // The decimals of the total on the right: its own choice or, when it has none, those of the table.
+  function rightDecimals(config) {
+    return Number.isInteger(config.totalRightDecimals) && config.totalRightDecimals >= -1 ? config.totalRightDecimals : config.decimals;
   }
 
   // The rows of the block: all the rows, the starting row alone, or the rows linked to the starting row.
@@ -288,13 +283,13 @@
         return numberText(value, column.fn, decimalsOf(column, config));
       });
     }
-    const rightFn = config.totalRight ? rightTotalFn(config) : ``;
-    if (rightFn) {
-      const used = columns.map((column, index) => (column.fn ? index : -1)).filter((index) => index >= 0);
-      const decimals = decimalsOf(columns[used[0]], config);
+    if (config.totalRight && rightTotalPossible(config)) {
+      const fn = config.totalRightFn;
+      const used = columns.map((column, index) => index).filter((index) => fn === `count` || fn === `distinct` || [`Numeric`, `Int`, `Any`].includes(resolved[index].column.base));
+      const read = (row, index) => (fn === `distinct` ? dataset.textAt(resolved[index], row) : values.toNumber(dataset.valueAt(resolved[index], row)));
       headers.push({ text: words.total, numeric: true });
-      shown.forEach((row, at) => body[at].push(numberText(combine(used.map((index) => values.toNumber(dataset.valueAt(resolved[index], row))), rightFn), rightFn, decimals)));
-      if (total) total.push(numberText(combine(used.map((index) => totalValues[index]), rightFn), rightFn, decimals));
+      shown.forEach((row, at) => body[at].push(numberText(combine(used.map((index) => read(row, index)), fn), fn, rightDecimals(config))));
+      if (total) total.push(numberText(combine(used.map((index) => totalValues[index]), fn), fn, rightDecimals(config)));
     }
     return { headers, rows: body, total, truncated: order.length > shown.length };
   }
@@ -354,11 +349,11 @@
     const shown = result.rows.slice(0, MAX_ROWS);
     const body = shown.map((row) => [...row.keys, ...row.values.map((value, index) => numberText(value, measures[index].fn, measures[index].decimals))]);
     const total = config.total ? [words.total, ...groupBy.slice(1).map(() => ``), ...result.totals.map((value, index) => numberText(value, measures[index].fn, measures[index].decimals))] : null;
-    const rightFn = config.totalRight ? rightTotalFn(config) : ``;
-    if (rightFn) {
+    if (config.totalRight && rightTotalPossible(config)) {
+      const fn = config.totalRightFn;
       headers.push({ text: words.total, numeric: true });
-      shown.forEach((row, at) => body[at].push(numberText(combine(row.values, rightFn), rightFn, measures[0].decimals)));
-      if (total) total.push(numberText(combine(result.totals, rightFn), rightFn, measures[0].decimals));
+      shown.forEach((row, at) => body[at].push(numberText(combine(row.values, fn), fn, rightDecimals(config))));
+      if (total) total.push(numberText(combine(result.totals, fn), fn, rightDecimals(config)));
     }
     return { headers, rows: body, total, truncated: result.rows.length > shown.length };
   }
@@ -383,7 +378,7 @@
     return { ok: true, ...outcome, kept: filtered.rows.length, scanned: chosen.rows.length, warnings: filtered.errors };
   }
 
-  const api = { MAX_ROWS, chainKey, listStarts, listTables, listLinks, listAllTables, listChoices, listDynamicTables, numericPaths, tablesForChoices, explainChoices, tablesFor, rightTotalFn, runTable };
+  const api = { MAX_ROWS, chainKey, listStarts, listTables, listLinks, listAllTables, listChoices, listDynamicTables, numericPaths, tablesForChoices, explainChoices, tablesFor, rightTotalPossible, runTable };
   if (isNode) module.exports = api;
   else root.exportTdbTableQuery = api;
 })(typeof window !== `undefined` ? window : globalThis);

@@ -25,3 +25,10 @@ test(`the changelog has a section for the version of the package`, () => {
   const changelog = fs.readFileSync(path.join(root, `CHANGELOG.md`), `utf8`);
   assert.ok(changelog.includes(`## ${version}\n`));
 });
+
+test(`the newest section of the changelog is the version of the package`, () => {
+  const changelog = fs.readFileSync(path.join(root, `CHANGELOG.md`), `utf8`);
+  const newest = /^## (\d+\.\d+\.\d+)$/m.exec(changelog);
+  assert.ok(newest);
+  assert.equal(newest[1], version);
+});
