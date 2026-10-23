@@ -7,6 +7,7 @@
 (function () {
   const { t } = window.exportTdbI18n;
   const Layout = window.exportTdbLayout;
+  const Flow = window.exportTdbFlow;
   const Model = window.exportTdbModel;
   const access = window.exportTdbAccess;
   const Markdown = window.exportTdbMarkdown;
@@ -53,7 +54,7 @@
     text: $(`boardText`), field: $(`boardField`), size: $(`boardSize`), align: $(`boardAlign`), fill: $(`boardFill`),
     textInfo: $(`boardTextInfo`), cellState: $(`boardCellState`),
     tableBox: $(`boardTableSettings`), kind: $(`boardKind`), tableSel: $(`boardTable`), linkRow: $(`boardLinkRow`), link: $(`boardLink`), rowsHelp: $(`boardRowsHelp`),
-    explain: $(`boardExplain`), explainBody: $(`boardExplainBody`), explainHead: $(`boardExplainHead`), explainClose: $(`boardExplainClose`), more: $(`boardMore`), totalRight: $(`boardTotalRight`), totalRightRow: $(`boardTotalRightRow`), totalRightFn: $(`boardTotalRightFn`), totalRightLess: $(`boardTotalRightLess`), totalRightMore: $(`boardTotalRightMore`), moreLinks: $(`boardMoreLinks`),
+    explain: $(`boardExplain`), explainBody: $(`boardExplainBody`), explainHead: $(`boardExplainHead`), explainClose: $(`boardExplainClose`), more: $(`boardMore`), totalRight: $(`boardTotalRight`), flow: $(`boardFlow`), totalRightRow: $(`boardTotalRightRow`), totalRightFn: $(`boardTotalRightFn`), totalRightLess: $(`boardTotalRightLess`), totalRightMore: $(`boardTotalRightMore`), moreLinks: $(`boardMoreLinks`),
     groupRow: $(`boardGroupRow`), group1: $(`boardGroup1`), merge: $(`boardMerge`),
     columnRows: $(`boardColumnRows`), addColumn: $(`boardAddColumn`), sortBy: $(`boardSortBy`), sortColumn: $(`boardSortColumn`),
     sortDir: $(`boardSortDir`), total: $(`boardTotal`), tableInfo: $(`boardTableInfo`),
@@ -399,6 +400,60 @@
     return node;
   }
 
+  // What the last drawing found about the long tables: for each block, the rows that fit nowhere and the
+  // number of pages that follow its first page and that it uses.
+  const flowInfo = new Map();
+
+  // Cuts the table of a block whose option `flow` is on: the rows that do not fit in its frame move to
+  // the free places of the following pages, with the title (followed by "(continued)") and the heading
+  // again. The heights of the rows are measured in the page, so the cut follows the real layout.
+  function applyFlow(block, node) {
+    const table = node.querySelector(`table.dt`);
+    const rows = [...table.tBodies[0].rows];
+    if (!node.clientHeight || !rows.length) return;
+    node.dataset.flow = `1`;
+    const style = getComputedStyle(node);
+    const padding = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+    const overhead = table.offsetTop - parseFloat(style.paddingTop) + table.tHead.offsetHeight;
+    const regions = Flow.regionsAfter(model.blocks, block, model.pages, Layout.gridOf(model.page));
+    const rooms = regions.map((region) => region.h * STEP_MM * mmPx - padding - overhead);
+    const split = Flow.splitRows(rows.map((row) => row.offsetHeight), node.clientHeight - padding - overhead, rooms);
+    rows.slice(split.chunks[0].end).forEach((row) => row.remove());
+    let last = node;
+    let pages = 0;
+    split.chunks.slice(1).forEach((chunk, index) => {
+      if (chunk.end <= chunk.start) return;
+      const region = regions[index];
+      const page = el.canvas.querySelector(`.page[data-page="${region.page}"]`);
+      if (!page) return;
+      const next = document.createElement(`div`);
+      next.className = `block tableBlock continuation`;
+      next.dataset.flow = `1`;
+      next.style.fontSize = node.style.fontSize;
+      next.style.marginLeft = node.style.marginLeft;
+      next.style.marginTop = node.style.marginTop;
+      if (block.title) {
+        const title = document.createElement(`div`);
+        title.className = `tableTitle`;
+        title.textContent = `${block.title} ${tr(`boardSuite`)}`;
+        next.appendChild(title);
+      }
+      const part = document.createElement(`table`);
+      part.className = `dt`;
+      part.appendChild(table.tHead.cloneNode(true));
+      const body = part.createTBody();
+      rows.slice(chunk.start, chunk.end).forEach((row) => body.appendChild(row));
+      next.appendChild(part);
+      place(next, { x: block.x, y: region.y, w: block.w, h: region.h });
+      page.appendChild(next);
+      last = next;
+      pages = Math.max(pages, region.page - block.page);
+    });
+    node.classList.toggle(`overflowing`, split.leftover > 0 && last === node);
+    last.classList.toggle(`overflowing`, split.leftover > 0);
+    flowInfo.set(block.id, { leftover: split.leftover, pages });
+  }
+
   // Draws every page with its blocks. With `focus` the selected block gets the keyboard focus again.
   function render(options = {}) {
     const hadFocus = Boolean(options.keepFocus) && el.canvas.contains(document.activeElement);
@@ -441,7 +496,14 @@
       hint.textContent = tr(`boardEmpty`);
       el.canvas.appendChild(hint);
     }
-    for (const node of el.canvas.querySelectorAll(`.block.textBlock, .block.tableBlock`)) {
+    flowInfo.clear();
+    for (const block of model.blocks) {
+      if (block.type !== `table` || !block.config.flow) continue;
+      const node = el.canvas.querySelector(`.block[data-id="${block.id}"]`);
+      if (node && node.querySelector(`table.dt`)) applyFlow(block, node);
+    }
+    for (const node of el.canvas.querySelectorAll(`.block.textBlock:not(.continuation), .block.tableBlock:not(.continuation)`)) {
+      if (node.dataset.flow) continue;
       node.classList.toggle(`overflowing`, node.scrollHeight > node.clientHeight + 2);
     }
     syncTools();
@@ -793,7 +855,7 @@
   function fillTableSettings(block) {
     const config = block.config;
     const state = context();
-    const controls = [el.kind, el.tableSel, el.link, el.group1, el.merge, el.addColumn, el.sortBy, el.sortColumn, el.sortDir, el.total, el.totalRight, el.totalRightFn, el.totalRightLess, el.totalRightMore, el.filterToggle, el.sortToggle, el.moreLinks];
+    const controls = [el.kind, el.tableSel, el.link, el.group1, el.merge, el.addColumn, el.sortBy, el.sortColumn, el.sortDir, el.total, el.totalRight, el.flow, el.totalRightFn, el.totalRightLess, el.totalRightMore, el.filterToggle, el.sortToggle, el.moreLinks];
     controls.forEach((control) => { control.disabled = !state.schema; });
     if (!state.schema) {
       el.tableInfo.textContent = tr(`boardTableNotReady`);
@@ -851,6 +913,7 @@
     setToggle(el.filterToggle, el.filterBody, filtersOpen);
     setToggle(el.sortToggle, el.sortBody, sortOpen);
     el.total.checked = config.total;
+    el.flow.checked = config.flow;
     const rightOn = Query.rightTotalPossible(config);
     el.totalRight.disabled = !rightOn;
     el.totalRight.checked = config.totalRight && rightOn;
@@ -872,7 +935,10 @@
     }
     const node = el.canvas.querySelector(`.block[data-id="${block.id}"]`);
     const overflow = Boolean(node) && node.classList.contains(`overflowing`);
-    if (overflow) messages.push(tr(`boardTableOverflow`));
+    const info = flowInfo.get(block.id);
+    if (config.flow && info && info.leftover > 0) messages.push(tr(`boardTableMoreRows`, { n: info.leftover }));
+    else if (overflow) messages.push(tr(`boardTableOverflow`));
+    if (config.flow && info && info.pages > 0) messages.push(tr(`boardTablePages`, { n: info.pages + 1 }));
     el.tableInfo.textContent = messages.join(` `);
     el.tableInfo.className = overflow || (result.ok && (result.warnings.length || result.truncated)) || (!result.ok && result.reason !== `choose`) ? `warning` : `hint`;
   }
@@ -1268,6 +1334,7 @@
   el.sortColumn.addEventListener(`change`, changeSort);
   el.sortDir.addEventListener(`change`, changeSort);
   el.total.addEventListener(`change`, () => changeConfig({ total: el.total.checked }));
+  el.flow.addEventListener(`change`, () => changeConfig({ flow: el.flow.checked }));
   el.totalRight.addEventListener(`change`, () => changeConfig({ totalRight: el.totalRight.checked }));
   el.totalRightFn.addEventListener(`change`, () => changeConfig({ totalRightFn: el.totalRightFn.value }));
   const stepRight = (delta) => {

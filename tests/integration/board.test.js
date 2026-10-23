@@ -727,3 +727,21 @@ test(`the lines of a grouped table can follow the referenced table or a manual l
   assert.equal((await model(w.page)).blocks[0].config.sort.by, `ref`);
   assert.deepEqual(w.errors, []);
 });
+
+test(`a long table continues on the next page with its heading and says when a page is missing`, async () => {
+  const config = { mode: `list`, table: `Rooms`, link: `Rooms.Site`, columns: [{ path: `Number` }], flow: true };
+  const build = (pages) => ({ model: { version: 1, page: { format: `screen`, orientation: `landscape`, margin: 10 }, pages, blocks: [{ id: `tb1`, type: `table`, title: `Surfaces`, page: 0, x: 0, y: 0, w: 30, h: 4, config }] } });
+  const w = await openWithRow({ savedOptions: build(2) }, 1);
+  await w.page.waitForFunction(() => document.querySelectorAll(`.page[data-page="1"] .continuation .dt tbody tr`).length > 0);
+  const total = await w.page.$$eval(`.block.tableBlock .dt tbody tr`, (rows) => rows.length);
+  assert.equal(total, 4);
+  assert.match(await w.page.locator(`.page[data-page="1"] .continuation .tableTitle`).innerText(), /Surfaces/);
+  assert.equal(await w.page.locator(`.page[data-page="1"] .continuation .dt thead th`).first().innerText(), await w.page.locator(`.page[data-page="0"] .dt thead th`).first().innerText());
+  assert.deepEqual(w.errors, []);
+  const short = await openWithRow({ savedOptions: build(1) }, 1);
+  await short.page.waitForFunction(() => document.querySelectorAll(`.block.tableBlock .dt tbody tr`).length < 4);
+  await edit(short);
+  await short.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 10, y: 10 } });
+  assert.match(await short.page.locator(`#boardTableInfo`).innerText(), /Ajouter une page|Add a page/);
+  assert.deepEqual(short.errors, []);
+});

@@ -216,7 +216,7 @@ test(`the settings of a table block are cleaned`, () => {
     filters: [{ path: `Area`, op: `gt`, value: { kind: `const`, value: 10 } }, { path: `Area`, op: `evil` }, { path: `A`, op: `eq`, value: { kind: `field`, path: `B.C` } }, { path: `A`, op: `empty` }, { path: `A`, op: `eq` }],
     sort: { by: `value`, column: `Area`, dir: `desc` }, total: true, decimals: 2, extra: 1
   });
-  assert.deepEqual(Object.keys(config).sort(), [`columns`, `decimals`, `filters`, `groupBy`, `link`, `merge`, `mode`, `sort`, `start`, `table`, `total`, `totalRight`, `totalRightFn`]);
+  assert.deepEqual(Object.keys(config).sort(), [`columns`, `decimals`, `filters`, `flow`, `groupBy`, `link`, `merge`, `mode`, `sort`, `start`, `table`, `total`, `totalRight`, `totalRightFn`]);
   assert.equal(config.mode, `group`);
   assert.equal(M.cleanConfig(`table`, { mode: `group` }).mode, `list`);
   assert.equal(M.cleanConfig(`table`, { mode: `list`, groupBy: [`Usage`] }).mode, `group`);

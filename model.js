@@ -99,6 +99,7 @@
       sort: { by: oneOf(sort.by, SORT_BYS), column: matching(sort.column, PATH_PATTERN), dir: sort.dir === `desc` ? `desc` : `asc`, order: cleanOrder(sort.order) },
       total: raw.total === true,
       totalRight: raw.totalRight === true,
+      flow: raw.flow === true,
       totalRightFn: FUNCTIONS.includes(raw.totalRightFn) ? raw.totalRightFn : `sum`,
       ...(Number.isInteger(raw.totalRightDecimals) && raw.totalRightDecimals >= -1 && raw.totalRightDecimals <= 4 ? { totalRightDecimals: raw.totalRightDecimals } : {}),
       decimals: Number.isInteger(raw.decimals) && raw.decimals >= 0 && raw.decimals <= 4 ? raw.decimals : -1
