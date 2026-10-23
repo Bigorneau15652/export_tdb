@@ -157,3 +157,9 @@ input[type="number"]:focus-visible, input[type="text"]:focus-visible { outline: 
 .orderList .orderName { flex: 1 1 0; min-width: 0; overflow-wrap: anywhere; font-size: 13px; }
 .orderList button { min-width: 26px; min-height: 26px; padding: 0 5px; border: 1px solid #52606d; border-radius: 4px; background: #e4e7eb; color: #1f2933; font: inherit; font-size: 12px; cursor: pointer; }
 .orderList button:focus-visible { outline: 3px solid #f2b705; }
+/* Version 0.5.6: calculation and decimals of the total on the right. */
+#boardTotalRightRow { display: flex; align-items: center; gap: 4px; margin: 2px 0 6px; }
+#boardTotalRightRow[hidden] { display: none; }
+#boardTotalRightRow select { flex: 0 0 76px; min-width: 0; }
+#boardPanel .stepButton { min-width: 26px; min-height: 28px; padding: 0 5px; border: 1px solid #52606d; border-radius: 4px; background: #e4e7eb; color: #1f2933; font: inherit; font-size: 12px; cursor: pointer; }
+#boardPanel .stepButton:focus-visible { outline: 3px solid #f2b705; }

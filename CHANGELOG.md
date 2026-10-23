@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.8
+
+- Correction of the version numbers. Version 0.5.7 was published with the number 0.5.5 on its pages, so the browser kept old files from the cache and mixed them with the new ones, which could leave the menus empty. Every page, the package, the lock file and the explorer now carry 0.5.8, so the browser loads fresh files.
+- Version 0.5.6 (the Total column on the right with its own calculation and decimals) was never published; it is part of this version, merged with the order of the items of 0.5.7.
+
 ## 0.5.7
 
 - Order of the lines of a grouped table, in the Sort section of the "Filters and sort" menu. New choices next to "By label" (alphabetical and numeric order) and "By value":
@@ -7,6 +12,11 @@
   - "Manual list": the labels found in the table are listed with arrows to move them up or down. A label that you ranked is remembered even when the rows now shown do not have it (it is marked "missing here" and can be removed with its cross). Labels that are not ranked come after, in alphabetical order.
 - The model keeps the manual order as `sort.order` and accepts the new sort kinds `ref` and `manual`; tables saved by 0.5.6 stay valid.
 - Tests: the two new orders, with and without the manual order column, and the cleaning of the manual list.
+
+## 0.5.6
+
+- Total line (right): the Total column has its own calculation (Somme, Moy, Min, Max, Nb or Nb dif) and its own decimals buttons, shown under the tick box once it is ticked, whatever the calculations of the columns. It only needs at least two columns. Somme, Moy, Min and Max use the numbers of the line; Nb counts the filled cells and Nb dif the different values. In a list, the numbers are taken from the columns that hold numbers (every column for Nb and Nb dif). With the line below, the bottom right cell combines the totals of the columns with the same calculation.
+- Tests: the calculations and the decimals of the total on the right, in a list and in a grouped table.
 
 ## 0.5.5
 
