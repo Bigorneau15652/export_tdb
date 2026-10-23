@@ -180,3 +180,20 @@ input[type="number"]:focus-visible, input[type="text"]:focus-visible { outline: 
 .block.recordBlock .recordCell { min-width: 0; }
 .block.recordBlock .recordLabel { font-size: 0.75em; color: #52606d; overflow-wrap: anywhere; }
 .block.recordBlock .recordValue { color: #1f2933; font-weight: 600; overflow-wrap: anywhere; min-height: 1.25em; }
+
+/* Version 0.6.1: the editor of the named values. */
+.valueCard { margin: 6px 0; padding: 6px; border: 1px solid #9aa5b1; border-radius: 6px; background: #f5f7fa; color: #1f2933; }
+.valueCard .valueHead, .valueCard .valueRow { display: flex; align-items: center; gap: 4px; margin: 3px 0; }
+.valueCard .valueName { flex: 1 1 0; min-width: 0; }
+.valueCard .valueKind { flex: 0 1 45%; min-width: 0; }
+.valueCard .valueFn { flex: 0 0 76px; min-width: 0; }
+.valueCard .valuePath { flex: 1 1 0; min-width: 0; }
+.valueCard .valueUnit { flex: 1 1 0; min-width: 0; }
+.valueCard .valueDecimals { flex: 0 0 45%; min-width: 0; }
+.valueCard .valueLabelled { display: block; margin: 3px 0; font-size: 12px; font-weight: 600; }
+.valueCard .valueLabelled select, .valueCard .valueLabelled input { display: block; width: 100%; box-sizing: border-box; margin-top: 2px; font-weight: 400; }
+.valueCard .valueRemove { min-width: 26px; min-height: 28px; padding: 0 5px; border: 1px solid #52606d; border-radius: 4px; background: #e4e7eb; color: #1f2933; font: inherit; cursor: pointer; }
+.valueCard .valueRemove:focus-visible { outline: 3px solid #f2b705; }
+.valueCard .valueResult { margin: 4px 0 0; font-weight: 700; overflow-wrap: anywhere; }
+.valueCard .valueResult.warning { font-weight: 400; }
+.valueCard .valueNames { margin: 2px 0; overflow-wrap: anywhere; }
