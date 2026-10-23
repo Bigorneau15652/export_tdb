@@ -1153,3 +1153,24 @@ test(`the footer text and the page numbers are set in the tools and saved with t
   assert.deepEqual([page.footer, page.numbers], [`Report {x}`, true]);
   assert.deepEqual(w.errors, []);
 });
+
+test(`the PDF keeps one sheet per page when the print dialog imposes margins of its own`, async () => {
+  const w = await openWithRow({ savedOptions: printModel({ numbers: true, footer: `Report` }) }, 1);
+  const popup = await openPrint(w);
+  await popup.evaluate(() => document.querySelector(`link[href*="print/"]`).remove());
+  const pdf = (await popup.pdf({ width: `297mm`, height: `210mm`, margin: { top: `5mm`, bottom: `5mm`, left: `5mm`, right: `5mm` }, printBackground: true })).toString(`latin1`);
+  assert.equal((pdf.match(/\/Type\s*\/Page[^s]/g) || []).length, 2);
+  await popup.close();
+});
+
+test(`a new named value starts with the type of the previous one`, async () => {
+  const fieldValue = { name: `seats`, kind: `field`, path: `Seats`, unit: ``, decimals: -1 };
+  const w = await openWithRow({ linked: `Rooms`, savedOptions: VALUES_MODEL([fieldValue], []) }, 1);
+  await edit(w);
+  await w.page.click(`#boardValuesButton`);
+  await w.page.click(`#boardValuesAdd`);
+  assert.equal(await w.page.locator(`.valueCard`).count(), 2);
+  assert.equal(await w.page.locator(`.valueCard:nth-child(2) .valueKind`).inputValue(), `field`);
+  assert.equal((await model(w.page)).values[1].kind, `field`);
+  assert.deepEqual(w.errors, []);
+});
