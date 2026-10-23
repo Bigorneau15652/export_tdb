@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.0
+
+- Printing and PDF. A new button "Print" (always visible, next to "Edit") opens a window of the widget that holds all the pages of the dashboard for the selected row, drawn at their real size by the same code as the screen, then opens the print dialog of the browser: choose "Save as PDF" or a printer. The window waits until the pictures are loaded. If the dialog does not open (the frame of Grist may forbid it), the Print button of the window or the keys Ctrl+P do the same.
+  - The size of the sheet follows the format and the orientation of the dashboard (screen, A3, A4, A5, square), with no margin added by the browser: the margins of the dashboard are the margins of the sheet. One small static style sheet per format and orientation is kept in the folder `print/`, because the size of a printed page cannot be set from a script. One page of the dashboard is one sheet.
+  - The charts are kept as vector drawings, the text stays selectable in the PDF.
+  - New page `print.html` with its own strict Content-Security-Policy (no script).
+- Footer of the pages, set in the tools in editing mode: a checkbox "Page numbers" (written at the bottom right as "Page 2 of 5") and a free text "Footer" (written at the bottom left). Both are shown on screen and printed, in the bottom margin, which needs at least 5 mm. The settings are saved with the page settings (`numbers` and `footer`, off and empty by default: a dashboard saved before is unchanged).
+- Tests: the cleaning of the new page settings and, in the page, the print window (number of pages, real size, blocks and chart drawn, the screen unchanged afterwards), the PDF produced from it (number of sheets and size A4 landscape), the footer and the page numbers.
+
 ## 0.8.1
 
 - Image block: the caption is now the value of a column of the selected row, chosen in a menu (a column of a linked table is possible), written under the photo, centred and at the width of the photo. It changes with the row. The free text with fields of version 0.8.0 is dropped: the key `caption` now holds the path of the column, and an old text is not a path so it is simply ignored.

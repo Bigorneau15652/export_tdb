@@ -41,6 +41,7 @@
   const MAX_RULES = 4;
   const MAX_NOTE = 200;
   const MAX_IMAGE_RANK = 20;
+  const MAX_FOOTER = 120;
   const VALUE_KINDS = [`calc`, `field`, `expr`];
   const NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]{0,39}$/;
   const MAX_UNIT = 12;
@@ -55,7 +56,7 @@
 
   // A model with one empty page: screen format, landscape, 10 mm margins.
   function emptyModel() {
-    return { version: FORMAT_VERSION, page: { format: `screen`, orientation: `landscape`, margin: DEFAULT_MARGIN }, pages: 1, blocks: [], values: [] };
+    return { version: FORMAT_VERSION, page: { format: `screen`, orientation: `landscape`, margin: DEFAULT_MARGIN, numbers: false, footer: `` }, pages: 1, blocks: [], values: [] };
   }
 
   // A value that must be one of the allowed ones, or the first allowed one.
@@ -239,13 +240,16 @@
     return Math.min(max, Math.max(min, Math.round(value)));
   }
 
-  // Page settings cleaned: unknown values give the defaults.
+  // Page settings cleaned: unknown values give the defaults. `numbers` shows the page numbers and `footer` is a free
+  // text, both written in the bottom margin of every page.
   function cleanPage(raw) {
     const source = raw && typeof raw === `object` ? raw : {};
     return {
       format: Object.prototype.hasOwnProperty.call(FORMATS, source.format) ? source.format : `screen`,
       orientation: ORIENTATIONS.includes(source.orientation) ? source.orientation : `landscape`,
-      margin: MARGINS.includes(source.margin) ? source.margin : DEFAULT_MARGIN
+      margin: MARGINS.includes(source.margin) ? source.margin : DEFAULT_MARGIN,
+      numbers: source.numbers === true,
+      footer: typeof source.footer === `string` ? source.footer.slice(0, MAX_FOOTER) : ``
     };
   }
 
@@ -409,7 +413,7 @@
     return reflow({ ...model, page: cleanPage({ ...model.page, ...changes }) });
   }
 
-  const api = { FORMAT_VERSION, MAX_BLOCKS, MAX_TITLE, MAX_FIXED_TEXT, MAX_COLUMNS, MAX_FILTERS, MAX_GROUPS, TABLE_MODES, SLICES, FUNCTIONS, OPERATORS, SORT_BYS, TYPES, MAX_RECORD_ITEMS, RECORD_COLUMNS, MAX_VALUES, CHART_TYPES, CHART_PALETTES, CHART_LEGENDS, CHART_LABELS, INDICATOR_COLORS, MAX_RULES, MAX_NOTE, MAX_IMAGE_RANK, VALUE_KINDS, NAME_PATTERN, cleanValues, setValues, TEXT_SOURCES, TEXT_SIZES, TEXT_ALIGNS, FILLS, DEFAULT_SIZES, emptyModel, cleanConfig, validateModel, reflow, findBlock, addBlock, compactPages, updateBlock, moveBlock, resizeBlock, deleteBlock, setPage };
+  const api = { FORMAT_VERSION, MAX_BLOCKS, MAX_TITLE, MAX_FIXED_TEXT, MAX_COLUMNS, MAX_FILTERS, MAX_GROUPS, TABLE_MODES, SLICES, FUNCTIONS, OPERATORS, SORT_BYS, TYPES, MAX_RECORD_ITEMS, RECORD_COLUMNS, MAX_VALUES, CHART_TYPES, CHART_PALETTES, CHART_LEGENDS, CHART_LABELS, INDICATOR_COLORS, MAX_RULES, MAX_NOTE, MAX_IMAGE_RANK, MAX_FOOTER, VALUE_KINDS, NAME_PATTERN, cleanValues, setValues, TEXT_SOURCES, TEXT_SIZES, TEXT_ALIGNS, FILLS, DEFAULT_SIZES, emptyModel, cleanConfig, validateModel, reflow, findBlock, addBlock, compactPages, updateBlock, moveBlock, resizeBlock, deleteBlock, setPage };
   if (typeof module !== `undefined` && module.exports) module.exports = api;
   else root.exportTdbModel = api;
 })(typeof window !== `undefined` ? window : globalThis);
