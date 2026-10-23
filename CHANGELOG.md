@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.5
+
+- Cross table: choosing an item in columns on a table that has no calculation yet now adds the calculation line by itself (Somme, with the column left to choose), so the table can be filled. If the calculation is removed, the button "Add a column" comes back. In a cross table the title of the section is "Calculation of the cells" instead of "Columns", because the columns of the table are the values of the item in columns and a single calculation fills all the cells.
+- Test: the calculation line after the choice of an item in columns.
+
 ## 0.6.4
 
 - Cross tables. In the settings of a table block, a new menu "Item in columns (cross table)" appears under "Item". When an item is chosen there, the table becomes a cross table: the values of the item of the lines go down the left side, the values of the item in columns are along the top, and each cell holds one calculation (the first line of the columns settings, which is the only one used and is shown alone). Without an item in columns the table stays grouped, so tables saved by 0.6.3 stay valid.

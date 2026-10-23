@@ -965,3 +965,18 @@ test(`an item in columns makes a cross table that can be cut into slices`, async
   assert.equal((await model(w.page)).blocks[0].config.mode, `group`);
   assert.deepEqual(w.errors, []);
 });
+
+test(`choosing an item in columns on a table without calculation adds the calculation line to fill`, async () => {
+  const config = { table: `Rooms`, link: `Rooms.Site`, groupBy: [`Usage`] };
+  const w = await openWithRow({ savedOptions: tableModel(config) }, 1);
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 20, y: 30 } });
+  assert.equal((await model(w.page)).blocks[0].config.columns.length, 0);
+  await w.page.selectOption(`#boardColItem`, `Floor`);
+  assert.equal(await w.page.locator(`#boardColumnRows .colrow`).count(), 1);
+  await w.page.selectOption(`#boardColumnRows .colrow .colPath`, `Area`);
+  await w.page.waitForFunction(() => document.querySelectorAll(`.block[data-id="tb1"] .dt th`).length >= 3);
+  assert.equal(await w.page.locator(`#boardAddColumn`).isHidden(), true);
+  assert.match(await w.page.locator(`#boardColumnsLabel`).innerText(), /Calcul des cases|Calculation of the cells/);
+  assert.deepEqual(w.errors, []);
+});
