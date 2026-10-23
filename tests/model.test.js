@@ -331,3 +331,16 @@ test(`the imposed order of the labels keeps texts without duplicates and the new
   assert.equal(M.cleanConfig(`table`, { sort: { by: `nothing` } }).sort.by, M.cleanConfig(`table`, {}).sort.by);
   assert.deepEqual(M.cleanConfig(`table`, { sort: { order: `x` } }).sort.order, []);
 });
+
+test(`the settings of an indicator block are cleaned`, () => {
+  const clean = M.cleanConfig(`indicator`, { value: `ratio`, note: `n`.repeat(400), size: `large`, base: `blue`, rules: [{ op: `le`, limit: 5, color: `green` }, { op: `x`, limit: `3`, color: `pink` }, null, { op: `ge`, limit: 10, color: `red` }, {}, {}, {}] });
+  assert.equal(clean.value, `ratio`);
+  assert.equal(clean.note.length, M.MAX_NOTE);
+  assert.deepEqual([clean.size, clean.base], [`large`, `blue`]);
+  assert.equal(clean.rules.length, 3);
+  assert.equal(M.cleanConfig(`indicator`, { rules: Array.from({ length: 9 }, () => ({ op: `ge`, limit: 1, color: `red` })) }).rules.length, M.MAX_RULES);
+  assert.deepEqual(clean.rules[0], { op: `le`, limit: 5, color: `green` });
+  assert.deepEqual(clean.rules[1], { op: `ge`, limit: null, color: `none` });
+  assert.deepEqual(M.cleanConfig(`indicator`, {}), { value: ``, note: ``, size: `normal`, base: `none`, rules: [] });
+  assert.equal(M.cleanConfig(`indicator`, { value: `bad name` }).value, ``);
+});

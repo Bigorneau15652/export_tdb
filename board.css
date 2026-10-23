@@ -197,3 +197,23 @@ input[type="number"]:focus-visible, input[type="text"]:focus-visible { outline: 
 .valueCard .valueResult { margin: 4px 0 0; font-weight: 700; overflow-wrap: anywhere; }
 .valueCard .valueResult.warning { font-weight: 400; }
 .valueCard .valueNames { margin: 2px 0; overflow-wrap: anywhere; }
+
+/* Version 0.6.3: the indicator block. */
+.block.indicatorBlock { padding: 0.4em 0.6em 0.4em 0.8em; border-left: 6px solid #cbd2d9; background: #ffffff; color: #1f2933; line-height: 1.2; }
+.block.indicatorBlock .indLabelText { font-size: 0.85em; color: #3e4c59; overflow-wrap: anywhere; }
+.block.indicatorBlock .indValueRow { display: flex; align-items: baseline; gap: 0.4em; }
+.block.indicatorBlock .indValueText { font-size: 2em; font-weight: 700; overflow-wrap: anywhere; }
+.block.indicatorBlock .indSymbol { font-size: 1.2em; font-weight: 700; }
+.block.indicatorBlock .indNoteText { margin-top: 0.2em; font-size: 0.8em; color: #3e4c59; overflow-wrap: anywhere; }
+.block.indicatorBlock.ind-green { background: #e3f4e6; border-left-color: #1f7a3a; }
+.block.indicatorBlock.ind-orange { background: #fff1d6; border-left-color: #b35c00; }
+.block.indicatorBlock.ind-red { background: #fde4e4; border-left-color: #b3261e; }
+.block.indicatorBlock.ind-blue { background: #e1eefb; border-left-color: #1c5d8c; }
+.block.indicatorBlock.ind-grey { background: #eceff2; border-left-color: #52606d; }
+#boardPanel .indLabelled { display: block; margin: 4px 0; font-size: 12px; font-weight: 600; }
+#boardPanel .indLabelled select, #boardPanel .indLabelled input { display: block; width: 100%; box-sizing: border-box; margin-top: 2px; font-weight: 400; }
+#boardPanel .indRules { margin-top: 2px; }
+#boardPanel .indRule { display: flex; align-items: center; gap: 3px; margin: 3px 0; }
+#boardPanel .indRule select { min-width: 0; flex: 1 1 0; }
+#boardPanel .indRule .indLimit { min-width: 0; width: 56px; flex: 0 0 56px; }
+#boardPanel .indRule button { min-width: 26px; min-height: 28px; padding: 0 5px; border: 1px solid #52606d; border-radius: 4px; background: #e4e7eb; color: #1f2933; font: inherit; cursor: pointer; }

@@ -32,6 +32,9 @@
   const MAX_COLUMNS = 12;
   const MAX_RECORD_ITEMS = 24;
   const MAX_VALUES = 40;
+  const INDICATOR_COLORS = [`none`, `green`, `orange`, `red`, `blue`, `grey`];
+  const MAX_RULES = 4;
+  const MAX_NOTE = 200;
   const VALUE_KINDS = [`calc`, `field`, `expr`];
   const NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]{0,39}$/;
   const MAX_UNIT = 12;
@@ -126,6 +129,23 @@
     };
   }
 
+  // The settings of an indicator block cleaned: the named value that it shows, a short note under it, the size of
+  // the text, the default colour and up to four rules (`ge` or `le` a limit gives a colour; the first rule met wins).
+  function cleanIndicator(raw) {
+    const rules = Array.isArray(raw.rules) ? raw.rules : [];
+    return {
+      value: matching(raw.value, NAME_PATTERN),
+      note: typeof raw.note === `string` ? raw.note.slice(0, MAX_NOTE) : ``,
+      size: TEXT_SIZES.includes(raw.size) ? raw.size : `normal`,
+      base: oneOf(raw.base, INDICATOR_COLORS),
+      rules: rules.slice(0, MAX_RULES).filter((rule) => rule && typeof rule === `object`).map((rule) => ({
+        op: rule.op === `le` ? `le` : `ge`,
+        limit: typeof rule.limit === `number` && Number.isFinite(rule.limit) ? rule.limit : null,
+        color: oneOf(rule.color, INDICATOR_COLORS)
+      }))
+    };
+  }
+
   // The named values of the dashboard cleaned. A value has a name (empty while it is being typed), a kind
   // (`calc` a calculation on a table, `field` a column of the selected row, `expr` an expression of other
   // values), a unit and decimals for its text, and the settings of its kind.
@@ -157,6 +177,7 @@
     const source = raw && typeof raw === `object` ? raw : {};
     if (type === `table`) return cleanTable(source);
     if (type === `record`) return cleanRecord(source);
+    if (type === `indicator`) return cleanIndicator(source);
     if (type !== `text`) return {};
     return {
       source: oneOf(source.source, TEXT_SOURCES),
@@ -354,7 +375,7 @@
     return reflow({ ...model, page: cleanPage({ ...model.page, ...changes }) });
   }
 
-  const api = { FORMAT_VERSION, MAX_BLOCKS, MAX_TITLE, MAX_FIXED_TEXT, MAX_COLUMNS, MAX_FILTERS, MAX_GROUPS, TABLE_MODES, FUNCTIONS, OPERATORS, SORT_BYS, TYPES, MAX_RECORD_ITEMS, RECORD_COLUMNS, MAX_VALUES, VALUE_KINDS, NAME_PATTERN, cleanValues, setValues, TEXT_SOURCES, TEXT_SIZES, TEXT_ALIGNS, FILLS, DEFAULT_SIZES, emptyModel, cleanConfig, validateModel, reflow, findBlock, addBlock, compactPages, updateBlock, moveBlock, resizeBlock, deleteBlock, setPage };
+  const api = { FORMAT_VERSION, MAX_BLOCKS, MAX_TITLE, MAX_FIXED_TEXT, MAX_COLUMNS, MAX_FILTERS, MAX_GROUPS, TABLE_MODES, FUNCTIONS, OPERATORS, SORT_BYS, TYPES, MAX_RECORD_ITEMS, RECORD_COLUMNS, MAX_VALUES, INDICATOR_COLORS, MAX_RULES, MAX_NOTE, VALUE_KINDS, NAME_PATTERN, cleanValues, setValues, TEXT_SOURCES, TEXT_SIZES, TEXT_ALIGNS, FILLS, DEFAULT_SIZES, emptyModel, cleanConfig, validateModel, reflow, findBlock, addBlock, compactPages, updateBlock, moveBlock, resizeBlock, deleteBlock, setPage };
   if (typeof module !== `undefined` && module.exports) module.exports = api;
   else root.exportTdbModel = api;
 })(typeof window !== `undefined` ? window : globalThis);

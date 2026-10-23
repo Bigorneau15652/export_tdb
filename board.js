@@ -15,6 +15,8 @@
   const Fields = window.exportTdbFields;
   const Record = window.exportTdbRecord;
   const Named = window.exportTdbNamed;
+  const Indicator = window.exportTdbIndicator;
+  const IndicatorPanel = window.exportTdbIndicatorPanel;
   const ValuesPanel = window.exportTdbValuesPanel;
   const Help = window.exportTdbHelp;
   const Data = window.exportTdbData;
@@ -35,6 +37,7 @@
   const TEXT_MM = { small: 3, normal: 3.5, large: 5 };
   const TABLE_MM = 3;
   const CELL_DELAY_MS = 900;
+  const INDICATOR_COLOR_KEYS = { none: `indColorNone`, green: `indColorGreen`, orange: `indColorOrange`, red: `indColorRed`, blue: `indColorBlue`, grey: `indColorGrey` };
   const SIZE_KEYS = { small: `sizeSmall`, normal: `sizeNormal`, large: `sizeLarge` };
   const ALIGN_KEYS = { left: `alignLeft`, center: `alignCenter`, justify: `alignJustify` };
   const FILL_KEYS = { none: `fillNone`, grey: `fillGrey`, blue: `fillBlue`, green: `fillGreen`, yellow: `fillYellow`, red: `fillRed` };
@@ -53,7 +56,7 @@
     zoomIn: $(`boardZoomIn`), saveState: $(`boardSaveState`), confirm: $(`boardConfirm`), confirmText: $(`boardConfirmText`),
     confirmYes: $(`boardConfirmYes`), confirmNo: $(`boardConfirmNo`), scroll: $(`boardScroll`), canvas: $(`boardCanvas`),
     side: $(`boardPanel`), titleRow: $(`boardTitleRow`), title: $(`boardTitle`), remove: $(`boardDelete`), close: $(`boardClose`), refresh: $(`boardRefresh`),
-    textBox: $(`boardTextSettings`), valuesBox: $(`boardValuesSettings`), valuesList: $(`boardValuesList`), valuesAdd: $(`boardValuesAdd`), valuesButton: $(`boardValuesButton`), heading: $(`boardPanelHeading`), recordBox: $(`boardRecordSettings`), recordRows: $(`boardRecordRows`), recordAdd: $(`boardRecordAdd`), recordColumns: $(`boardRecordColumns`), recordSize: $(`boardRecordSize`), recordInfo: $(`boardRecordInfo`), source: $(`boardSource`), columnRow: $(`boardColumnRow`), column: $(`boardColumn`),
+    textBox: $(`boardTextSettings`), indicatorBox: $(`boardIndicatorSettings`), indicatorBody: $(`boardIndicatorBody`), valuesBox: $(`boardValuesSettings`), valuesList: $(`boardValuesList`), valuesAdd: $(`boardValuesAdd`), valuesButton: $(`boardValuesButton`), heading: $(`boardPanelHeading`), recordBox: $(`boardRecordSettings`), recordRows: $(`boardRecordRows`), recordAdd: $(`boardRecordAdd`), recordColumns: $(`boardRecordColumns`), recordSize: $(`boardRecordSize`), recordInfo: $(`boardRecordInfo`), source: $(`boardSource`), columnRow: $(`boardColumnRow`), column: $(`boardColumn`),
     text: $(`boardText`), field: $(`boardField`), size: $(`boardSize`), align: $(`boardAlign`), fill: $(`boardFill`),
     textInfo: $(`boardTextInfo`), cellState: $(`boardCellState`),
     tableBox: $(`boardTableSettings`), kind: $(`boardKind`), tableSel: $(`boardTable`), linkRow: $(`boardLinkRow`), link: $(`boardLink`), rowsHelp: $(`boardRowsHelp`),
@@ -160,15 +163,29 @@
     const state = context();
     const empty = !raw.trim();
     if (!state.schema || !state.record) return { nodes: tree, problems: [], empty };
+    const result = Fields.expandFields(tree, fieldResolver());
+    return { nodes: result.nodes, problems: result.problems, empty };
+  }
+
+  // The function that reads a field `{name}` or `{Column}` of the selected row: a named value comes first, then a
+  // column (also through a reference). Used by the texts and by the notes of the indicators.
+  function fieldResolver() {
+    const state = context();
     const words = { yes: tr(`wordYes`), no: tr(`wordNo`) };
     const dataset = currentDataset();
     const named = namedValues().byName;
-    const result = Fields.expandFields(tree, (path) => {
+    return (path) => {
       const value = path.includes(`.`) ? null : named.get(path);
       if (value) return value.error ? { ok: false, reason: `named` } : { ok: true, text: value.text };
       return Fields.resolveField(dataset, state.schema, state.linked, state.record, path, words);
-    });
-    return { nodes: result.nodes, problems: result.problems, empty };
+    };
+  }
+
+  // The text of the note of an indicator with its fields replaced.
+  function noteText(block) {
+    const state = context();
+    if (!block.config.note || !state.schema || !state.record) return block.config.note;
+    return Fields.expandFields([{ type: `text`, value: block.config.note }], fieldResolver()).nodes[0].value;
   }
 
   // The result of the named values for the selected row, kept until the data, the row or the values change.
@@ -194,6 +211,7 @@
       if (block.type === `text`) Fields.extractFields(sourceText(block)).forEach((path) => paths.add(path));
       if (block.type === `table`) Query.tablesFor(state.schema, state.linked, block.config).forEach((name) => wanted.add(name));
       if (block.type === `record`) Record.recordPaths(block.config).forEach((path) => paths.add(path));
+      if (block.type === `indicator`) Fields.extractFields(block.config.note).forEach((path) => paths.add(path));
       if (block.type === `table` && explainOpen && block.id === selectedId && block.config.table) Query.tablesForChoices(state.schema, state.linked, block.config.table).forEach((name) => wanted.add(name));
     }
     // A row that the loaded table does not hold yet (added since it was loaded): load the table again, once.
@@ -341,6 +359,52 @@
     result.rows.forEach((texts) => addRow(texts, ``));
     if (result.total) addRow(result.total, `total`);
     return table;
+  }
+
+  // Fills the element of an indicator block: its label (the title of the block), its value in bold with a symbol
+  // that tells the state, and a short note. The colour follows the thresholds; the text stays dark.
+  function buildIndicatorBody(node, block) {
+    const config = block.config;
+    node.classList.add(`indicatorBlock`);
+    node.style.fontSize = `${TEXT_MM[config.size] * mmPx}px`;
+    const named = config.value ? namedValues().byName.get(config.value) : null;
+    const ok = Boolean(named) && !named.error;
+    const color = Indicator.pickColor(config, ok ? named.number : null);
+    node.classList.add(`ind-${color}`);
+    if (block.title) {
+      const label = document.createElement(`div`);
+      label.className = `indLabelText`;
+      label.textContent = block.title;
+      node.appendChild(label);
+    }
+    const row = document.createElement(`div`);
+    row.className = `indValueRow`;
+    const value = document.createElement(`span`);
+    value.className = `indValueText`;
+    value.textContent = ok ? named.text : Named.DASH;
+    row.appendChild(value);
+    if (Indicator.SYMBOLS[color]) {
+      const symbol = document.createElement(`span`);
+      symbol.className = `indSymbol`;
+      symbol.textContent = Indicator.SYMBOLS[color];
+      symbol.setAttribute(`role`, `img`);
+      symbol.setAttribute(`aria-label`, tr(INDICATOR_COLOR_KEYS[color]));
+      row.appendChild(symbol);
+    }
+    node.appendChild(row);
+    const note = noteText(block);
+    if (note) {
+      const small = document.createElement(`div`);
+      small.className = `indNoteText`;
+      small.textContent = note;
+      node.appendChild(small);
+    }
+    if (editing && !config.value) {
+      const hint = document.createElement(`p`);
+      hint.className = `tableHint`;
+      hint.textContent = tr(`indicatorNoValue`);
+      node.appendChild(hint);
+    }
   }
 
   // Fills the element of a record block: its title and its grid of information, each one a small label above
@@ -530,6 +594,8 @@
       buildTableBody(node, block);
     } else if (block.type === `record`) {
       buildRecordBody(node, block);
+    } else if (block.type === `indicator`) {
+      buildIndicatorBody(node, block);
     } else {
       const kind = document.createElement(`div`);
       kind.className = `blockType`;
@@ -700,7 +766,7 @@
       const label = wrap.querySelector(`.pageLabel`);
       label.textContent = wrap.querySelector(`.page.newPage`) ? tr(`boardNewPage`) : tr(`boardPageLabel`, { n: index + 1, total: count });
     });
-    for (const node of el.canvas.querySelectorAll(`.block.textBlock:not(.continuation), .block.tableBlock:not(.continuation), .block.recordBlock`)) {
+    for (const node of el.canvas.querySelectorAll(`.block.textBlock:not(.continuation), .block.tableBlock:not(.continuation), .block.recordBlock, .block.indicatorBlock`)) {
       if (node.dataset.flow) continue;
       node.classList.toggle(`overflowing`, node.scrollHeight > node.clientHeight + 2);
     }
@@ -854,7 +920,7 @@
   // Changes the settings of the selected block (text or table) and draws again.
   function changeConfig(changes) {
     const block = selectedBlock();
-    if (block && (block.type === `text` || block.type === `table` || block.type === `record`)) commit(Model.updateBlock(model, block.id, { config: changes }));
+    if (block && (block.type === `text` || block.type === `table` || block.type === `record` || block.type === `indicator`)) commit(Model.updateBlock(model, block.id, { config: changes }));
   }
 
   // The paths of the columns that hold numbers, for the table of the selected table block.
@@ -1156,6 +1222,7 @@
       el.tableBox.hidden = true;
       el.textBox.hidden = true;
       el.recordBox.hidden = true;
+      el.indicatorBox.hidden = true;
       el.valuesAdd.disabled = model.values.length >= Model.MAX_VALUES;
       valuesPanel.render();
       return;
@@ -1170,6 +1237,8 @@
     if (block.type === `text`) fillTextSettings(block);
     el.recordBox.hidden = block.type !== `record`;
     if (block.type === `record`) fillRecordSettings(block);
+    el.indicatorBox.hidden = block.type !== `indicator`;
+    if (block.type === `indicator`) indicatorPanel.render();
   }
 
   // Selects a block (or none) and opens or closes its settings.
@@ -1669,6 +1738,21 @@
     linkLabel: choiceLabel,
     Fields,
     Query
+  });
+
+  const indicatorPanel = IndicatorPanel.create({
+    box: el.indicatorBody,
+    getBlock: selectedBlock,
+    change: changeConfig,
+    names: () => [...new Set(model.values.map((item) => item.name).filter(Boolean))],
+    current: () => {
+      const block = selectedBlock();
+      const named = block && block.config.value ? namedValues().byName.get(block.config.value) : null;
+      const ok = Boolean(named) && !named.error;
+      return { text: ok ? named.text : ``, error: !ok, color: Indicator.pickColor(block.config, ok ? named.number : null) };
+    },
+    sizeItems: Model.TEXT_SIZES.map((name) => [name, tr(SIZE_KEYS[name])]),
+    maxRules: Model.MAX_RULES
   });
 
   fillTools();
