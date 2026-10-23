@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.10
+
+- Pages are now managed by the program. The buttons "Add a page" and "Remove the last page" are gone.
+  - A new block that does not fit in the existing pages gets a new page.
+  - In editing mode an empty page with a dashed outline always shows at the end, "New page: drop a block here to create it". It becomes a real page when a block is dropped on it, and it is not part of the saved pages while it stays empty.
+  - A page that holds no block is removed by itself, at the end or in the middle: the blocks of the following pages move up and the pages are numbered again. To keep a blank page, add a block and leave it empty (no title, no content).
+  - The pages that the rest of a long table needs are drawn without being saved: they appear when the table needs them and disappear when it gets shorter. A long table now only reports missing room when the maximum of 40 pages is reached.
+- Long tables: each frame of the rest of a table takes the height of its rows, so that the rest of the page stays free for other blocks. Several long tables avoid each other's frames on the pages that follow.
+- The model functions `addPage` and `removeLastPage` are replaced by `compactPages`. `moveBlock` accepts a page after the last one, which then exists.
+- Tests: pages added and removed by themselves, dropping a block on the empty page at the end, the height of the frame of the rest of a table.
+
 ## 0.5.9
 
 - Long tables over several pages. A new tick box in the table settings, "Long table: continue on the following pages", is off by default. When it is on and the rows do not fit in the block, the rest of the rows moves to the top of the following pages, at the same horizontal position and with the same width, in the free places left by the other blocks of those pages (a free place shorter than four steps is not used). The heading row is repeated and the title is followed by "(continued)". The heights of the rows are measured in the page, so the cut follows the real layout, and the total line stays with the last rows.
