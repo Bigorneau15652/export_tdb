@@ -388,7 +388,8 @@
       }
       return { headers, rows: body, total };
     });
-    return { headers: slices[0].headers, rows: slices[0].rows, total: slices[0].total, slices, truncated: cross.rowKeys.length > shownKeys.length };
+    const chart = { categories: shownKeys, series: cross.colKeys.map((name, col) => ({ name, values: shownKeys.map((_, row) => cross.cells[row][col]) })) };
+    return { headers: slices[0].headers, rows: slices[0].rows, total: slices[0].total, slices, chart, truncated: cross.rowKeys.length > shownKeys.length };
   }
 
   // The result of a grouping: one line per group with the keys and the measures.
@@ -411,7 +412,11 @@
       shown.forEach((row, at) => body[at].push(numberText(combine(row.values, fn), fn, rightDecimals(config))));
       if (total) total.push(numberText(combine(result.totals, fn), fn, rightDecimals(config)));
     }
-    return { headers, rows: body, total, truncated: result.rows.length > shown.length };
+    const chart = {
+      categories: shown.map((row) => row.keys[0]),
+      series: measures.map((measure, at) => ({ name: headers[groupBy.length + at].text, values: shown.map((row) => row.values[at]) }))
+    };
+    return { headers, rows: body, total, chart, truncated: result.rows.length > shown.length };
   }
 
   // Computes a table block for the selected row `record` of the table `linked`. `config` is the cleaned

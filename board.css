@@ -220,3 +220,9 @@ input[type="number"]:focus-visible, input[type="text"]:focus-visible { outline: 
 
 /* Version 0.6.4: the slices of a cross table are stacked. */
 .dt.sliceNext { margin-top: 0.8em; }
+
+/* Version 0.7.0: the chart block drawn in SVG. */
+.block.chartBlock { display: flex; flex-direction: column; padding: 0.4em 0.5em; background: #ffffff; color: #1f2933; }
+.block.chartBlock .chartTitle { margin: 0 0 0.3em; font-size: 1.2em; font-weight: 700; flex: 0 0 auto; }
+.block.chartBlock .chartPlot { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; }
+#boardTableSettings.forChart .tableOnly { display: none; }

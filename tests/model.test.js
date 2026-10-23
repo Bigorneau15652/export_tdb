@@ -213,7 +213,7 @@ test(`the settings of a text block are cleaned and the other types have none`, (
       { id: `t1`, type: `text`, page: 0, x: 0, y: 0, w: 10, h: 4, config: { source: `cell`, text: `hello`, column: `Notes`, size: `large`, align: `justify`, fill: `green`, extra: 1 } },
       { id: `t2`, type: `text`, page: 0, x: 0, y: 5, w: 10, h: 4, config: { source: `other`, text: 5, column: `bad name`, size: `huge`, align: `x`, fill: `#ff0000` } },
       { id: `t3`, type: `text`, page: 0, x: 0, y: 10, w: 10, h: 4 },
-      { id: `c1`, type: `chart`, page: 0, x: 0, y: 15, w: 10, h: 4, config: { source: `cell` } }
+      { id: `c1`, type: `image`, page: 0, x: 0, y: 15, w: 10, h: 4, config: { source: `cell` } }
     ]
   });
   assert.deepEqual(M.findBlock(model, `t1`).config, { source: `cell`, text: `hello`, column: `Notes`, size: `large`, align: `justify`, fill: `green` });
@@ -230,7 +230,7 @@ test(`changing the settings keeps the others, and a new type starts with default
   model = M.updateBlock(model, id, { config: { text: `Bonjour {Name}`, align: `center` } });
   model = M.updateBlock(model, id, { config: { size: `small` } });
   assert.deepEqual(M.findBlock(model, id).config, { source: `fixed`, text: `Bonjour {Name}`, column: ``, size: `small`, align: `center`, fill: `none` });
-  model = M.updateBlock(model, id, { type: `chart` });
+  model = M.updateBlock(model, id, { type: `image` });
   assert.deepEqual(M.findBlock(model, id).config, {});
   model = M.updateBlock(model, id, { type: `text` });
   assert.equal(M.findBlock(model, id).config.text, ``);
@@ -353,4 +353,19 @@ test(`a table with an item in lines and an item in columns is a cross table`, ()
   assert.deepEqual([config.colItem, config.colSort, config.slice], [`B.C`, `ref`, 6]);
   const bad = M.cleanConfig(`table`, { colItem: `bad path`, colSort: `x`, slice: 7 });
   assert.deepEqual([bad.colItem, bad.colSort, bad.slice], [``, `key`, 0]);
+});
+
+test(`the settings of a chart block are the settings of a table block and the settings of the drawing`, () => {
+  const config = M.cleanConfig(`chart`, { table: `Rooms`, groupBy: [`Usage`], chart: `donut`, palette: `froide`, legend: `right`, labels: `percent`, columns: [{ path: `Area`, fn: `sum` }] });
+  assert.deepEqual([config.chart, config.palette, config.legend, config.labels, config.mode, config.table], [`donut`, `froide`, `right`, `percent`, `group`, `Rooms`]);
+  assert.equal(config.columns.length, 1);
+  assert.deepEqual(M.cleanConfig(`chart`, {}).chart, `bar`);
+  const bad = M.cleanConfig(`chart`, { chart: `radar`, palette: `x`, legend: `diagonal`, labels: `all` });
+  assert.deepEqual([bad.chart, bad.palette, bad.legend, bad.labels], [`bar`, `franche`, `bottom`, `none`]);
+  assert.equal(M.cleanConfig(`chart`, { legend: `none` }).legend, `none`);
+  const options = require(`../chart-option.js`);
+  assert.deepEqual(M.CHART_TYPES, options.CHART_TYPES);
+  assert.deepEqual(M.CHART_PALETTES, options.PALETTE_KEYS);
+  assert.deepEqual(M.CHART_LEGENDS, options.LEGENDS);
+  assert.deepEqual(M.CHART_LABELS, options.LABELS);
 });

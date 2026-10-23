@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.7.0
+
+- The block "Chart" draws charts in SVG, so that they stay sharp in print and in the PDF. Seven kinds: grouped columns, stacked columns, horizontal bars, stacked horizontal bars, line, pie and donut (area, scatter and treemap charts come later).
+  - The data are set with the same panel as a table block: kind of table, table, rows linked to the selected row, "Item" (the categories), "Item in columns" (the series, one colour each), the calculation, filters and sort. Without an item in columns each calculation is a series. A pie or a donut uses the first series. The total lines and the slices, which only make sense in a table, are hidden.
+  - Look: kind of chart, palette, legend (none, top, bottom, right) and labels of the values (none, values, percentages for pies and donuts). The title of the block is the title of the chart.
+  - Four palettes of ten colours, checked by a test: each colour keeps a 3 to 1 contrast against white and every pair of colours of a palette is told apart. "Vivid" (the default), "Soft", "High contrast" (suited to colour-blind readers) and "Cool". The exact hues of the reference documents will be given later.
+- Apache ECharts 6.1.0 is copied into the repository as a custom build (`vendor/echarts`): only the bar, line and pie charts, the grid and legend, the label layout and the SVG renderer are in it, with its licences (Apache-2.0, BSD-3-Clause and 0BSD) and a record `VENDOR.md` (source, version, checksum and how to build it again). Nothing is loaded from the network and the strict Content-Security-Policy of the page is kept.
+- New pure module `chart-option.js` (the options of the drawing and the palettes) and the settings of the type `chart` in the model (the settings of a table block plus `chart`, `palette`, `legend` and `labels`; a chart saved before is empty so nothing breaks). The results of grouped and cross tables also give the numbers of their series.
+- Tests: the palettes (contrast and distinction), the options of every kind of chart, the cleaning of the settings, the numbers of the series, the build (no code run from text, no network, licences, checksum) and the drawing in the page with its settings.
+
 ## 0.6.5
 
 - Cross table: choosing an item in columns on a table that has no calculation yet now adds the calculation line by itself (Somme, with the column left to choose), so the table can be filled. If the calculation is removed, the button "Add a column" comes back. In a cross table the title of the section is "Calculation of the cells" instead of "Columns", because the columns of the table are the values of the item in columns and a single calculation fills all the cells.

@@ -16,6 +16,9 @@
   const Record = window.exportTdbRecord;
   const Named = window.exportTdbNamed;
   const Indicator = window.exportTdbIndicator;
+  const ChartOption = window.exportTdbChartOption;
+  const Echarts = window.exportTdbEcharts;
+  const Format = window.exportTdbFormat;
   const IndicatorPanel = window.exportTdbIndicatorPanel;
   const ValuesPanel = window.exportTdbValuesPanel;
   const Help = window.exportTdbHelp;
@@ -37,6 +40,7 @@
   const TEXT_MM = { small: 3, normal: 3.5, large: 5 };
   const TABLE_MM = 3;
   const CELL_DELAY_MS = 900;
+  const CHART_TYPE_KEYS = { bar: `chartBar`, stack: `chartStack`, barh: `chartBarh`, barhStack: `chartBarhStack`, line: `chartLine`, pie: `chartPie`, donut: `chartDonut` };
   const INDICATOR_COLOR_KEYS = { none: `indColorNone`, green: `indColorGreen`, orange: `indColorOrange`, red: `indColorRed`, blue: `indColorBlue`, grey: `indColorGrey` };
   const SIZE_KEYS = { small: `sizeSmall`, normal: `sizeNormal`, large: `sizeLarge` };
   const ALIGN_KEYS = { left: `alignLeft`, center: `alignCenter`, justify: `alignJustify` };
@@ -56,7 +60,7 @@
     zoomIn: $(`boardZoomIn`), saveState: $(`boardSaveState`), confirm: $(`boardConfirm`), confirmText: $(`boardConfirmText`),
     confirmYes: $(`boardConfirmYes`), confirmNo: $(`boardConfirmNo`), scroll: $(`boardScroll`), canvas: $(`boardCanvas`),
     side: $(`boardPanel`), titleRow: $(`boardTitleRow`), title: $(`boardTitle`), remove: $(`boardDelete`), close: $(`boardClose`), refresh: $(`boardRefresh`),
-    textBox: $(`boardTextSettings`), crossBox: $(`boardCrossBox`), crossMore: $(`boardCrossMore`), colItem: $(`boardColItem`), slice: $(`boardSlice`), colSort: $(`boardColSort`), indicatorBox: $(`boardIndicatorSettings`), indicatorBody: $(`boardIndicatorBody`), valuesBox: $(`boardValuesSettings`), valuesList: $(`boardValuesList`), valuesAdd: $(`boardValuesAdd`), valuesButton: $(`boardValuesButton`), heading: $(`boardPanelHeading`), recordBox: $(`boardRecordSettings`), recordRows: $(`boardRecordRows`), recordAdd: $(`boardRecordAdd`), recordColumns: $(`boardRecordColumns`), recordSize: $(`boardRecordSize`), recordInfo: $(`boardRecordInfo`), source: $(`boardSource`), columnRow: $(`boardColumnRow`), column: $(`boardColumn`),
+    textBox: $(`boardTextSettings`), chartBox: $(`boardChartSettings`), chartType: $(`boardChartType`), chartPalette: $(`boardChartPalette`), chartLegend: $(`boardChartLegend`), chartLabels: $(`boardChartLabels`), chartInfo: $(`boardChartInfo`), crossBox: $(`boardCrossBox`), crossMore: $(`boardCrossMore`), colItem: $(`boardColItem`), slice: $(`boardSlice`), colSort: $(`boardColSort`), indicatorBox: $(`boardIndicatorSettings`), indicatorBody: $(`boardIndicatorBody`), valuesBox: $(`boardValuesSettings`), valuesList: $(`boardValuesList`), valuesAdd: $(`boardValuesAdd`), valuesButton: $(`boardValuesButton`), heading: $(`boardPanelHeading`), recordBox: $(`boardRecordSettings`), recordRows: $(`boardRecordRows`), recordAdd: $(`boardRecordAdd`), recordColumns: $(`boardRecordColumns`), recordSize: $(`boardRecordSize`), recordInfo: $(`boardRecordInfo`), source: $(`boardSource`), columnRow: $(`boardColumnRow`), column: $(`boardColumn`),
     text: $(`boardText`), field: $(`boardField`), size: $(`boardSize`), align: $(`boardAlign`), fill: $(`boardFill`),
     textInfo: $(`boardTextInfo`), cellState: $(`boardCellState`),
     tableBox: $(`boardTableSettings`), kind: $(`boardKind`), tableSel: $(`boardTable`), linkRow: $(`boardLinkRow`), link: $(`boardLink`), rowsHelp: $(`boardRowsHelp`),
@@ -209,10 +213,10 @@
     const wanted = new Set();
     for (const block of model.blocks) {
       if (block.type === `text`) Fields.extractFields(sourceText(block)).forEach((path) => paths.add(path));
-      if (block.type === `table`) Query.tablesFor(state.schema, state.linked, block.config).forEach((name) => wanted.add(name));
+      if (block.type === `table` || block.type === `chart`) Query.tablesFor(state.schema, state.linked, block.config).forEach((name) => wanted.add(name));
       if (block.type === `record`) Record.recordPaths(block.config).forEach((path) => paths.add(path));
       if (block.type === `indicator`) Fields.extractFields(block.config.note).forEach((path) => paths.add(path));
-      if (block.type === `table` && explainOpen && block.id === selectedId && block.config.table) Query.tablesForChoices(state.schema, state.linked, block.config.table).forEach((name) => wanted.add(name));
+      if ((block.type === `table` || block.type === `chart`) && explainOpen && block.id === selectedId && block.config.table) Query.tablesForChoices(state.schema, state.linked, block.config.table).forEach((name) => wanted.add(name));
     }
     // A row that the loaded table does not hold yet (added since it was loaded): load the table again, once.
     const loadedLinked = Data.tables().get(state.linked);
@@ -361,6 +365,53 @@
     return table;
   }
 
+  // The charts drawn by the last drawing, to be drawn again or forgotten at the next one, and the charts waiting for
+  // their element to be in the page (their size is known only then).
+  let chartInstances = [];
+  let chartPending = [];
+
+  // Fills the element of a chart block: its title and the place where the chart is drawn once the page is built, or
+  // a hint in the editing mode when there is nothing to draw yet.
+  function buildChartBody(node, block) {
+    node.classList.add(`chartBlock`);
+    node.style.fontSize = `${TABLE_MM * mmPx}px`;
+    if (block.title) {
+      const title = document.createElement(`div`);
+      title.className = `chartTitle`;
+      title.textContent = block.title;
+      node.appendChild(title);
+    }
+    const result = tableResult(block);
+    const usable = result.ok && block.config.mode !== `list` && result.chart && result.chart.categories.length;
+    if (usable) {
+      const plot = document.createElement(`div`);
+      plot.className = `chartPlot`;
+      node.appendChild(plot);
+      chartPending.push({ plot, block, data: result.chart });
+    } else if (editing) {
+      const hint = document.createElement(`p`);
+      hint.className = `tableHint`;
+      hint.textContent = result.ok && block.config.mode === `list` ? tr(`chartNeedsItem`) : result.ok ? tr(`chartNoData`) : reasonText(result);
+      node.appendChild(hint);
+    }
+  }
+
+  // Draws the charts of the blocks that are now in the page, in SVG, and forgets the ones of the last drawing.
+  function drawCharts() {
+    for (const { plot, block, data } of chartPending) {
+      const width = plot.clientWidth;
+      const height = plot.clientHeight;
+      if (width < 30 || height < 30) continue;
+      const decimals = block.config.columns.length && Number.isInteger(block.config.columns[0].decimals) ? block.config.columns[0].decimals : block.config.decimals;
+      const option = ChartOption.buildOption(block.config, data, { fontSize: Math.max(8, TABLE_MM * mmPx), format: Format.formatNumber, decimals });
+      if (!option) continue;
+      const instance = Echarts.init(plot, null, { renderer: `svg`, width, height });
+      instance.setOption(option);
+      chartInstances.push(instance);
+    }
+    chartPending = [];
+  }
+
   // Fills the element of an indicator block: its label (the title of the block), its value in bold with a symbol
   // that tells the state, and a short note. The colour follows the thresholds; the text stays dark.
   function buildIndicatorBody(node, block) {
@@ -446,6 +497,26 @@
       grid.appendChild(item);
     }
     node.appendChild(grid);
+  }
+
+  // Fills the settings of a chart block: the type, the palette, the legend and the labels. The data are the
+  // settings of a table (the same panel, filled by fillTableSettings).
+  function fillChartSettings(block) {
+    const config = block.config;
+    setOptions(el.chartType, ChartOption.CHART_TYPES.map((name) => [name, tr(CHART_TYPE_KEYS[name])]), config.chart);
+    setOptions(el.chartPalette, ChartOption.PALETTE_KEYS.map((name) => [name, tr(`palette_${name}`)]), config.palette);
+    setOptions(el.chartLegend, ChartOption.LEGENDS.map((name) => [name, tr(`legend_${name}`)]), config.legend);
+    setOptions(el.chartLabels, ChartOption.LABELS.map((name) => [name, tr(`labels_${name}`)]), config.labels);
+    const result = tableResult(block);
+    const pie = config.chart === `pie` || config.chart === `donut`;
+    const messages = [];
+    if (config.mode === `list`) messages.push(tr(`chartNeedsItem`));
+    else if (!result.ok && result.reason !== `choose`) messages.push(reasonText(result));
+    else if (result.ok && !(result.chart && result.chart.categories.length)) messages.push(tr(`chartNoData`));
+    if (pie && result.ok && result.chart && result.chart.series.length > 1) messages.push(tr(`chartPieFirst`));
+    if (config.labels === `percent` && !pie) messages.push(tr(`chartPercentPie`));
+    el.chartInfo.textContent = messages.join(` `);
+    el.chartInfo.className = messages.length ? `warning` : `hint`;
   }
 
   // Fills the settings of a record block: one line per information (the column, its label and the buttons
@@ -600,6 +671,8 @@
       buildRecordBody(node, block);
     } else if (block.type === `indicator`) {
       buildIndicatorBody(node, block);
+    } else if (block.type === `chart`) {
+      buildChartBody(node, block);
     } else {
       const kind = document.createElement(`div`);
       kind.className = `blockType`;
@@ -748,6 +821,9 @@
   function render(options = {}) {
     const hadFocus = Boolean(options.keepFocus) && el.canvas.contains(document.activeElement);
     computeScale();
+    chartInstances.forEach((instance) => instance.dispose());
+    chartInstances = [];
+    chartPending = [];
     el.canvas.textContent = ``;
     el.canvas.classList.toggle(`editing`, editing);
     for (let index = 0; index < model.pages; index += 1) makePage(index, false);
@@ -764,6 +840,7 @@
       const node = el.canvas.querySelector(`.block[data-id="${block.id}"]`);
       if (node && node.querySelectorAll(`table.dt`).length === 1) applyFlow(block, node, taken);
     }
+    drawCharts();
     const count = el.canvas.querySelectorAll(`.page`).length;
     if (editing && count < Layout.MAX_PAGES) makePage(count, true).classList.add(`newPage`);
     el.canvas.querySelectorAll(`.pageWrap`).forEach((wrap, index) => {
@@ -924,7 +1001,7 @@
   // Changes the settings of the selected block (text or table) and draws again.
   function changeConfig(changes) {
     const block = selectedBlock();
-    if (block && (block.type === `text` || block.type === `table` || block.type === `record` || block.type === `indicator`)) commit(Model.updateBlock(model, block.id, { config: changes }));
+    if (block && (block.type === `text` || block.type === `table` || block.type === `chart` || block.type === `record` || block.type === `indicator`)) commit(Model.updateBlock(model, block.id, { config: changes }));
   }
 
   // The paths of the columns that hold numbers, for the table of the selected table block.
@@ -1233,6 +1310,7 @@
     if (valuesOpen) {
       el.titleRow.hidden = true;
       el.tableBox.hidden = true;
+      el.chartBox.hidden = true;
       el.textBox.hidden = true;
       el.recordBox.hidden = true;
       el.indicatorBox.hidden = true;
@@ -1244,8 +1322,13 @@
     if (!block) return;
     setValue(el.title, block.title);
     el.titleRow.hidden = block.type === `text`;
-    el.tableBox.hidden = block.type !== `table`;
-    if (block.type === `table`) fillTableSettings(block);
+    const dataBlock = block.type === `table` || block.type === `chart`;
+    el.tableBox.hidden = !dataBlock;
+    el.tableBox.classList.toggle(`forChart`, block.type === `chart`);
+    $(`boardTableHeading`).textContent = tr(block.type === `chart` ? `boardChartDataTitle` : `boardTableTitle`);
+    if (dataBlock) fillTableSettings(block);
+    el.chartBox.hidden = block.type !== `chart`;
+    if (block.type === `chart`) fillChartSettings(block);
     el.textBox.hidden = block.type !== `text`;
     if (block.type === `text`) fillTextSettings(block);
     el.recordBox.hidden = block.type !== `record`;
@@ -1628,6 +1711,10 @@
   });
   el.slice.addEventListener(`change`, () => changeConfig({ slice: Number(el.slice.value) }));
   el.colSort.addEventListener(`change`, () => changeConfig({ colSort: el.colSort.value }));
+  el.chartType.addEventListener(`change`, () => changeConfig({ chart: el.chartType.value }));
+  el.chartPalette.addEventListener(`change`, () => changeConfig({ palette: el.chartPalette.value }));
+  el.chartLegend.addEventListener(`change`, () => changeConfig({ legend: el.chartLegend.value }));
+  el.chartLabels.addEventListener(`change`, () => changeConfig({ labels: el.chartLabels.value }));
   el.recordAdd.addEventListener(`click`, () => {
     const block = selectedBlock();
     if (block && block.config.items.length < Model.MAX_RECORD_ITEMS) changeConfig({ items: [...block.config.items, { path: ``, label: `` }] });

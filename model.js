@@ -33,6 +33,10 @@
   const MAX_COLUMNS = 12;
   const MAX_RECORD_ITEMS = 24;
   const MAX_VALUES = 40;
+  const CHART_TYPES = [`bar`, `stack`, `barh`, `barhStack`, `line`, `pie`, `donut`];
+  const CHART_PALETTES = [`franche`, `douce`, `contrastee`, `froide`];
+  const CHART_LEGENDS = [`none`, `top`, `bottom`, `right`];
+  const CHART_LABELS = [`none`, `values`, `percent`];
   const INDICATOR_COLORS = [`none`, `green`, `orange`, `red`, `blue`, `grey`];
   const MAX_RULES = 4;
   const MAX_NOTE = 200;
@@ -133,6 +137,18 @@
     };
   }
 
+  // The settings of a chart block cleaned: the data are chosen like those of a table block (the same keys), then
+  // the type of chart, the palette, the position of the legend and the labels of the values.
+  function cleanChart(raw) {
+    return {
+      ...cleanTable(raw),
+      chart: oneOf(raw.chart, CHART_TYPES),
+      palette: oneOf(raw.palette, CHART_PALETTES),
+      legend: CHART_LEGENDS.includes(raw.legend) ? raw.legend : `bottom`,
+      labels: oneOf(raw.labels, CHART_LABELS)
+    };
+  }
+
   // The settings of an indicator block cleaned: the named value that it shows, a short note under it, the size of
   // the text, the default colour and up to four rules (`ge` or `le` a limit gives a colour; the first rule met wins).
   function cleanIndicator(raw) {
@@ -181,6 +197,7 @@
     const source = raw && typeof raw === `object` ? raw : {};
     if (type === `table`) return cleanTable(source);
     if (type === `record`) return cleanRecord(source);
+    if (type === `chart`) return cleanChart(source);
     if (type === `indicator`) return cleanIndicator(source);
     if (type !== `text`) return {};
     return {
@@ -379,7 +396,7 @@
     return reflow({ ...model, page: cleanPage({ ...model.page, ...changes }) });
   }
 
-  const api = { FORMAT_VERSION, MAX_BLOCKS, MAX_TITLE, MAX_FIXED_TEXT, MAX_COLUMNS, MAX_FILTERS, MAX_GROUPS, TABLE_MODES, SLICES, FUNCTIONS, OPERATORS, SORT_BYS, TYPES, MAX_RECORD_ITEMS, RECORD_COLUMNS, MAX_VALUES, INDICATOR_COLORS, MAX_RULES, MAX_NOTE, VALUE_KINDS, NAME_PATTERN, cleanValues, setValues, TEXT_SOURCES, TEXT_SIZES, TEXT_ALIGNS, FILLS, DEFAULT_SIZES, emptyModel, cleanConfig, validateModel, reflow, findBlock, addBlock, compactPages, updateBlock, moveBlock, resizeBlock, deleteBlock, setPage };
+  const api = { FORMAT_VERSION, MAX_BLOCKS, MAX_TITLE, MAX_FIXED_TEXT, MAX_COLUMNS, MAX_FILTERS, MAX_GROUPS, TABLE_MODES, SLICES, FUNCTIONS, OPERATORS, SORT_BYS, TYPES, MAX_RECORD_ITEMS, RECORD_COLUMNS, MAX_VALUES, CHART_TYPES, CHART_PALETTES, CHART_LEGENDS, CHART_LABELS, INDICATOR_COLORS, MAX_RULES, MAX_NOTE, VALUE_KINDS, NAME_PATTERN, cleanValues, setValues, TEXT_SOURCES, TEXT_SIZES, TEXT_ALIGNS, FILLS, DEFAULT_SIZES, emptyModel, cleanConfig, validateModel, reflow, findBlock, addBlock, compactPages, updateBlock, moveBlock, resizeBlock, deleteBlock, setPage };
   if (typeof module !== `undefined` && module.exports) module.exports = api;
   else root.exportTdbModel = api;
 })(typeof window !== `undefined` ? window : globalThis);
