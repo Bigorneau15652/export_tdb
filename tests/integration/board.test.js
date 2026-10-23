@@ -898,3 +898,47 @@ test(`the named values button is next to the Done button, only in the editing mo
   assert.ok(Math.abs(done.y - values.y) < done.height, `on the same line as the Done button`);
   assert.deepEqual(w.errors, []);
 });
+
+const INDICATOR_MODEL = (config, title = `Surface`) => VALUES_MODEL([AREA_VALUE], [{ id: `in1`, type: `indicator`, title, page: 0, x: 0, y: 0, w: 14, h: 8, config }]);
+
+test(`an indicator shows a named value in bold with a colour that follows its rules`, async () => {
+  const config = { value: `area`, note: `sur {area}`, size: `normal`, base: `grey`, rules: [{ op: `ge`, limit: 100, color: `green` }, { op: `ge`, limit: 50, color: `orange` }] };
+  const w = await openWithRow({ savedOptions: INDICATOR_MODEL(config) }, 1);
+  await w.page.waitForFunction(() => /75,8/.test(document.querySelector(`.block[data-id="in1"] .indValueText`).textContent));
+  const node = w.page.locator(`.block[data-id="in1"]`);
+  assert.match(await node.getAttribute(`class`), /ind-orange/);
+  assert.equal(await node.locator(`.indLabelText`).innerText(), `Surface`);
+  assert.equal(await node.locator(`.indSymbol`).innerText(), `!`);
+  assert.match(await node.locator(`.indNoteText`).innerText(), /sur 75,8/);
+  assert.deepEqual(w.errors, []);
+});
+
+test(`an indicator with no value or an unknown value shows a dash and the default colour`, async () => {
+  const w = await openWithRow({ savedOptions: INDICATOR_MODEL({ value: `unknown`, base: `blue`, rules: [{ op: `ge`, limit: 1, color: `green` }] }) }, 1);
+  await w.page.waitForFunction(() => document.querySelector(`.block[data-id="in1"] .indValueText`));
+  assert.equal(await w.page.locator(`.block[data-id="in1"] .indValueText`).innerText(), `–`);
+  assert.match(await w.page.locator(`.block[data-id="in1"]`).getAttribute(`class`), /ind-blue/);
+  assert.deepEqual(w.errors, []);
+});
+
+test(`the settings of an indicator choose the value, the note and the rules`, async () => {
+  const w = await openWithRow({ savedOptions: INDICATOR_MODEL({}) }, 1);
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="in1"]`, { position: { x: 20, y: 10 } });
+  assert.equal(await w.page.locator(`#boardIndicatorSettings`).isVisible(), true);
+  await w.page.selectOption(`.indValue`, `area`);
+  await w.page.fill(`.indNote`, `Surface totale`);
+  await w.page.click(`#boardIndicatorBody button.button`);
+  assert.equal(await w.page.locator(`.indRule`).count(), 1);
+  await w.page.fill(`.indRule .indLimit`, `50,5`);
+  await w.page.selectOption(`.indRule .indColor`, `green`);
+  const config = (await model(w.page)).blocks[0].config;
+  assert.equal(config.value, `area`);
+  assert.equal(config.note, `Surface totale`);
+  assert.deepEqual(config.rules, [{ op: `ge`, limit: 50.5, color: `green` }]);
+  await w.page.waitForFunction(() => /ind-green/.test(document.querySelector(`.block[data-id="in1"]`).className));
+  assert.match(await w.page.locator(`#boardIndicatorBody .hint`).innerText(), /75,8/);
+  await w.page.click(`.indRule button:nth-of-type(3)`);
+  assert.equal(await w.page.locator(`.indRule`).count(), 0);
+  assert.deepEqual(w.errors, []);
+});

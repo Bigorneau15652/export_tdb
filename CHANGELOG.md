@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.3
+
+- The block "Indicator" is no longer an empty frame. It is a card with a label (the title of the block), a value in bold and an optional small note under it.
+  - The value is a named value chosen in a menu (the number, its unit and its decimals come from the named value). A value that does not exist or cannot be calculated shows a dash.
+  - The note accepts the fields and the named values like a text (`sur {surface_totale}`).
+  - The colour follows up to four rules "greater or equal to" or "less or equal to" a limit, read in order: the first rule that the value meets gives the colour, otherwise the default colour. Colours: none, green, orange, red, blue and grey. The card has a pale tinted background and a coloured bar on the left, the text stays dark, and a small symbol (check mark, exclamation mark, cross, i) tells the state without colour, for printing in black and white.
+  - Size of the text: small, normal or large.
+- New pure module `indicator.js` (colour of a number, symbols), `indicator-panel.js` (the settings) and the model settings of the type `indicator`: `value`, `note`, `size`, `base` and `rules`.
+- Tests: cleaning of the settings, the colour for a number (first rule met, missing number, rules without limit), and the card and its settings in the page.
+
 ## 0.6.2
 
 - The button "Named values" moves next to the button "Done" at the top of the dashboard (it was at the end of the line of the tools, out of sight on a narrow screen). It shows only in the editing mode.

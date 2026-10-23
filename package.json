@@ -1,6 +1,6 @@
 {
   "name": "export_tdb",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "Grist custom widget: dashboard composer (text, tables, charts, images) that prints or exports to PDF",
   "homepage": "https://github.com/Bigorneau15652/export_tdb",
   "private": true,
