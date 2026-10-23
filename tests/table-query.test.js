@@ -345,3 +345,27 @@ test(`a grouped table and a cross table give the numbers for a chart`, () => {
   assert.deepEqual(cross.chart.series.map((s) => s.name), [`Ground`, `Level 1`]);
   assert.deepEqual(cross.chart.series[0].values, [8.25, null, 32.5]);
 });
+
+const runChart = (changes) => Q.runTable(schema, dataset, `Sites`, record(`Sites`, 1), M.cleanConfig(`chart`, changes), WORDS);
+
+test(`a scatter list gives the points of two number columns and one series per value of a third column`, () => {
+  const base = { table: `Rooms`, link: `Rooms.Site`, chart: `scatter` };
+  const plain = runChart({ ...base, columns: [{ path: `Area` }, { path: `Seats` }] });
+  assert.equal(plain.ok, true);
+  assert.deepEqual(plain.scatter.xName, `Area`);
+  assert.deepEqual(plain.scatter.yName, `Seats`);
+  assert.deepEqual(plain.scatter.series, [{ name: ``, points: [[20.5, 4], [35, 10], [12, 0], [8.25, 1]] }]);
+  const coloured = runChart({ ...base, columns: [{ path: `Area` }, { path: `Seats` }, { path: `Building` }] });
+  assert.deepEqual(coloured.scatter.series.map((one) => [one.name, one.points.length]), [[`Building A`, 2], [`Building B`, 2]]);
+  assert.equal(coloured.scatter.groups, 2);
+  const labelled = runChart({ ...base, columns: [{ path: `Area`, label: `Surface` }, { path: `Seats` }] });
+  assert.equal(labelled.scatter.xName, `Surface`);
+});
+
+test(`a scatter list leaves out the rows without two numbers and is absent for other charts or one column`, () => {
+  const text = runChart({ table: `Rooms`, link: `Rooms.Site`, chart: `scatter`, columns: [{ path: `Number` }, { path: `Seats` }] });
+  assert.equal(text.scatter.kept, 0);
+  assert.deepEqual(text.scatter.series, []);
+  assert.equal(run(`Sites`, 1, { table: `Rooms`, link: `Rooms.Site`, columns: [{ path: `Area` }, { path: `Seats` }] }).scatter, undefined);
+  assert.equal(runChart({ table: `Rooms`, link: `Rooms.Site`, chart: `scatter`, columns: [{ path: `Area` }] }).scatter, undefined);
+});

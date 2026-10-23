@@ -41,7 +41,7 @@
   const TEXT_MM = { small: 3, normal: 3.5, large: 5 };
   const TABLE_MM = 3;
   const CELL_DELAY_MS = 900;
-  const CHART_TYPE_KEYS = { bar: `chartBar`, stack: `chartStack`, barh: `chartBarh`, barhStack: `chartBarhStack`, line: `chartLine`, pie: `chartPie`, donut: `chartDonut` };
+  const CHART_TYPE_KEYS = { bar: `chartBar`, stack: `chartStack`, barh: `chartBarh`, barhStack: `chartBarhStack`, line: `chartLine`, area: `chartArea`, pie: `chartPie`, donut: `chartDonut`, treemap: `chartTreemap`, scatter: `chartScatter` };
   const INDICATOR_COLOR_KEYS = { none: `indColorNone`, green: `indColorGreen`, orange: `indColorOrange`, red: `indColorRed`, blue: `indColorBlue`, grey: `indColorGrey` };
   const SIZE_KEYS = { small: `sizeSmall`, normal: `sizeNormal`, large: `sizeLarge` };
   const ALIGN_KEYS = { left: `alignLeft`, center: `alignCenter`, justify: `alignJustify` };
@@ -394,16 +394,19 @@
       node.appendChild(title);
     }
     const result = tableResult(block);
-    const usable = result.ok && block.config.mode !== `list` && result.chart && result.chart.categories.length;
-    if (usable) {
+    const scatter = block.config.chart === `scatter`;
+    const wrongMode = scatter ? block.config.mode !== `list` : block.config.mode === `list`;
+    const data = scatter ? result.scatter : result.chart;
+    const hasData = Boolean(data) && (scatter ? data.series.some((one) => one.points.length) : data.categories.length > 0);
+    if (result.ok && !wrongMode && hasData) {
       const plot = document.createElement(`div`);
       plot.className = `chartPlot`;
       node.appendChild(plot);
-      chartPending.push({ plot, block, data: result.chart });
+      chartPending.push({ plot, block, data });
     } else if (editing) {
       const hint = document.createElement(`p`);
       hint.className = `tableHint`;
-      hint.textContent = result.ok && block.config.mode === `list` ? tr(`chartNeedsItem`) : result.ok ? tr(`chartNoData`) : reasonText(result);
+      hint.textContent = result.ok && wrongMode ? tr(scatter ? `chartScatterNeedsList` : `chartNeedsItem`) : result.ok ? tr(scatter ? `chartScatterNoData` : `chartNoData`) : reasonText(result);
       node.appendChild(hint);
     }
   }
@@ -520,13 +523,24 @@
     setOptions(el.chartLegend, ChartOption.LEGENDS.map((name) => [name, tr(`legend_${name}`)]), config.legend);
     setOptions(el.chartLabels, ChartOption.LABELS.map((name) => [name, tr(`labels_${name}`)]), config.labels);
     const result = tableResult(block);
-    const pie = config.chart === `pie` || config.chart === `donut`;
+    const pie = config.chart === `pie` || config.chart === `donut` || config.chart === `treemap`;
+    const scatter = config.chart === `scatter`;
     const messages = [];
-    if (config.mode === `list`) messages.push(tr(`chartNeedsItem`));
-    else if (!result.ok && result.reason !== `choose`) messages.push(reasonText(result));
-    else if (result.ok && !(result.chart && result.chart.categories.length)) messages.push(tr(`chartNoData`));
+    if (scatter) {
+      if (config.mode !== `list`) messages.push(tr(`chartScatterNeedsList`));
+      else if (!result.ok && result.reason !== `choose`) messages.push(reasonText(result));
+      else if (result.ok && !(result.scatter && result.scatter.kept)) messages.push(tr(`chartScatterNoData`));
+      else if (result.ok && result.scatter.groups > result.scatter.series.length) messages.push(tr(`chartScatterGroups`, { max: result.scatter.series.length }));
+      if (!messages.length) messages.push(tr(`chartScatterHint`));
+    } else if (config.mode === `list`) {
+      messages.push(tr(`chartNeedsItem`));
+    } else if (!result.ok && result.reason !== `choose`) {
+      messages.push(reasonText(result));
+    } else if (result.ok && !(result.chart && result.chart.categories.length)) {
+      messages.push(tr(`chartNoData`));
+    }
     if (pie && result.ok && result.chart && result.chart.series.length > 1) messages.push(tr(`chartPieFirst`));
-    if (config.labels === `percent` && !pie) messages.push(tr(`chartPercentPie`));
+    if (config.labels === `percent` && !pie && !scatter) messages.push(tr(`chartPercentPie`));
     el.chartInfo.textContent = messages.join(` `);
     el.chartInfo.className = messages.length ? `warning` : `hint`;
   }

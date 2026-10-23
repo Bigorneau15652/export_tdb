@@ -33,7 +33,7 @@
   const MAX_COLUMNS = 12;
   const MAX_RECORD_ITEMS = 24;
   const MAX_VALUES = 40;
-  const CHART_TYPES = [`bar`, `stack`, `barh`, `barhStack`, `line`, `pie`, `donut`];
+  const CHART_TYPES = [`bar`, `stack`, `barh`, `barhStack`, `line`, `area`, `pie`, `donut`, `treemap`, `scatter`];
   const CHART_PALETTES = [`franche`, `douce`, `contrastee`, `froide`];
   const CHART_LEGENDS = [`none`, `top`, `bottom`, `right`];
   const CHART_LABELS = [`none`, `values`, `percent`];

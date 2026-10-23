@@ -15,6 +15,9 @@
 
   // The most rows that a block computes (the page could not show more anyway).
   const MAX_ROWS = 2000;
+  // A scatter chart draws at most this many points and this many series (one colour each).
+  const MAX_POINTS = 2000;
+  const MAX_SERIES = 10;
   const NO_VALUE = new Set([`empty`, `notEmpty`, `true`, `false`]);
 
   // Key of a chain of steps going down from a table: `Table.Column>Table.Column`.
@@ -293,7 +296,28 @@
       shown.forEach((row, at) => body[at].push(numberText(combine(used.map((index) => read(row, index)), fn), fn, rightDecimals(config))));
       if (total) total.push(numberText(combine(used.map((index) => totalValues[index]), fn), fn, rightDecimals(config)));
     }
-    return { headers, rows: body, total, truncated: order.length > shown.length };
+    const out = { headers, rows: body, total, truncated: order.length > shown.length };
+    if (config.chart === `scatter` && resolved.length >= 2) out.scatter = scatterPoints(dataset, config, columns, resolved, order, words);
+    return out;
+  }
+
+  // The points of a scatter chart from the rows of a list: the first column gives the horizontal number, the second
+  // the vertical one and the third (optional) the series, one colour each. A row without both numbers is left out.
+  function scatterPoints(dataset, config, columns, resolved, rows, words) {
+    const name = (index) => columns[index].label || pathLabel(dataset, config.table, columns[index].path);
+    const groups = new Map();
+    let kept = 0;
+    for (const row of rows.slice(0, MAX_POINTS)) {
+      const x = values.toNumber(dataset.valueAt(resolved[0], row));
+      const y = values.toNumber(dataset.valueAt(resolved[1], row));
+      if (x === null || y === null) continue;
+      const key = resolved.length > 2 ? dataset.textAt(resolved[2], row) || words.empty : ``;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push([x, y]);
+      kept += 1;
+    }
+    const series = [...groups.entries()].slice(0, MAX_SERIES).map(([key, points]) => ({ name: key, points }));
+    return { xName: name(0), yName: name(1), series, kept, groups: groups.size };
   }
 
   // The rank of each row of the table that a reference column points to, in the order that the user gave to

@@ -115,3 +115,41 @@ test(`a long legend breaks its names and keeps the drawing clear of it`, () => {
   assert.ok(bars.grid.top > 40);
   assert.equal(bars.legend.type, `plain`);
 });
+
+test(`an area chart stacks smooth layers without symbols`, () => {
+  const option = C.buildOption(config({ chart: `area` }), data, helpers);
+  assert.equal(option.series.length, 2);
+  assert.equal(option.series[0].type, `line`);
+  assert.equal(option.series[0].stack, `total`);
+  assert.ok(option.series[0].areaStyle.opacity > 0.5);
+  assert.equal(option.series[0].symbol, `none`);
+  assert.equal(option.xAxis.boundaryGap, false);
+  assert.equal(option.series[0].label.show, false);
+});
+
+test(`a treemap has one rectangle per item with a palette colour and no legend`, () => {
+  const option = C.buildOption(config({ chart: `treemap`, labels: `percent`, palette: `froide` }), { categories: [`A`, `B`, `C`], series: [{ name: `S`, values: [1, 3, 0] }] }, helpers);
+  const one = option.series[0];
+  assert.equal(one.type, `treemap`);
+  assert.deepEqual(one.data.map((item) => item.name), [`A`, `B`]);
+  assert.equal(one.data[1].itemStyle.color, C.PALETTES.froide[1]);
+  assert.equal(option.legend.show, false);
+  assert.equal(one.label.formatter({ name: `B`, value: 3 }), `B\n75.0 %`);
+  assert.equal(C.buildOption(config({ chart: `treemap`, labels: `values` }), data, helpers).series[0].label.formatter({ name: `A`, value: 1 }), `A\n1`);
+  assert.equal(C.buildOption(config({ chart: `treemap` }), { categories: [`A`], series: [{ name: `S`, values: [0] }] }, helpers), null);
+});
+
+test(`a scatter chart has numeric axes with names, one series per colour and a legend only when there are several`, () => {
+  const scatter = { xName: `Area`, yName: `Seats`, series: [{ name: `North`, points: [[1, 2], [3, 4]] }, { name: `South`, points: [[5, 6]] }] };
+  const option = C.buildOption(config({ chart: `scatter` }), scatter, helpers);
+  assert.equal(option.series.length, 2);
+  assert.equal(option.series[0].type, `scatter`);
+  assert.deepEqual(option.series[0].data, [[1, 2], [3, 4]]);
+  assert.equal(option.xAxis.name, `Area`);
+  assert.equal(option.yAxis.name, `Seats`);
+  assert.equal(option.legend.show, true);
+  const single = C.buildOption(config({ chart: `scatter` }), { ...scatter, series: [scatter.series[0]] }, helpers);
+  assert.equal(single.legend.show, false);
+  assert.equal(C.buildOption(config({ chart: `scatter` }), { ...scatter, series: [{ name: ``, points: [] }] }, helpers), null);
+  assert.equal(C.buildOption(config({ chart: `scatter` }), null, helpers), null);
+});

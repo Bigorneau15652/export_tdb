@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.10.0
+
+- Three more kinds of chart in the block "Chart":
+  - Stacked areas: like the stacked columns but with smooth layers, one per series, from a grouped or cross table.
+  - Treemap: one rectangle per item, the area proportional to the first calculation, in the colours of the palette, with the name written inside (and the value or the percentage with the labels setting). Items with a zero or negative value are left out.
+  - Scatter plot: made from a table without grouping. The first column gives the horizontal axis, the second the vertical axis (both must be numbers; a row without both is left out) and an optional third column gives one colour per value (at most ten colours). The axes carry the names of the columns and the legend only appears when there are several colours. The settings tell which column does what.
+- The custom build of Apache ECharts now also holds the scatter and treemap charts (`vendor/echarts`, new checksum and `VENDOR.md` updated, same licences).
+- Tests: the options of the three kinds, the points of a scatter chart (axes, colours, rows left out), the cleaning of the settings and the drawing in the page with the settings.
+
 ## 0.9.1
 
 - Printing: a blank sheet was inserted after every page when the print dialog of the browser kept margins of its own (for example the choice "Minimum" in "Margins"): the page of the dashboard, a little taller than the printable area, spilled onto a second sheet. In print the page now follows the printable area (`100vw` by `100vh`), so there is exactly one sheet per page whatever the margins chosen; when the margins are at zero, as the dashboard asks, the page is the full sheet as before. The message of the print window also tells to set "Margins" to "Default" or "None".
