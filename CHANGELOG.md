@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.12
+
+- Long tables are now automatic: the tick box "Long table: continue on the following pages" is gone and every table block continues on the following pages when its rows do not fit in its frame. The setting `flow` of the model is dropped; tables saved by 0.5.11 stay valid (the key is ignored).
+- Test: a table continues by itself and the settings have no tick box for it.
+
 ## 0.5.11
 
 - A double click on the rest of a long table (the blue frames on the following pages) opens the settings of that table, like a double click on its first frame. A simple click selects the table. The frames of the rest still cannot be moved, resized or deleted by themselves: only the first frame is the block.
