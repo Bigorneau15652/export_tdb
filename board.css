@@ -253,6 +253,8 @@ body.printBody { margin: 0; background: #e4e7eb; color: #1f2933; font-family: sa
   body.printBody { background: #ffffff; }
   .printBar { display: none; }
   .printSheet { display: block; padding: 0; }
-  .printSheet .page { margin: 0; box-shadow: none; break-after: page; page-break-after: always; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  /* The sheet follows the printable area of the page, so that margins imposed by the print dialog never push a page
+     onto a second sheet (the size is the full sheet when the margins of the page are kept at zero). */
+  .printSheet .page { width: 100vw !important; height: 100vh !important; margin: 0; box-shadow: none; break-after: page; page-break-after: always; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .printSheet .page:last-child { break-after: auto; page-break-after: auto; }
 }

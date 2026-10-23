@@ -1153,3 +1153,12 @@ test(`the footer text and the page numbers are set in the tools and saved with t
   assert.deepEqual([page.footer, page.numbers], [`Report {x}`, true]);
   assert.deepEqual(w.errors, []);
 });
+
+test(`the PDF keeps one sheet per page when the print dialog imposes margins of its own`, async () => {
+  const w = await openWithRow({ savedOptions: printModel({ numbers: true, footer: `Report` }) }, 1);
+  const popup = await openPrint(w);
+  await popup.evaluate(() => document.querySelector(`link[href*="print/"]`).remove());
+  const pdf = (await popup.pdf({ width: `297mm`, height: `210mm`, margin: { top: `5mm`, bottom: `5mm`, left: `5mm`, right: `5mm` }, printBackground: true })).toString(`latin1`);
+  assert.equal((pdf.match(/\/Type\s*\/Page[^s]/g) || []).length, 2);
+  await popup.close();
+});

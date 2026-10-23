@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.1
+
+- Printing: a blank sheet was inserted after every page when the print dialog of the browser kept margins of its own (for example the choice "Minimum" in "Margins"): the page of the dashboard, a little taller than the printable area, spilled onto a second sheet. In print the page now follows the printable area (`100vw` by `100vh`), so there is exactly one sheet per page whatever the margins chosen; when the margins are at zero, as the dashboard asks, the page is the full sheet as before. The message of the print window also tells to set "Margins" to "Default" or "None".
+- Tests: the PDF of the print window keeps one sheet per page when the dialog imposes margins.
+
 ## 0.9.0
 
 - Printing and PDF. A new button "Print" (always visible, next to "Edit") opens a window of the widget that holds all the pages of the dashboard for the selected row, drawn at their real size by the same code as the screen, then opens the print dialog of the browser: choose "Save as PDF" or a printer. The window waits until the pictures are loaded. If the dialog does not open (the frame of Grist may forbid it), the Print button of the window or the keys Ctrl+P do the same.
