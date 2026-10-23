@@ -1169,7 +1169,8 @@
     setOptions(el.group1, columnItems, config.groupBy[0] || ``);
     el.crossBox.hidden = !config.groupBy[0];
     el.crossMore.hidden = config.mode !== `cross`;
-    el.addColumn.hidden = config.mode === `cross`;
+    el.addColumn.hidden = config.mode === `cross` && config.columns.length > 0;
+    $(`boardColumnsLabel`).textContent = tr(config.mode === `cross` ? `boardCellCalc` : `boardColumns`);
     setOptions(el.colItem, [[``, tr(`boardColItemNone`)], ...choices.map((choice) => [choice.path, choice.label])], config.colItem);
     const colColumn = config.colItem ? schema.tables.get(config.table).columns.find((column) => column.id === config.colItem.split(`.`)[0]) : null;
     setOptions(el.colSort, [[`key`, tr(`colSortKey`)], ...(colColumn && colColumn.kind === `ref` ? [[`ref`, tr(`colSortRef`)]] : [])], config.colSort);
@@ -1619,7 +1620,12 @@
     const group = Boolean(el.group1.value);
     changeConfig({ groupBy: [el.group1.value], colItem: group ? block.config.colItem : ``, sort: { ...block.config.sort, by: group ? `key` : `none` }, columns: fitColumns(block, group) });
   });
-  el.colItem.addEventListener(`change`, () => changeConfig({ colItem: el.colItem.value }));
+  el.colItem.addEventListener(`change`, () => {
+    const block = selectedBlock();
+    if (!block) return;
+    const columns = el.colItem.value && !block.config.columns.length ? [{ path: ``, fn: `sum`, label: `` }] : block.config.columns;
+    changeConfig({ colItem: el.colItem.value, columns });
+  });
   el.slice.addEventListener(`change`, () => changeConfig({ slice: Number(el.slice.value) }));
   el.colSort.addEventListener(`change`, () => changeConfig({ colSort: el.colSort.value }));
   el.recordAdd.addEventListener(`click`, () => {
