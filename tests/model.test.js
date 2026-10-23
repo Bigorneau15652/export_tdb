@@ -20,7 +20,7 @@ function assertValid(model) {
 test(`nothing saved gives an empty model with one screen page`, () => {
   const { model, warnings, locked } = M.validateModel(null);
   assert.deepEqual(model, M.emptyModel());
-  assert.deepEqual(model.page, { format: `screen`, orientation: `landscape`, margin: 10 });
+  assert.deepEqual(model.page, { format: `screen`, orientation: `landscape`, margin: 10, numbers: false, footer: `` });
   assert.equal(model.pages, 1);
   assert.deepEqual(warnings, []);
   assert.equal(locked, false);
@@ -42,8 +42,9 @@ test(`a model from a newer version is not read and is locked`, () => {
 });
 
 test(`unknown page settings give the defaults and valid ones are kept`, () => {
-  assert.deepEqual(M.validateModel({ version: 1, page: { format: `a3`, orientation: `portrait`, margin: 5 } }).model.page, { format: `a3`, orientation: `portrait`, margin: 5 });
-  assert.deepEqual(M.validateModel({ version: 1, page: { format: `<b>`, orientation: 3, margin: 7 } }).model.page, { format: `screen`, orientation: `landscape`, margin: 10 });
+  assert.deepEqual(M.validateModel({ version: 1, page: { format: `a3`, orientation: `portrait`, margin: 5, numbers: true, footer: `Report` } }).model.page, { format: `a3`, orientation: `portrait`, margin: 5, numbers: true, footer: `Report` });
+  assert.deepEqual(M.validateModel({ version: 1, page: { format: `<b>`, orientation: 3, margin: 7, numbers: `yes`, footer: 5 } }).model.page, { format: `screen`, orientation: `landscape`, margin: 10, numbers: false, footer: `` });
+  assert.equal(M.validateModel({ version: 1, page: { footer: `x`.repeat(500) } }).model.page.footer.length, M.MAX_FOOTER);
 });
 
 test(`blocks are cleaned: type, title, numbers and ids`, () => {

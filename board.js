@@ -55,7 +55,7 @@
 
   const $ = (id) => document.getElementById(id);
   const el = {
-    panel: $(`panelBoard`), notice: $(`boardNotice`), edit: $(`boardEdit`), tools: $(`boardTools`), help: $(`boardHelp`),
+    panel: $(`panelBoard`), notice: $(`boardNotice`), edit: $(`boardEdit`), print: $(`boardPrint`), numbers: $(`boardNumbers`), footerText: $(`boardFooter`), tools: $(`boardTools`), help: $(`boardHelp`),
     addType: $(`boardAddType`), add: $(`boardAdd`), format: $(`boardFormat`),
     orientation: $(`boardOrientation`), margin: $(`boardMargin`), zoomOut: $(`boardZoomOut`), zoomFit: $(`boardZoomFit`),
     zoomIn: $(`boardZoomIn`), saveState: $(`boardSaveState`), confirm: $(`boardConfirm`), confirmText: $(`boardConfirmText`),
@@ -85,6 +85,9 @@
   let saveTimer = null;
   // Pixels per millimetre of the page on the screen.
   let mmPx = 1;
+  // True while the pages are drawn at their real size for the print window.
+  let printing = false;
+  const PRINT_MM_PX = 96 / 25.4;
   // The text typed for a cell source and not yet written, and the written value kept on screen until
   // Grist gives the row again.
   let cellPending = null;
@@ -312,6 +315,10 @@
 
   // Computes the scale so that the page fills the width of the area, times the zoom.
   function computeScale() {
+    if (printing) {
+      mmPx = PRINT_MM_PX;
+      return;
+    }
     const size = Layout.pageSizeMm(model.page.format, model.page.orientation);
     const available = Math.max(120, el.scroll.clientWidth - 18);
     mmPx = (available / size.w) * ZOOMS[zoomIndex];
@@ -964,6 +971,7 @@
       const label = wrap.querySelector(`.pageLabel`);
       label.textContent = wrap.querySelector(`.page.newPage`) ? tr(`boardNewPage`) : tr(`boardPageLabel`, { n: index + 1, total: count });
     });
+    addFooters();
     for (const node of el.canvas.querySelectorAll(`.block.textBlock:not(.continuation), .block.tableBlock:not(.continuation), .block.recordBlock, .block.indicatorBlock`)) {
       if (node.dataset.flow) continue;
       node.classList.toggle(`overflowing`, node.scrollHeight > node.clientHeight + 2);
@@ -975,6 +983,30 @@
       const node = el.canvas.querySelector(`.block[data-id="${selectedId}"]`);
       if (node) node.focus({ preventScroll: true });
     }
+  }
+
+  // Writes the footer of the pages (the free text on the left, the page number on the right) in the bottom margin of
+  // every page, when the page settings ask for it. At least 5 mm are kept for it.
+  function addFooters() {
+    if (!model.page.numbers && !model.page.footer) return;
+    const pages = [...el.canvas.querySelectorAll(`.page:not(.newPage)`)];
+    const margin = Math.max(5, Layout.gridOf(model.page).margin);
+    pages.forEach((page, index) => {
+      const footer = document.createElement(`div`);
+      footer.className = `pageFooter`;
+      footer.style.left = `${Layout.gridOf(model.page).margin * mmPx}px`;
+      footer.style.right = `${Layout.gridOf(model.page).margin * mmPx}px`;
+      footer.style.height = `${margin * mmPx}px`;
+      footer.style.fontSize = `${Math.min(margin * 0.6, 3.2) * mmPx}px`;
+      const text = document.createElement(`span`);
+      text.className = `footerText`;
+      text.textContent = model.page.footer;
+      const number = document.createElement(`span`);
+      number.className = `footerNumber`;
+      number.textContent = model.page.numbers ? tr(`boardPageNumber`, { n: index + 1, total: pages.length }) : ``;
+      footer.append(text, number);
+      page.appendChild(footer);
+    });
   }
 
   // Shows or hides the tools and sets the controls to the state of the model.
@@ -991,6 +1023,130 @@
     el.format.value = model.page.format;
     el.orientation.value = model.page.orientation;
     el.margin.value = String(model.page.margin);
+    el.numbers.checked = model.page.numbers;
+    setValue(el.footerText, model.page.footer);
+  }
+
+  // ------------------------------------------------------------------ Printing
+
+  // Shows a message about the printing in the notice line of the tab.
+  function printNotice(text) {
+    el.notice.textContent = text;
+    el.notice.hidden = false;
+  }
+
+  // Prepares the document of the print window, a page of the site (print.html) that the widget fills: the size of the
+  // sheet (a small static style sheet per format), a bar with the buttons (hidden when printing) and the sheet that will
+  // hold the pages. Returns { sheet, message }.
+  function preparePrintWindow(popup) {
+    const doc = popup.document;
+    doc.title = tr(`printTitle`);
+    const sizeSheet = doc.createElement(`link`);
+    sizeSheet.rel = `stylesheet`;
+    sizeSheet.href = new URL(`print/${model.page.format}-${model.page.orientation}.css`, location.href).href;
+    doc.head.appendChild(sizeSheet);
+    doc.body.textContent = ``;
+    const bar = doc.createElement(`div`);
+    bar.className = `printBar`;
+    const message = doc.createElement(`p`);
+    message.className = `printMessage`;
+    message.textContent = tr(`printPreparing`);
+    const print = doc.createElement(`button`);
+    print.type = `button`;
+    print.textContent = tr(`printButton`);
+    print.addEventListener(`click`, () => popup.print());
+    const close = doc.createElement(`button`);
+    close.type = `button`;
+    close.textContent = tr(`printClose`);
+    close.addEventListener(`click`, () => popup.close());
+    bar.append(message, print, close);
+    const sheet = doc.createElement(`div`);
+    sheet.className = `printSheet`;
+    doc.body.append(bar, sheet);
+    return { sheet, message };
+  }
+
+  // Opens the print window on the page print.html and waits until it is loaded. Must be called from a click.
+  // Resolves to the window, or to null when the browser blocks it or the page does not load.
+  async function openPrintWindow() {
+    const popup = window.open(``, `export_tdb_print`, `popup=yes,width=1100,height=820,resizable=yes,scrollbars=yes`);
+    if (!popup) return { popup: null, blocked: true };
+    try {
+      popup.location.href = new URL(`print.html`, location.href).href;
+      const deadline = Date.now() + 10000;
+      const loaded = () => {
+        try {
+          return popup.location.pathname.endsWith(`/print.html`) && popup.document.readyState === `complete` && popup.document.body && popup.document.body.dataset.ready === `1`;
+        } catch {
+          return false;
+        }
+      };
+      while (!popup.closed && !loaded() && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 50));
+      if (loaded()) return { popup, blocked: false };
+    } catch {
+      // The window cannot be used: it is closed below.
+    }
+    popup.close();
+    return { popup: null, blocked: false };
+  }
+
+  // Waits until every picture of the print window is loaded (or failed), then opens the print dialog of the browser.
+  async function finishPrint(popup, sheet, message, count) {
+    const deadline = Date.now() + 15000;
+    const ready = () => [...sheet.querySelectorAll(`img`)].every((img) => img.getAttribute(`src`) && img.complete);
+    while (!popup.closed && !ready() && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 100));
+    if (popup.closed) return;
+    message.textContent = tr(`printReady`, { count });
+    popup.focus();
+    try {
+      popup.print();
+    } catch {
+      // The browser refuses: the message above tells the keys to use.
+    }
+  }
+
+  // Draws every page at its real size in a window of its own and opens the print dialog of the browser, where the
+  // PDF is saved. The pages are drawn by the same code as the screen, then moved into the window.
+  async function printDashboard() {
+    const opened = await openPrintWindow();
+    const popup = opened.popup;
+    if (!popup) {
+      printNotice(tr(opened.blocked ? `boardPrintBlocked` : `boardPrintFailed`));
+      return;
+    }
+    let target;
+    try {
+      target = preparePrintWindow(popup);
+    } catch {
+      popup.close();
+      printNotice(tr(`boardPrintFailed`));
+      return;
+    }
+    const saved = { editing, selectedId };
+    printing = true;
+    editing = false;
+    selectedId = null;
+    let count = 0;
+    try {
+      render();
+      const pages = [...el.canvas.querySelectorAll(`.page:not(.newPage)`)];
+      const size = Layout.pageSizeMm(model.page.format, model.page.orientation);
+      // The charts now belong to the print window: they must not be disposed by the next drawing.
+      chartInstances = [];
+      for (const page of pages) {
+        page.dataset.size = `${model.page.format}-${model.page.orientation}`;
+        page.style.width = `${size.w}mm`;
+        page.style.height = `${size.h - 0.3}mm`;
+        target.sheet.appendChild(popup.document.adoptNode(page));
+      }
+      count = pages.length;
+    } finally {
+      printing = false;
+      editing = saved.editing;
+      selectedId = saved.selectedId;
+      render();
+    }
+    finishPrint(popup, target.sheet, target.message, count);
   }
 
   // ------------------------------------------------------------------ Settings panel
@@ -1740,6 +1896,9 @@
   el.format.addEventListener(`change`, pageChange);
   el.orientation.addEventListener(`change`, pageChange);
   el.margin.addEventListener(`change`, pageChange);
+  el.print.addEventListener(`click`, printDashboard);
+  el.numbers.addEventListener(`change`, () => commit(Model.setPage(model, { numbers: el.numbers.checked })));
+  el.footerText.addEventListener(`input`, () => commit(Model.setPage(model, { footer: el.footerText.value })));
   el.zoomOut.addEventListener(`click`, () => zoom(-1));
   el.zoomIn.addEventListener(`click`, () => zoom(1));
   el.zoomFit.addEventListener(`click`, () => zoom(0));

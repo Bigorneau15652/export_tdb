@@ -11,13 +11,13 @@
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'self'; script-src 'self' https://grist.numerique.gouv.fr; img-src 'self' data: blob: https:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>export_tdb</title>
-  <link rel="stylesheet" href="explorer.css?v=0.8.1">
-  <link rel="stylesheet" href="board.css?v=0.8.1">
+  <link rel="stylesheet" href="explorer.css?v=0.9.0">
+  <link rel="stylesheet" href="board.css?v=0.9.0">
   <script src="https://grist.numerique.gouv.fr/grist-plugin-api.js"></script>
 </head>
 <body>
   <main id="app">
-    <h1><span data-i18n="title"></span> <small class="version" id="version">0.8.1</small></h1>
+    <h1><span data-i18n="title"></span> <small class="version" id="version">0.9.0</small></h1>
     <div id="tabs" role="tablist">
       <button type="button" role="tab" id="tabBoard" class="tab" aria-selected="true" data-i18n="tabBoard"></button>
       <button type="button" role="tab" id="tabExplorer" class="tab" aria-selected="false" data-i18n="tabExplorer"></button>
@@ -30,6 +30,7 @@
       <p id="boardNotice" class="warning" role="status" hidden></p>
       <div id="boardBar">
         <button type="button" id="boardEdit" class="button" data-i18n="boardEdit"></button>
+        <button type="button" id="boardPrint" class="button secondary" data-i18n="boardPrint"></button>
         <button type="button" id="boardValuesButton" class="button secondary" aria-expanded="false" hidden data-i18n="boardValuesButton"></button>
         <span id="boardSaveState" class="hint" role="status"></span>
       </div>
@@ -55,6 +56,11 @@
           <div class="tool">
             <label for="boardMargin"><span class="help" tabindex="0" role="img" data-i18n-tip="tipBoardMargin">?</span> <span data-i18n="boardMargin"></span></label>
             <select id="boardMargin"></select>
+          </div>
+          <div class="tool">
+            <label for="boardFooter"><span class="help" tabindex="0" role="img" data-i18n-tip="tipBoardFooter">?</span> <span data-i18n="boardFooter"></span></label>
+            <input type="text" id="boardFooter" maxlength="120">
+            <label class="check"><input type="checkbox" id="boardNumbers"> <span data-i18n="boardNumbers"></span></label>
           </div>
           <div class="tool">
             <p class="label"><span class="help" tabindex="0" role="img" data-i18n-tip="tipBoardZoom">?</span> <span data-i18n="boardZoom"></span></p>
@@ -335,38 +341,38 @@
     </div>
   </main>
 
-  <script src="shared/i18n.js?v=0.8.1"></script>
-  <script src="schema.js?v=0.8.1"></script>
-  <script src="shape.js?v=0.8.1"></script>
-  <script src="report.js?v=0.8.1"></script>
-  <script src="values.js?v=0.8.1"></script>
-  <script src="dataset.js?v=0.8.1"></script>
-  <script src="rowset.js?v=0.8.1"></script>
-  <script src="aggregate.js?v=0.8.1"></script>
-  <script src="format.js?v=0.8.1"></script>
-  <script src="expr.js?v=0.8.1"></script>
-  <script src="explorer.js?v=0.8.1"></script>
-  <script src="help.js?v=0.8.1"></script>
-  <script src="filter-ui.js?v=0.8.1"></script>
-  <script src="lab.js?v=0.8.1"></script>
-  <script src="layout.js?v=0.8.1"></script>
-  <script src="flow.js?v=0.8.1"></script>
-  <script src="model.js?v=0.8.1"></script>
-  <script src="grist-access.js?v=0.8.1"></script>
-  <script src="markdown.js?v=0.8.1"></script>
-  <script src="fields.js?v=0.8.1"></script>
-  <script src="record.js?v=0.8.1"></script>
-  <script src="image.js?v=0.8.1"></script>
-  <script src="indicator.js?v=0.8.1"></script>
-  <script src="vendor/echarts/echarts.custom.min.js?v=0.8.1"></script>
-  <script src="chart-option.js?v=0.8.1"></script>
-  <script src="data-cache.js?v=0.8.1"></script>
-  <script src="markdown-view.js?v=0.8.1"></script>
-  <script src="table-query.js?v=0.8.1"></script>
-  <script src="named.js?v=0.8.1"></script>
-  <script src="values-panel.js?v=0.8.1"></script>
-  <script src="indicator-panel.js?v=0.8.1"></script>
-  <script src="board.js?v=0.8.1"></script>
-  <script src="tabs.js?v=0.8.1"></script>
+  <script src="shared/i18n.js?v=0.9.0"></script>
+  <script src="schema.js?v=0.9.0"></script>
+  <script src="shape.js?v=0.9.0"></script>
+  <script src="report.js?v=0.9.0"></script>
+  <script src="values.js?v=0.9.0"></script>
+  <script src="dataset.js?v=0.9.0"></script>
+  <script src="rowset.js?v=0.9.0"></script>
+  <script src="aggregate.js?v=0.9.0"></script>
+  <script src="format.js?v=0.9.0"></script>
+  <script src="expr.js?v=0.9.0"></script>
+  <script src="explorer.js?v=0.9.0"></script>
+  <script src="help.js?v=0.9.0"></script>
+  <script src="filter-ui.js?v=0.9.0"></script>
+  <script src="lab.js?v=0.9.0"></script>
+  <script src="layout.js?v=0.9.0"></script>
+  <script src="flow.js?v=0.9.0"></script>
+  <script src="model.js?v=0.9.0"></script>
+  <script src="grist-access.js?v=0.9.0"></script>
+  <script src="markdown.js?v=0.9.0"></script>
+  <script src="fields.js?v=0.9.0"></script>
+  <script src="record.js?v=0.9.0"></script>
+  <script src="image.js?v=0.9.0"></script>
+  <script src="indicator.js?v=0.9.0"></script>
+  <script src="vendor/echarts/echarts.custom.min.js?v=0.9.0"></script>
+  <script src="chart-option.js?v=0.9.0"></script>
+  <script src="data-cache.js?v=0.9.0"></script>
+  <script src="markdown-view.js?v=0.9.0"></script>
+  <script src="table-query.js?v=0.9.0"></script>
+  <script src="named.js?v=0.9.0"></script>
+  <script src="values-panel.js?v=0.9.0"></script>
+  <script src="indicator-panel.js?v=0.9.0"></script>
+  <script src="board.js?v=0.9.0"></script>
+  <script src="tabs.js?v=0.9.0"></script>
 </body>
 </html>

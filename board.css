@@ -234,3 +234,25 @@ input[type="number"]:focus-visible, input[type="text"]:focus-visible { outline: 
 .block.imageBlock .imagePicture { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
 .block.imageBlock .imageMessage { margin: 0; color: #8a1c1c; font-weight: 600; overflow-wrap: anywhere; }
 .block.imageBlock .imageCaption { flex: 0 0 auto; margin-top: 0.3em; font-size: 0.85em; text-align: center; color: #3e4c59; overflow-wrap: anywhere; }
+
+/* Footer of the pages: free text on the left, page number on the right, in the bottom margin. */
+.pageFooter { position: absolute; bottom: 0; display: flex; align-items: center; justify-content: space-between; gap: 1em; color: #3e4c59; line-height: 1; pointer-events: none; }
+.pageFooter .footerText { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0; }
+.pageFooter .footerNumber { flex: 0 0 auto; white-space: nowrap; }
+
+/* Print window: the pages at their real size. The size of the sheet comes from a small static style sheet per format
+   and orientation (folder print/), because the size of a printed page cannot be set from a script. */
+body.printBody { margin: 0; background: #e4e7eb; color: #1f2933; font-family: sans-serif; }
+.printBar { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 12px; background: #ffffff; border-bottom: 1px solid #9aa5b1; }
+.printBar .printMessage { flex: 1 1 280px; margin: 0; font-size: 14px; color: #1f2933; }
+.printBar button { padding: 6px 12px; font-size: 14px; color: #ffffff; background: #1c5d8c; border: 1px solid #1c5d8c; border-radius: 4px; cursor: pointer; }
+.printBar button:last-child { color: #1f2933; background: #ffffff; border-color: #52606d; }
+.printSheet { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 12px; }
+.printSheet .page { flex: none; border: 0; overflow: hidden; }
+@media print {
+  body.printBody { background: #ffffff; }
+  .printBar { display: none; }
+  .printSheet { display: block; padding: 0; }
+  .printSheet .page { margin: 0; box-shadow: none; break-after: page; page-break-after: always; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .printSheet .page:last-child { break-after: auto; page-break-after: auto; }
+}

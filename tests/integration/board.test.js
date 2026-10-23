@@ -1088,3 +1088,68 @@ test(`the settings of an image block choose the column, the rank and the caption
   assert.deepEqual([config.path, config.rank, config.caption], [`Photo`, 2, `Name`]);
   assert.deepEqual(w.errors, []);
 });
+
+const printModel = (page = {}) => ({ model: { version: 1, page: { format: `a4`, orientation: `landscape`, margin: 10, ...page }, pages: 2, blocks: [
+  { id: `p1`, type: `text`, title: ``, page: 0, x: 0, y: 0, w: 30, h: 6, config: { source: `fixed`, text: `# First page` } },
+  { id: `p2`, type: `chart`, title: `Surfaces`, page: 0, x: 0, y: 8, w: 30, h: 16, config: { ...CHART_CONFIG, chart: `bar` } },
+  { id: `p3`, type: `text`, title: ``, page: 1, x: 0, y: 0, w: 30, h: 6, config: { source: `fixed`, text: `# Second page` } }
+] } });
+
+// Clicks Print and returns the print window once its pages are ready.
+async function openPrint(w) {
+  const [popup] = await Promise.all([w.context.waitForEvent(`page`), w.page.click(`#boardPrint`)]);
+  await popup.waitForFunction(() => /prêtes|ready/.test((document.querySelector(`.printMessage`) || {}).textContent || ``), null, { timeout: 20000 });
+  return popup;
+}
+
+test(`the print window holds every page at its real size with the blocks drawn like on screen`, async () => {
+  const w = await openWithRow({ savedOptions: printModel() }, 1);
+  const before = await box(w.page, `.block[data-id="p1"]`);
+  const popup = await openPrint(w);
+  assert.equal(await popup.locator(`.printSheet .page`).count(), 2);
+  assert.equal(await popup.locator(`.printSheet .page`).first().getAttribute(`data-size`), `a4-landscape`);
+  assert.equal(Math.round((await popup.locator(`.printSheet .page`).first().boundingBox()).width), Math.round(297 * 96 / 25.4));
+  assert.match(await popup.locator(`.block[data-id="p1"]`).innerText(), /First page/);
+  assert.match(await popup.locator(`.block[data-id="p3"]`).innerText(), /Second page/);
+  assert.equal(await popup.locator(`.block[data-id="p2"] svg`).count(), 1);
+  assert.equal(await popup.locator(`.printBar`).count(), 1);
+  const after = await box(w.page, `.block[data-id="p1"]`);
+  assert.equal(Math.round(after.width), Math.round(before.width));
+  assert.equal(await w.page.locator(`.pageWrap`).count(), 2);
+  assert.deepEqual(w.errors, []);
+  await popup.close();
+});
+
+test(`the PDF of the print window has one sheet per page at the size of the format`, async () => {
+  const w = await openWithRow({ savedOptions: printModel() }, 1);
+  const popup = await openPrint(w);
+  const pdf = (await popup.pdf({ preferCSSPageSize: true, printBackground: true })).toString(`latin1`);
+  assert.equal((pdf.match(/\/Type\s*\/Page[^s]/g) || []).length, 2);
+  const media = /\/MediaBox\s*\[\s*0\s+0\s+([\d.]+)\s+([\d.]+)/.exec(pdf);
+  assert.ok(media, `no media box`);
+  assert.ok(Math.abs(Number(media[1]) - 841.89) < 1.5 && Math.abs(Number(media[2]) - 595.28) < 1.5, media.slice(1, 3).join(` x `));
+  await popup.close();
+});
+
+test(`the footer and the page numbers are written on every page, on screen and in the print window`, async () => {
+  const w = await openWithRow({ savedOptions: printModel({ numbers: true, footer: `Internal report` }) }, 1);
+  assert.equal(await w.page.locator(`.page .pageFooter`).count(), 2);
+  assert.match(await w.page.locator(`.page .pageFooter`).nth(1).innerText(), /Internal report/);
+  assert.match(await w.page.locator(`.page .pageFooter`).nth(1).innerText(), /2.*2/);
+  const popup = await openPrint(w);
+  assert.equal(await popup.locator(`.printSheet .pageFooter`).count(), 2);
+  assert.match(await popup.locator(`.printSheet .pageFooter`).first().innerText(), /1.*2/);
+  await popup.close();
+});
+
+test(`the footer text and the page numbers are set in the tools and saved with the page settings`, async () => {
+  const w = await openWithRow({ savedOptions: printModel() }, 1);
+  assert.equal(await w.page.locator(`.pageFooter`).count(), 0);
+  await edit(w);
+  await w.page.fill(`#boardFooter`, `Report {x}`);
+  await w.page.check(`#boardNumbers`);
+  await w.page.waitForFunction(() => document.querySelectorAll(`.pageFooter`).length === 2);
+  const page = (await model(w.page)).page;
+  assert.deepEqual([page.footer, page.numbers], [`Report {x}`, true]);
+  assert.deepEqual(w.errors, []);
+});

@@ -95,11 +95,11 @@ async function openExplorer(browser, baseUrl, options = {}) {
     if ([`error`, `warning`].includes(message.type()) && !message.text().includes(`Failed to load resource`)) errors.push(message.text());
   });
   await page.route(`**/grist-plugin-api.js`, (route) => route.fulfill({ body: fakeGristScript(options), contentType: `text/javascript` }));
-  await page.route(`${GRIST_HOST}/api/**`, (route) => {
+  await context.route(`${GRIST_HOST}/api/**`, (route) => {
     if (route.request().url().includes(`/attachments/12/`)) return route.fulfill({ status: 404, body: `missing` });
     return route.fulfill({ body: PIXEL, contentType: `image/gif` });
   });
-  await page.route(`https://cloud.example.org/**`, (route) => route.fulfill({ body: PIXEL, contentType: `image/gif` }));
+  await context.route(`https://cloud.example.org/**`, (route) => route.fulfill({ body: PIXEL, contentType: `image/gif` }));
   await page.goto(`${baseUrl}/index.html`);
   await page.waitForFunction(() => typeof window.__onRecord === `function`);
   if (options.tab !== `board`) await page.click(`#tabExplorer`);
@@ -114,7 +114,7 @@ async function openExplorer(browser, baseUrl, options = {}) {
       window.__onRecord(record, {});
     });
   }, [id, bare]);
-  return { page, errors, selectRow };
+  return { page, context, errors, selectRow };
 }
 
 module.exports = { startServer, launch, openExplorer, GRIST_HOST };
