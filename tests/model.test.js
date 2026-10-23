@@ -371,8 +371,8 @@ test(`the settings of a chart block are the settings of a table block and the se
 });
 
 test(`the settings of an image block are cleaned`, () => {
-  assert.deepEqual(M.cleanConfig(`image`, { path: `Site.Photo`, rank: 3, caption: `Cap {Name}`, extra: 1 }), { path: `Site.Photo`, rank: 3, caption: `Cap {Name}` });
+  assert.deepEqual(M.cleanConfig(`image`, { path: `Site.Photo`, rank: 3, caption: `Site.Name`, extra: 1 }), { path: `Site.Photo`, rank: 3, caption: `Site.Name` });
   assert.deepEqual(M.cleanConfig(`image`, { path: `bad name`, rank: 0, caption: 5 }), { path: ``, rank: 1, caption: `` });
   assert.equal(M.cleanConfig(`image`, { rank: 21 }).rank, 1);
-  assert.equal(M.cleanConfig(`image`, { caption: `x`.repeat(500) }).caption.length, M.MAX_NOTE);
+  assert.equal(M.cleanConfig(`image`, { caption: `Photo of {Name}` }).caption, ``);
 });

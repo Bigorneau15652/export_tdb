@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.1
+
+- Image block: the caption is now the value of a column of the selected row, chosen in a menu (a column of a linked table is possible), written under the photo, centred and at the width of the photo. It changes with the row. The free text with fields of version 0.8.0 is dropped: the key `caption` now holds the path of the column, and an old text is not a path so it is simply ignored.
+- Image block: the rank of the picture is typed with the keyboard (a number from 1 to 20) instead of being chosen in a list. A value out of range is ignored and the last valid number comes back when the field is left.
+- Tests: the cleaning of the caption column and, in the page, the caption read from a column and the rank typed.
+
 ## 0.8.0
 
 - The block "Image" shows a picture of the selected row. The picture comes from an attachments column or from a text column that holds https links, one per line; a column of a linked table can be chosen too (written Reference > Column). When the cell holds several pictures, a setting gives the rank of the one to show (the same rank for every row).
