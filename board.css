@@ -166,6 +166,7 @@ input[type="number"]:focus-visible, input[type="text"]:focus-visible { outline: 
 
 /* Version 0.5.9: the continuation of a long table on the following pages. */
 .block.continuation { pointer-events: none; background: #e8f1f8; }
+#boardCanvas.editing .block.continuation { pointer-events: auto; cursor: pointer; }
 #boardCanvas:not(.editing) .block.continuation { background: transparent; }
 
 /* Version 0.5.10: the empty page at the end, where a block can be dropped to create a page. */

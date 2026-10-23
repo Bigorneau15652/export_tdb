@@ -761,3 +761,19 @@ test(`a long table continues on the next page with its heading, which is drawn e
   assert.equal(await short.page.locator(`.page`).count(), 3);
   assert.deepEqual(short.errors, []);
 });
+
+test(`a double click on the rest of a long table opens the settings of that table`, async () => {
+  const config = { mode: `list`, table: `Rooms`, link: `Rooms.Site`, columns: [{ path: `Number` }], flow: true };
+  const saved = { model: { version: 1, page: { format: `screen`, orientation: `landscape`, margin: 10 }, pages: 1, blocks: [{ id: `tb1`, type: `table`, title: `Surfaces`, page: 0, x: 0, y: 0, w: 30, h: 4, config }] } };
+  const w = await openWithRow({ savedOptions: saved }, 1);
+  await edit(w);
+  await w.page.waitForFunction(() => document.querySelectorAll(`.page[data-page="1"] .continuation .dt tbody tr`).length > 0);
+  assert.equal(await w.page.locator(`#boardPanel`).isVisible(), false);
+  await w.page.dblclick(`.page[data-page="1"] .continuation`, { position: { x: 20, y: 10 } });
+  assert.equal(await w.page.locator(`#boardPanel`).isVisible(), true);
+  assert.equal(await w.page.inputValue(`#boardTitle`), `Surfaces`);
+  assert.equal(await w.page.locator(`#boardTableSettings`).isVisible(), true);
+  assert.equal(await w.page.locator(`.block[data-id="tb1"].selected`).count(), 1);
+  assert.equal((await model(w.page)).blocks.length, 1);
+  assert.deepEqual(w.errors, []);
+});
