@@ -114,3 +114,14 @@ test(`the choices are sorted by level: own columns first, then linked columns, e
   ]);
   assert.deepEqual(sorted.map((choice) => choice.label), [`Alpha`, `beta2`, `beta10`, `zeta`, `Site > Area`, `Site > Name`]);
 });
+
+test(`the columns that can hold a picture are the attachments and the text columns, also through a reference`, () => {
+  const choices = F.imageChoices(schema, `Buildings`);
+  const byPath = Object.fromEntries(choices.map((choice) => [choice.path, choice.kind]));
+  assert.equal(byPath.Photo, `attachments`);
+  assert.equal(byPath.Name, `text`);
+  assert.equal(byPath[`Site.Name`], `text`);
+  assert.equal(byPath.Year, undefined);
+  assert.equal(byPath.Site, undefined);
+  assert.deepEqual(F.imageChoices(schema, `Nothing`), []);
+});

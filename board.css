@@ -226,3 +226,11 @@ input[type="number"]:focus-visible, input[type="text"]:focus-visible { outline: 
 .block.chartBlock .chartTitle { margin: 0 0 0.3em; font-size: 1.2em; font-weight: 700; flex: 0 0 auto; }
 .block.chartBlock .chartPlot { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; }
 #boardTableSettings.forChart .tableOnly { display: none; }
+
+/* Image block: the picture fills the frame, centred and never deformed; the edges are cut when needed. */
+.block.imageBlock { display: flex; flex-direction: column; padding: 0.4em 0.5em; background: #ffffff; color: #1f2933; }
+.block.imageBlock .imageTitle { margin: 0 0 0.3em; font-size: 1.2em; font-weight: 700; flex: 0 0 auto; }
+.block.imageBlock .imageFrame { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; }
+.block.imageBlock .imagePicture { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.block.imageBlock .imageMessage { margin: 0; color: #8a1c1c; font-weight: 600; overflow-wrap: anywhere; }
+.block.imageBlock .imageCaption { flex: 0 0 auto; margin-top: 0.3em; font-size: 0.85em; color: #3e4c59; overflow-wrap: anywhere; }

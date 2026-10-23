@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8.0
+
+- The block "Image" shows a picture of the selected row. The picture comes from an attachments column or from a text column that holds https links, one per line; a column of a linked table can be chosen too (written Reference > Column). When the cell holds several pictures, a setting gives the rank of the one to show (the same rank for every row).
+  - The picture fills the whole frame without being deformed: it stays centred and the edges are cut when its proportions differ from those of the block.
+  - Share links of Nextcloud (the download address of the share is used), Google Drive and kDrive are converted into addresses that a browser can load; OneDrive links, links that are not https and files that are not pictures (PDF, TIFF...) give a clear message in the block. A picture that cannot be loaded gives a message too.
+  - An optional caption under the picture accepts the fields `{Column}` like a text block. The title of the block is shown above the picture.
+  - Attachments are loaded through a picture element with the short-lived token of Grist: the strict Content-Security-Policy of the page does not change and the widget still opens no network connection of its own.
+- New pure module `image.js` (reading of the cell and conversion of the links, from the image_plus widget of the same author, MIT licence) and the settings of the type `image` in the model (`path`, `rank`, `caption`; an image block saved before is empty so nothing breaks). `fields.js` gives the columns that can hold a picture.
+- Tests: the reading of attachments and links, the conversion of the Nextcloud, Google Drive and kDrive links, the refused links, the cleaning of the settings and, in the page, the attachment with its token, the Nextcloud link, the refused links, the rank and the settings.
+
 ## 0.7.1
 
 - Legend of the charts: the text is smaller, long names break onto several lines and the legend no longer scrolls. The room it takes is reserved, so the legend never overlaps the drawing: a legend on the right keeps the pie or the bars to its left, a legend at the top or the bottom keeps them below or above it, and the legend always stays inside the block.

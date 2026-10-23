@@ -78,3 +78,4 @@ MIT, voir `LICENSE`. Auteur : Olivier Holweck.
 
 - Apache ECharts 6.1.0 (Apache-2.0), with zrender (BSD-3-Clause) and tslib (0BSD): custom build in `vendor/echarts`, with its licences and the record `VENDOR.md`. It is loaded from the repository, never from the network.
 - Apache ECharts 6.1.0 (Apache-2.0), avec zrender (BSD-3-Clause) et tslib (0BSD) : version personnalisée dans `vendor/echarts`, avec ses licences et la fiche `VENDOR.md`. Elle est chargée depuis le dépôt, jamais depuis le réseau.
+- The link rules of the image block (Nextcloud, Google Drive and kDrive share links) come from the image_plus widget of the same author (MIT licence). / Les règles de liens du bloc Image (liens de partage Nextcloud, Google Drive et kDrive) viennent du widget image_plus du même auteur (licence MIT).

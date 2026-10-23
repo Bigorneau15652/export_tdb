@@ -21,7 +21,7 @@ const columnRows = [
   C(20, 6, `Name`, `Text`),
   C(27, 7, `Text`, `Text`),
   C(28, 4, `manualSort`, `ManualSortPos`), C(29, 4, `gristHelper_Display`, `Any`, { isFormula: true }),
-  C(30, 8, `Usage`, `Ref:Usages`), C(31, 8, `Area`, `Numeric`, { isFormula: true }), C(32, 2, `Inspected`, `Date`)
+  C(30, 8, `Usage`, `Ref:Usages`), C(31, 8, `Area`, `Numeric`, { isFormula: true }), C(32, 2, `Inspected`, `Date`), C(33, 2, `Link`, `Text`)
 ];
 
 // Metadata tables in the column form of fetchTable.
@@ -38,7 +38,8 @@ const data = {
   Buildings: {
     id: [1, 2, 3, 4], Name: [`Building A`, `Building B`, `Building A`, `Annex`], Site: [1, 1, 2, 1], Year: [1965, 1990, 2005, 0],
     Photo: [[`L`, 11, 12], null, [`L`], null], Parent: [0, 0, 0, 1], Managers: [[`L`, 1, 2], [`L`], null, [`L`, 2]],
-    Inspected: [1736294400, 1704067200, null, 1736294400]
+    Inspected: [1736294400, 1704067200, null, 1736294400],
+    Link: [`https://cloud.example.org/s/AbC123`, `https://1drv.ms/i/abc\nhttps://cloud.example.org/index.php/s/Second/`, `http://insecure.example.org/a.png`, ``]
   },
   Floors: { id: [1, 2, 3, 4], Label: [`Ground`, `Level 1`, `Ground`, `Ground`], Building: [1, 1, 2, 3] },
   Rooms: {

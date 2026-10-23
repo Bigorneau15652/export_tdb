@@ -14,6 +14,7 @@
   const MarkdownView = window.exportTdbMarkdownView;
   const Fields = window.exportTdbFields;
   const Record = window.exportTdbRecord;
+  const ImageCell = window.exportTdbImage;
   const Named = window.exportTdbNamed;
   const Indicator = window.exportTdbIndicator;
   const ChartOption = window.exportTdbChartOption;
@@ -60,7 +61,7 @@
     zoomIn: $(`boardZoomIn`), saveState: $(`boardSaveState`), confirm: $(`boardConfirm`), confirmText: $(`boardConfirmText`),
     confirmYes: $(`boardConfirmYes`), confirmNo: $(`boardConfirmNo`), scroll: $(`boardScroll`), canvas: $(`boardCanvas`),
     side: $(`boardPanel`), titleRow: $(`boardTitleRow`), title: $(`boardTitle`), remove: $(`boardDelete`), close: $(`boardClose`), refresh: $(`boardRefresh`),
-    textBox: $(`boardTextSettings`), chartBox: $(`boardChartSettings`), chartType: $(`boardChartType`), chartPalette: $(`boardChartPalette`), chartLegend: $(`boardChartLegend`), chartLabels: $(`boardChartLabels`), chartInfo: $(`boardChartInfo`), crossBox: $(`boardCrossBox`), crossMore: $(`boardCrossMore`), colItem: $(`boardColItem`), slice: $(`boardSlice`), colSort: $(`boardColSort`), indicatorBox: $(`boardIndicatorSettings`), indicatorBody: $(`boardIndicatorBody`), valuesBox: $(`boardValuesSettings`), valuesList: $(`boardValuesList`), valuesAdd: $(`boardValuesAdd`), valuesButton: $(`boardValuesButton`), heading: $(`boardPanelHeading`), recordBox: $(`boardRecordSettings`), recordRows: $(`boardRecordRows`), recordAdd: $(`boardRecordAdd`), recordColumns: $(`boardRecordColumns`), recordSize: $(`boardRecordSize`), recordInfo: $(`boardRecordInfo`), source: $(`boardSource`), columnRow: $(`boardColumnRow`), column: $(`boardColumn`),
+    textBox: $(`boardTextSettings`), chartBox: $(`boardChartSettings`), chartType: $(`boardChartType`), chartPalette: $(`boardChartPalette`), chartLegend: $(`boardChartLegend`), chartLabels: $(`boardChartLabels`), chartInfo: $(`boardChartInfo`), crossBox: $(`boardCrossBox`), crossMore: $(`boardCrossMore`), colItem: $(`boardColItem`), slice: $(`boardSlice`), colSort: $(`boardColSort`), indicatorBox: $(`boardIndicatorSettings`), indicatorBody: $(`boardIndicatorBody`), valuesBox: $(`boardValuesSettings`), valuesList: $(`boardValuesList`), valuesAdd: $(`boardValuesAdd`), valuesButton: $(`boardValuesButton`), heading: $(`boardPanelHeading`), imageBox: $(`boardImageSettings`), imageColumn: $(`boardImageColumn`), imageRank: $(`boardImageRank`), imageCaption: $(`boardImageCaption`), imageInfo: $(`boardImageInfo`), recordBox: $(`boardRecordSettings`), recordRows: $(`boardRecordRows`), recordAdd: $(`boardRecordAdd`), recordColumns: $(`boardRecordColumns`), recordSize: $(`boardRecordSize`), recordInfo: $(`boardRecordInfo`), source: $(`boardSource`), columnRow: $(`boardColumnRow`), column: $(`boardColumn`),
     text: $(`boardText`), field: $(`boardField`), size: $(`boardSize`), align: $(`boardAlign`), fill: $(`boardFill`),
     textInfo: $(`boardTextInfo`), cellState: $(`boardCellState`),
     tableBox: $(`boardTableSettings`), kind: $(`boardKind`), tableSel: $(`boardTable`), linkRow: $(`boardLinkRow`), link: $(`boardLink`), rowsHelp: $(`boardRowsHelp`),
@@ -216,6 +217,10 @@
       if (block.type === `table` || block.type === `chart`) Query.tablesFor(state.schema, state.linked, block.config).forEach((name) => wanted.add(name));
       if (block.type === `record`) Record.recordPaths(block.config).forEach((path) => paths.add(path));
       if (block.type === `indicator`) Fields.extractFields(block.config.note).forEach((path) => paths.add(path));
+      if (block.type === `image`) {
+        if (block.config.path) paths.add(block.config.path);
+        Fields.extractFields(block.config.caption).forEach((path) => paths.add(path));
+      }
       if ((block.type === `table` || block.type === `chart`) && explainOpen && block.id === selectedId && block.config.table) Query.tablesForChoices(state.schema, state.linked, block.config.table).forEach((name) => wanted.add(name));
     }
     // A row that the loaded table does not hold yet (added since it was loaded): load the table again, once.
@@ -519,6 +524,114 @@
     el.chartInfo.className = messages.length ? `warning` : `hint`;
   }
 
+  // What an image block shows for the selected row: { state, picture, message }. `state` is `choose` (no column
+  // yet), `waiting` (the data are loading), `problem` (a message to show), `empty` (no picture at this rank) or
+  // `picture` (a picture to load, see ImageCell.pictureAt).
+  function imageStatus(block) {
+    const config = block.config;
+    const state = context();
+    if (!config.path) return { state: `choose` };
+    if (!state.schema || !state.record) return { state: `waiting` };
+    const read = Fields.resolveFieldFull(currentDataset(), state.schema, state.linked, state.record, config.path, { yes: tr(`wordYes`), no: tr(`wordNo`) });
+    if (!read.ok) return read.reason === `notloaded` ? { state: `waiting` } : { state: `problem`, message: tr(`imageUnknownColumn`, { column: config.path }) };
+    const picture = ImageCell.pictureAt(read.raw, config.rank);
+    if (picture.status === `empty`) return { state: `empty`, count: ImageCell.countImages(read.raw) };
+    if (picture.status === `rejected`) return { state: `problem`, message: tr(picture.reason === `link` ? `imageRejectedLink` : `imageRejectedFormat`, { text: picture.text }) };
+    if (picture.status === `onedrive`) return { state: `problem`, message: tr(`imageOnedrive`) };
+    return { state: `picture`, picture };
+  }
+
+  // The caption of an image block with its fields replaced.
+  function captionText(block) {
+    const state = context();
+    if (!block.config.caption || !state.schema || !state.record) return block.config.caption;
+    return Fields.expandFields([{ type: `text`, value: block.config.caption }], fieldResolver()).nodes[0].value;
+  }
+
+  // Loads a picture in an image element: an attachment through the token of Grist, a link through the addresses to
+  // try in turn. On failure the element is replaced by `fail()`.
+  async function loadPicture(img, picture, fail) {
+    let candidates = [];
+    if (picture.status === `attachment`) {
+      try {
+        candidates = [await access.attachmentAddress(picture.id)];
+        if (!img.isConnected) return;
+      } catch {
+        fail(tr(`imageTokenError`));
+        return;
+      }
+    } else {
+      candidates = picture.candidates;
+    }
+    let attempt = 0;
+    img.onerror = () => {
+      attempt += 1;
+      if (attempt < candidates.length) img.src = candidates[attempt];
+      else fail(tr(`imageLoadError`));
+    };
+    img.referrerPolicy = `no-referrer`;
+    img.src = candidates[0];
+  }
+
+  // Fills the element of an image block: its title, the picture that fills the frame without being deformed (the
+  // edges are cut when the proportions differ, the picture stays centred) and a caption, or a message.
+  function buildImageBody(node, block) {
+    node.classList.add(`imageBlock`);
+    node.style.fontSize = `${TABLE_MM * mmPx}px`;
+    if (block.title) {
+      const title = document.createElement(`div`);
+      title.className = `imageTitle`;
+      title.textContent = block.title;
+      node.appendChild(title);
+    }
+    const frame = document.createElement(`div`);
+    frame.className = `imageFrame`;
+    node.appendChild(frame);
+    const status = imageStatus(block);
+    const message = (text, warning) => {
+      frame.textContent = ``;
+      const note = document.createElement(`p`);
+      note.className = warning ? `imageMessage` : `tableHint`;
+      note.textContent = text;
+      frame.appendChild(note);
+    };
+    if (status.state === `picture`) {
+      const img = document.createElement(`img`);
+      img.className = `imagePicture`;
+      img.alt = captionText(block) || block.title || ``;
+      frame.appendChild(img);
+      loadPicture(img, status.picture, (text) => message(text, true));
+    } else if (status.state === `problem`) {
+      message(status.message, true);
+    } else if (editing) {
+      message(status.state === `choose` ? tr(`imageChoose`) : status.state === `waiting` ? tr(`imageWaiting`) : tr(`imageEmpty`, { rank: block.config.rank }), false);
+    }
+    const caption = captionText(block);
+    if (caption) {
+      const line = document.createElement(`div`);
+      line.className = `imageCaption`;
+      line.textContent = caption;
+      node.appendChild(line);
+    }
+  }
+
+  // Fills the settings of an image block: the column, the rank and the caption.
+  function fillImageSettings(block) {
+    const config = block.config;
+    const state = context();
+    const choices = state.schema && state.linked && state.schema.tables.has(state.linked) ? Fields.sortChoices(Fields.imageChoices(state.schema, state.linked)) : [];
+    setOptions(el.imageColumn, [[``, tr(`boardColumnNone`)], ...choices.map((choice) => [choice.path, choice.label])], config.path);
+    setOptions(el.imageRank, Array.from({ length: Model.MAX_IMAGE_RANK }, (_, index) => [index + 1, String(index + 1)]), config.rank);
+    setValue(el.imageCaption, config.caption);
+    const status = imageStatus(block);
+    const messages = [];
+    if (!state.schema) messages.push(tr(`boardTableNotReady`));
+    else if (status.state === `empty`) messages.push(tr(status.count ? `imageRankMissing` : `imageEmpty`, { rank: config.rank }));
+    else if (status.state === `problem`) messages.push(status.message);
+    el.imageInfo.textContent = messages.join(` `);
+    el.imageInfo.className = messages.length ? `warning` : `hint`;
+  }
+
   // Fills the settings of a record block: one line per information (the column, its label and the buttons
   // that move or remove it), the number of columns of the grid and the size of the text.
   function fillRecordSettings(block) {
@@ -673,6 +786,8 @@
       buildIndicatorBody(node, block);
     } else if (block.type === `chart`) {
       buildChartBody(node, block);
+    } else if (block.type === `image`) {
+      buildImageBody(node, block);
     } else {
       const kind = document.createElement(`div`);
       kind.className = `blockType`;
@@ -1001,7 +1116,7 @@
   // Changes the settings of the selected block (text or table) and draws again.
   function changeConfig(changes) {
     const block = selectedBlock();
-    if (block && (block.type === `text` || block.type === `table` || block.type === `chart` || block.type === `record` || block.type === `indicator`)) commit(Model.updateBlock(model, block.id, { config: changes }));
+    if (block && (block.type === `text` || block.type === `table` || block.type === `chart` || block.type === `record` || block.type === `indicator` || block.type === `image`)) commit(Model.updateBlock(model, block.id, { config: changes }));
   }
 
   // The paths of the columns that hold numbers, for the table of the selected table block.
@@ -1313,6 +1428,7 @@
       el.chartBox.hidden = true;
       el.textBox.hidden = true;
       el.recordBox.hidden = true;
+      el.imageBox.hidden = true;
       el.indicatorBox.hidden = true;
       el.valuesAdd.disabled = model.values.length >= Model.MAX_VALUES;
       valuesPanel.render();
@@ -1331,6 +1447,8 @@
     if (block.type === `chart`) fillChartSettings(block);
     el.textBox.hidden = block.type !== `text`;
     if (block.type === `text`) fillTextSettings(block);
+    el.imageBox.hidden = block.type !== `image`;
+    if (block.type === `image`) fillImageSettings(block);
     el.recordBox.hidden = block.type !== `record`;
     if (block.type === `record`) fillRecordSettings(block);
     el.indicatorBox.hidden = block.type !== `indicator`;
@@ -1720,6 +1838,9 @@
     if (block && block.config.items.length < Model.MAX_RECORD_ITEMS) changeConfig({ items: [...block.config.items, { path: ``, label: `` }] });
   });
   el.recordColumns.addEventListener(`change`, () => changeConfig({ columns: Number(el.recordColumns.value) }));
+  el.imageColumn.addEventListener(`change`, () => changeConfig({ path: el.imageColumn.value }));
+  el.imageRank.addEventListener(`change`, () => changeConfig({ rank: Number(el.imageRank.value) }));
+  el.imageCaption.addEventListener(`input`, () => changeConfig({ caption: el.imageCaption.value }));
   el.recordSize.addEventListener(`change`, () => changeConfig({ size: el.recordSize.value }));
   el.merge.addEventListener(`change`, () => changeConfig({ merge: el.merge.checked }));
   el.addColumn.addEventListener(`click`, () => {
