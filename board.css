@@ -276,7 +276,7 @@ body.printBody { margin: 0; background: #e4e7eb; color: #1f2933; font-family: sa
 .iconButton.on, .iconButton[aria-pressed="true"] { border-color: #1c5d8c; background: #1c5d8c; color: #ffffff; }
 .iconButton[aria-expanded="true"] { background: #cbd2d9; }
 .iconButton[data-tip]:hover::after, .iconButton[data-tip]:focus-visible::after { content: attr(data-tip); position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; width: max-content; max-width: 240px; padding: 5px 8px; border-radius: 4px; background: #1f2933; color: #ffffff; font-size: 12px; font-weight: 400; line-height: 1.3; text-align: left; white-space: normal; pointer-events: none; }
-#boardDebug[data-tip]:hover::after, #boardDebug[data-tip]:focus-visible::after, #boardPrint[data-tip]:hover::after { left: auto; right: 0; }
+#boardValuesButton[data-tip]:hover::after, #boardValuesButton[data-tip]:focus-visible::after, #boardDebug[data-tip]:hover::after, #boardDebug[data-tip]:focus-visible::after, #boardPrint[data-tip]:hover::after { left: auto; right: 0; }
 .barMenu { position: absolute; z-index: 20; min-width: 190px; padding: 6px; border: 2px solid #52606d; border-radius: 6px; background: #ffffff; box-shadow: 0 4px 14px rgba(31, 41, 51, 0.3); }
 .barMenu .menuList { display: flex; flex-direction: column; gap: 2px; }
 .barMenu .menuItem { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border: 0; border-radius: 4px; background: #ffffff; color: #1f2933; font: inherit; text-align: left; cursor: pointer; }
@@ -290,3 +290,4 @@ body.printBody { margin: 0; background: #e4e7eb; color: #1f2933; font-family: sa
 #boardZoomBar { position: fixed; right: 12px; bottom: 8px; z-index: 15; padding: 2px 8px; border: 1px solid #9aa5b1; border-radius: 12px; background: rgba(255, 255, 255, 0.92); }
 #boardZoomBar input[type="range"] { display: block; width: 110px; height: 14px; margin: 0; accent-color: #1c5d8c; cursor: pointer; }
 #boardLayout { padding-bottom: 40px; }
+.iconButton.glyph { font: inherit; font-size: 20px; font-weight: 700; line-height: 1; }

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.11.1
+
+- Tool bar: the diagnostic button now shows a developer behind a laptop, the named values button is an icon with the Greek letter pi (with its explanation under it on hover), and the page format button shows two sheets of different sizes so that it is no longer mistaken for the orientation button.
+- The message "Saved in the widget." is no longer written after each change; only a failed save is reported.
+- Tests: the named values button as an icon and the silence after a save.
+
 ## 0.11.0
 
 - The tool bar is now a single line of small icon buttons, so that it no longer takes the screen. In reading mode: "Edit" and the print button. In editing mode: "Finish editing", then the plus button (a menu of the types of blocks: choosing one creates the block and opens its settings), the page format, the orientation (one button that switches between landscape and portrait and shows the current one), the margins, the footer text, the page numbers (a button that changes colour when it is on), the refresh of the data and the print button; the named values and the diagnostic are set apart on the right. The "Add a block" button and all the "?" badges of the tool bar are gone: the explanation of a button is written under it when the mouse stays on it, without covering it. The line of explanations that was always shown is now the tip of the "Finish editing" button.
