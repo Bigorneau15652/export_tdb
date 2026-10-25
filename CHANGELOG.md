@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.10.1
+
+- Charts: the name of a series (in the legend) is now the name of the column alone for a sum (`SUB`), then the column and the calculation in lower case for the others (`SUB (average)`, `SUB (maximum)`). The heading of a table is unchanged. A name typed in the settings still wins.
+- Scatter plot made easier to use: choosing this kind on a chart that was grouped takes away the item and the item in columns by itself (the table becomes a plain list); the menus "Item" and the calculation menus of the columns are hidden since they do not apply; the title of the list of columns says what each column does (1st: horizontal axis, 2nd: vertical axis, 3rd, optional: colour); the message of the settings names the menus really used ("Item", "Item in columns") instead of a "grouping" that does not exist in the panel. The legend appears when a third column gives several colours, and not for a single series.
+- Tests: the names of the series and, in the page, the change to a scatter plot, the hidden menus and the legend of a stacked chart.
+
 ## 0.10.0
 
 - Three more kinds of chart in the block "Chart":
