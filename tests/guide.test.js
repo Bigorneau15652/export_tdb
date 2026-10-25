@@ -17,8 +17,8 @@ const french = dictionary(source.indexOf(`fr: {`), source.indexOf(`en: {`));
 const english = dictionary(source.indexOf(`en: {`), -1);
 const panel = fs.readFileSync(path.join(root, `index.html`), `utf8`);
 
-test(`every type of block that has a course exists, and the courses of this version are the text, the table and the sheet`, () => {
-  assert.deepEqual(Guide.TYPES, [`text`, `table`, `record`]);
+test(`every type of block that has a course exists, and the courses are those of the six blocks`, () => {
+  assert.deepEqual(Guide.TYPES, [`text`, `table`, `record`, `chart`, `image`, `indicator`]);
   for (const type of Guide.TYPES) assert.ok(Model.TYPES.includes(type), type);
 });
 
@@ -35,7 +35,7 @@ test(`every text of every course exists in French and in English`, () => {
 test(`every menu named between double brackets is a real menu of the panel, and the names of the menus are never written by hand`, () => {
   const real = new Set([...panel.matchAll(/data-i18n="(\w+)"/g)].map((match) => match[1]));
   // The names that the panel builds by script (the title of the columns of a cross table, the add buttons).
-  for (const key of [`boardCellCalc`, `boardColumnLabel`, `boardRecordAdd`, `boardValuesButton`]) real.add(key);
+  for (const key of [`boardCellCalc`, `boardColumnLabel`, `boardRecordAdd`, `boardValuesButton`, `boardIndicatorValue`, `boardIndicatorNote`, `boardIndicatorBase`, `boardIndicatorRules`, `boardIndicatorAddRule`]) real.add(key);
   for (const type of Guide.TYPES) {
     const { texts, menus } = Guide.keysOf(type);
     for (const menu of menus) assert.ok(real.has(menu), `${type}: ${menu} is not a menu of the panel`);
@@ -75,7 +75,7 @@ test(`the samples of the examples are made of invented values and of translated 
     for (const example of examples) {
       assert.ok(example.settings.length >= 1);
       const sample = example.sample;
-      assert.ok([`text`, `table`, `record`].includes(sample.kind));
+      assert.ok([`text`, `table`, `record`, `bars`, `indicator`, `image`].includes(sample.kind));
       if (sample.kind === `table`) {
         assert.ok(sample.headers.length >= 2 && sample.rows.length >= 1);
         for (const row of sample.rows) assert.equal(row.length, sample.headers.length);

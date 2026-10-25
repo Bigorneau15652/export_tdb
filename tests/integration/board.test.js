@@ -1408,8 +1408,15 @@ test(`the cap opens the course of the block in a window of its own, a second cli
   await w.page.selectOption(`#boardType`, `record`);
   await Promise.all([popup.waitForFunction(() => /Fiche|Sheet/.test(document.querySelector(`#guide h1`).textContent)), w.page.click(`#boardGuide`)]);
   assert.equal(await popup.locator(`#guide .sampleRecord`).count(), 1);
-  await w.page.selectOption(`#boardType`, `chart`);
-  assert.equal(await w.page.locator(`#boardGuide`).isHidden(), true);
+  // The courses of the chart, image and indicator blocks use the same window, with their own drawn samples.
+  for (const [type, title, sample] of [[`chart`, /Graphique|Chart/, `.sampleBars`], [`image`, /Image/, `.sampleImage`], [`indicator`, /Indicateur|Indicator/, `.sampleIndicator`]]) {
+    await w.page.selectOption(`#boardType`, type);
+    assert.equal(await w.page.locator(`#boardGuide`).isVisible(), true, type);
+    await Promise.all([popup.waitForFunction((source) => new RegExp(source).test(document.querySelector(`#guide h1`).textContent), title.source), w.page.click(`#boardGuide`)]);
+    assert.ok((await popup.locator(`#guide ${sample}`).count()) >= 1, type);
+    const course = await popup.locator(`#guide`).innerText();
+    assert.ok(!/\[\[/.test(course), type);
+  }
   await Promise.all([popup.waitForEvent(`close`), popup.click(`.guideClose`)]);
   assert.deepEqual(w.errors, []);
 });
