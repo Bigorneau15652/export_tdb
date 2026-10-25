@@ -56,6 +56,39 @@
       }
       return grid;
     }
+    if (sample.kind === `bars`) {
+      const chart = make(doc, `div`, `sampleBars`);
+      const numbers = sample.rows.map((row) => Number(String(row[1]).replace(/\s/g, ``).replace(`,`, `.`)) || 0);
+      const top = Math.max(...numbers, 1);
+      sample.rows.forEach((row, index) => {
+        const line = make(doc, `div`, `barRow`);
+        const track = make(doc, `div`, `barTrack`);
+        const bar = make(doc, `div`, `bar color${index % 4}`);
+        bar.style.width = `${Math.max(4, Math.round((numbers[index] / top) * 100))}%`;
+        track.appendChild(bar);
+        line.append(make(doc, `div`, `barLabel`, row[0]), track, make(doc, `div`, `barValue`, row[1]));
+        chart.appendChild(line);
+      });
+      return chart;
+    }
+    if (sample.kind === `indicator`) {
+      const [label, value, note] = sample.cells[0];
+      const card = make(doc, `div`, `sampleIndicator ind-${sample.color || `none`}`);
+      card.appendChild(make(doc, `div`, `indLabel`, label));
+      const symbol = (window.exportTdbIndicator && window.exportTdbIndicator.SYMBOLS[sample.color]) || ``;
+      const row = make(doc, `div`, `indRow`);
+      row.appendChild(make(doc, `span`, `indValue`, value));
+      if (symbol) row.appendChild(make(doc, `span`, `indSymbol`, symbol));
+      card.appendChild(row);
+      if (note) card.appendChild(make(doc, `div`, `indNote`, note));
+      return card;
+    }
+    if (sample.kind === `image`) {
+      const frame = make(doc, `div`, `sampleImage`);
+      frame.appendChild(make(doc, `div`, `picture`));
+      for (const line of sample.lines) frame.appendChild(make(doc, `div`, `caption`, line.text));
+      return frame;
+    }
     const box = make(doc, `div`, `sampleText`);
     for (const line of sample.lines) box.appendChild(make(doc, line.tag === `h1` ? `h1` : `p`, ``, line.text));
     return box;

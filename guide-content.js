@@ -66,6 +66,67 @@
         }
       ],
       notes: [`guide_record_note1`, `guide_record_note2`]
+    },
+    chart: {
+      title: `guide_chart_title`,
+      intro: `guide_chart_intro`,
+      steps: [`guide_chart_step1`, `guide_chart_step2`, `guide_chart_step3`, `guide_chart_step4`, `guide_chart_step5`, `guide_chart_step6`, `guide_chart_step7`],
+      menus: [
+        [`boardKind`, `tipBoardKind`], [`boardTableLabel`, `tipBoardTable`], [`boardRows`, `tipBoardRows`], [`boardItem`, `guide_chart_tip_item`], [`boardColItem`, `guide_chart_tip_colitem`],
+        [`boardColumns`, `guide_chart_tip_columns`], [`boardChartType`, `tipChartType`], [`boardChartLegend`, `guide_chart_tip_legend`], [`boardChartLabels`, `tipChartLabels`],
+        [`labFilters`, `tipFilter`], [`labSort`, `tipSort`]
+      ],
+      extras: [],
+      examples: [
+        {
+          title: `guide_chart_ex1_title`, settings: [`guide_chart_ex1_a`, `guide_chart_ex1_b`, `guide_chart_ex1_c`],
+          sample: { kind: `bars`, rows: [[`@guideGround`, `120,5`], [`@guideFloor1`, `47`]] }
+        },
+        {
+          title: `guide_chart_ex2_title`, settings: [`guide_chart_ex2_a`, `guide_chart_ex2_b`, `guide_chart_ex2_c`],
+          sample: { kind: `bars`, rows: [[`@guideOffice`, `92`], [`@guideClassroom`, `75,5`]] }
+        }
+      ],
+      notes: [`guide_chart_note1`, `guide_chart_note2`, `guide_chart_note3`]
+    },
+    image: {
+      title: `guide_image_title`,
+      intro: `guide_image_intro`,
+      steps: [`guide_image_step1`, `guide_image_step2`, `guide_image_step3`, `guide_image_step4`, `guide_image_step5`],
+      menus: [[`boardImageColumn`, `tipImageColumn`], [`boardImageRank`, `tipImageRank`], [`boardImageCaption`, `tipImageCaption`]],
+      extras: [],
+      examples: [
+        {
+          title: `guide_image_ex1_title`, settings: [`guide_image_ex1_a`, `guide_image_ex1_b`],
+          sample: { kind: `image`, lines: [{ tag: `p`, text: `@guideBuildingA` }] }
+        },
+        {
+          title: `guide_image_ex2_title`, settings: [`guide_image_ex2_a`, `guide_image_ex2_b`],
+          sample: { kind: `image`, lines: [] }
+        }
+      ],
+      notes: [`guide_image_note1`, `guide_image_note2`]
+    },
+    indicator: {
+      title: `guide_indicator_title`,
+      intro: `guide_indicator_intro`,
+      steps: [`guide_indicator_step1`, `guide_indicator_step2`, `guide_indicator_step3`, `guide_indicator_step4`, `guide_indicator_step5`, `guide_indicator_step6`],
+      menus: [
+        [`boardFieldTitle`, `tipFieldTitle`], [`boardIndicatorValue`, `guide_indicator_tip_value`], [`boardIndicatorNote`, `guide_indicator_tip_note`], [`boardSize`, `tipBoardSize`],
+        [`boardIndicatorBase`, `guide_indicator_tip_base`], [`boardIndicatorRules`, `guide_indicator_tip_rules`]
+      ],
+      extras: [],
+      examples: [
+        {
+          title: `guide_indicator_ex1_title`, settings: [`guide_indicator_ex1_a`, `guide_indicator_ex1_b`],
+          sample: { kind: `indicator`, color: `none`, cells: [[`@guideTotalArea`, `167,5`, `@guideSquareMetres`]] }
+        },
+        {
+          title: `guide_indicator_ex2_title`, settings: [`guide_indicator_ex2_a`, `guide_indicator_ex2_b`],
+          sample: { kind: `indicator`, color: `green`, cells: [[`@guideWordOccupancy`, `85 %`, ``]] }
+        }
+      ],
+      notes: [`guide_indicator_note1`, `guide_indicator_note2`]
     }
   };
 
@@ -136,7 +197,8 @@
           total: example.sample.total ? example.sample.total.map((value) => sampleText(value, t)) : null,
           lines: (example.sample.lines || []).map((line) => ({ tag: line.tag, text: sampleText(line.text, t) })),
           columns: example.sample.columns || 0,
-          cells: (example.sample.cells || []).map((cell) => cell.map((value) => sampleText(value, t)))
+          cells: (example.sample.cells || []).map((cell) => cell.map((value) => sampleText(value, t))),
+          color: example.sample.color || ``
         }
       }))
     });

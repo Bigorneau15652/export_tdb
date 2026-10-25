@@ -32,3 +32,24 @@ body { margin: 0; background: #ffffff; color: #1f2933; font-family: -apple-syste
 #guide .sampleRecord .label { font-size: 12px; color: #52606d; }
 #guide .sampleRecord .value { font-weight: 700; }
 #guide .notes li { color: #3e4c59; }
+#guide .sampleBars { padding: 8px 12px; border: 1px solid #cbd2d9; background: #ffffff; }
+#guide .barRow { display: grid; grid-template-columns: 9em minmax(0, 1fr) 4em; align-items: center; gap: 8px; margin: 4px 0; font-size: 13px; }
+#guide .barTrack { height: 16px; background: #eceff2; }
+#guide .bar { height: 100%; }
+#guide .bar.color0 { background: #1c5d8c; }
+#guide .bar.color1 { background: #b35c00; }
+#guide .bar.color2 { background: #1f7a3a; }
+#guide .bar.color3 { background: #6b4aa0; }
+#guide .barValue { text-align: right; font-weight: 700; }
+#guide .sampleIndicator { padding: 6px 12px 6px 14px; border: 1px solid #cbd2d9; border-left: 6px solid #cbd2d9; background: #ffffff; color: #1f2933; line-height: 1.2; }
+#guide .sampleIndicator .indLabel { font-size: 13px; color: #3e4c59; }
+#guide .sampleIndicator .indRow { display: flex; align-items: baseline; gap: 8px; }
+#guide .sampleIndicator .indValue { font-size: 28px; font-weight: 700; }
+#guide .sampleIndicator .indSymbol { font-size: 18px; font-weight: 700; }
+#guide .sampleIndicator .indNote { margin-top: 2px; font-size: 12px; color: #3e4c59; }
+#guide .sampleIndicator.ind-green { background: #e3f4e6; border-left-color: #1f7a3a; }
+#guide .sampleIndicator.ind-orange { background: #fff1d6; border-left-color: #b35c00; }
+#guide .sampleIndicator.ind-red { background: #fde4e4; border-left-color: #b3261e; }
+#guide .sampleImage { padding: 8px 12px; border: 1px solid #cbd2d9; background: #ffffff; }
+#guide .sampleImage .picture { height: 90px; background: linear-gradient(135deg, #cfe3f3, #9fc4e2); }
+#guide .sampleImage .caption { margin-top: 4px; font-size: 13px; text-align: center; color: #3e4c59; }

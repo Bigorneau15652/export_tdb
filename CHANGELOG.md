@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.15.0
+
+- Course windows, second part: the Chart, Image and Indicator blocks now have their course, so the student cap is shown for the six types of blocks. Each course follows the same plan as the others: what the block is for, step by step, the settings one by one, examples with a small drawn result, good to know.
+- The Chart course explains the data (kind, table, item, item in columns, calculations), the type, the legend and the labels of the values, with two examples drawn as bars. The Image course explains the column, the rank and the caption, with a drawn frame. The Indicator course explains the named value, the note, the size, the default colour and the rules of colour, with cards drawn in their colour and their symbol.
+- Some explanations that were written for tables (item, item in columns, columns, legend) have their own wording for the chart, and the indicator settings have explanations of their own.
+- Review of the labels and explanations: each menu they name exists in the panel, and the old names are gone.
+- Tests: the six courses have all their texts in French and in English, the menus built by script are known to the check, and in the page each new course opens in the same window with its drawn sample.
+
 ## 0.14.0
 
 - Course windows, first part: a button with a student cap, at the top of the settings panel next to the type of block, opens the course of the block in a window of the browser of its own. The window can be moved (to another screen too), resized and kept open while a block is set; a cross at its top right (or the Escape key) closes it, and a second click on the cap changes its content. Courses exist for the Text, Table and Sheet blocks; the cap is hidden for the other types until their courses are written (next version).
