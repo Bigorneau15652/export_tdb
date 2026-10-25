@@ -9,7 +9,7 @@ const Model = require(`../model.js`);
 test(`every icon is a list of simple path commands`, () => {
   for (const [name, commands] of Object.entries(Icons.PATHS)) {
     assert.ok(commands.length > 0, name);
-    for (const command of commands) assert.match(command, /^[MmLlHhVvAaCcZz0-9.\s,-]+$/, `${name}: ${command}`);
+    for (const command of commands) assert.match(command, /^[MmLlHhVvAaCcSsZz0-9.\s,-]+$/, `${name}: ${command}`);
   }
 });
 

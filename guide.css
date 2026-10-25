@@ -1,0 +1,34 @@
+/* Style of the course window. Colours are explicit on every element so that the dark mode of the operating system can
+   never make text invisible. */
+:root { color-scheme: light; }
+body { margin: 0; background: #ffffff; color: #1f2933; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 15px; line-height: 1.5; }
+#guide { max-width: 46em; margin: 0 auto; padding: 0 16px 32px; }
+.guideHead { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 -16px 8px; padding: 10px 16px; background: #1c5d8c; color: #ffffff; }
+.guideHead h1 { margin: 0; font-size: 20px; color: #ffffff; }
+.guideClose { flex: 0 0 auto; width: 32px; height: 32px; padding: 0; border: 1px solid #ffffff; border-radius: 6px; background: #1c5d8c; color: #ffffff; font-size: 22px; line-height: 1; cursor: pointer; }
+.guideClose:hover { background: #2a74ab; }
+.guideClose:focus-visible { outline: 3px solid #f2b705; outline-offset: 2px; }
+#guide h2 { margin: 22px 0 6px; padding-bottom: 3px; border-bottom: 2px solid #cbd2d9; font-size: 17px; color: #1c5d8c; }
+#guide h3 { margin: 16px 0 4px; font-size: 15px; }
+#guide p { margin: 6px 0; }
+#guide ol, #guide ul { margin: 6px 0; padding-left: 1.5em; }
+#guide li { margin: 4px 0; }
+#guide .intro { font-size: 16px; }
+#guide dl { margin: 6px 0; }
+#guide dt { margin-top: 10px; font-weight: 700; }
+#guide dd { margin: 2px 0 0 14px; color: #3e4c59; }
+#guide .example { margin: 12px 0; padding: 10px 12px; border: 1px solid #9aa5b1; border-radius: 6px; background: #f5f7fa; }
+#guide .example h3 { margin-top: 0; }
+#guide .exampleLabel { margin: 8px 0 2px; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #52606d; }
+#guide table.sample { border-collapse: collapse; width: 100%; background: #ffffff; font-size: 13px; }
+#guide table.sample th, #guide table.sample td { padding: 4px 8px; border-bottom: 1px solid #cbd2d9; text-align: left; }
+#guide table.sample th { border-bottom: 2px solid #1f2933; font-weight: 700; }
+#guide table.sample td.num, #guide table.sample th.num { text-align: right; }
+#guide table.sample tfoot td { border-top: 2px solid #1f2933; font-weight: 700; }
+#guide .sampleText { padding: 8px 12px; border: 1px solid #cbd2d9; background: #ffffff; }
+#guide .sampleText h1 { margin: 0 0 4px; font-size: 22px; }
+#guide .sampleText p { margin: 0; }
+#guide .sampleRecord { display: grid; gap: 8px 16px; padding: 8px 12px; border: 1px solid #cbd2d9; background: #ffffff; }
+#guide .sampleRecord .label { font-size: 12px; color: #52606d; }
+#guide .sampleRecord .value { font-weight: 700; }
+#guide .notes li { color: #3e4c59; }

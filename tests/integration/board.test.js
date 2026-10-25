@@ -1388,3 +1388,28 @@ test(`nothing is written after a save, only a failure is reported, and the named
   await failing.page.waitForFunction(() => document.getElementById(`boardSaveState`).textContent.length > 0);
   assert.equal(await failing.page.locator(`#boardSaveState.warning`).count(), 1);
 });
+
+test(`the cap opens the course of the block in a window of its own, a second click changes it, and the cross closes it`, async () => {
+  const w = await openWithRow({ savedOptions: tableModel({ table: `Rooms`, link: `Rooms.Site`, columns: [{ path: `Area` }] }) }, 1);
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 20, y: 30 } });
+  assert.equal(await w.page.locator(`#boardGuide`).isVisible(), true);
+  const [popup] = await Promise.all([w.context.waitForEvent(`page`), w.page.click(`#boardGuide`)]);
+  await popup.waitForSelector(`#guide h1`, { timeout: 15000 });
+  assert.match(await popup.locator(`#guide h1`).innerText(), /Tableau|Table/);
+  assert.ok((await popup.locator(`#guide h2`).count()) >= 4);
+  assert.ok((await popup.locator(`#guide table.sample`).count()) >= 3);
+  const text = await popup.locator(`#guide`).innerText();
+  assert.match(text, /« (Item) »/);
+  assert.ok(!/\[\[/.test(text));
+  assert.ok(!/regroupement|grouping column|Explorer tab|onglet Explorateur/i.test(text));
+  assert.equal(await popup.locator(`.guideClose`).isVisible(), true);
+  // The same window is used for the course of another block.
+  await w.page.selectOption(`#boardType`, `record`);
+  await Promise.all([popup.waitForFunction(() => /Fiche|Sheet/.test(document.querySelector(`#guide h1`).textContent)), w.page.click(`#boardGuide`)]);
+  assert.equal(await popup.locator(`#guide .sampleRecord`).count(), 1);
+  await w.page.selectOption(`#boardType`, `chart`);
+  assert.equal(await w.page.locator(`#boardGuide`).isHidden(), true);
+  await Promise.all([popup.waitForEvent(`close`), popup.click(`.guideClose`)]);
+  assert.deepEqual(w.errors, []);
+});

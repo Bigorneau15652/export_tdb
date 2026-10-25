@@ -61,7 +61,7 @@
     footerButton: $(`boardFooterButton`), menu: $(`boardMenu`), debug: $(`boardDebug`), debugBox: $(`boardDebugBox`), debugText: $(`boardDebugText`), debugClose: $(`boardDebugClose`),
     zoom: $(`boardZoom`), saveState: $(`boardSaveState`), scroll: $(`boardScroll`), canvas: $(`boardCanvas`),
     side: $(`boardPanel`), titleRow: $(`boardTitleRow`), title: $(`boardTitle`), remove: $(`boardDelete`), close: $(`boardClose`), refresh: $(`boardRefresh`),
-    textBox: $(`boardTextSettings`), chartBox: $(`boardChartSettings`), chartType: $(`boardChartType`), paletteButton: $(`boardPaletteButton`), chartLegend: $(`boardChartLegend`), chartLabels: $(`boardChartLabels`), chartInfo: $(`boardChartInfo`), crossBox: $(`boardCrossBox`), crossMore: $(`boardCrossMore`), colItem: $(`boardColItem`), slice: $(`boardSlice`), colSort: $(`boardColSort`), indicatorBox: $(`boardIndicatorSettings`), indicatorBody: $(`boardIndicatorBody`), valuesBox: $(`boardValuesSettings`), valuesList: $(`boardValuesList`), valuesAdd: $(`boardValuesAdd`), valuesButton: $(`boardValuesButton`), heading: $(`boardPanelHeading`), typeSelect: $(`boardType`), imageBox: $(`boardImageSettings`), imageColumn: $(`boardImageColumn`), imageRank: $(`boardImageRank`), imageCaption: $(`boardImageCaption`), imageInfo: $(`boardImageInfo`), recordBox: $(`boardRecordSettings`), recordRows: $(`boardRecordRows`), recordAdd: $(`boardRecordAdd`), recordColumns: $(`boardRecordColumns`), recordSize: $(`boardRecordSize`), recordInfo: $(`boardRecordInfo`), source: $(`boardSource`), columnRow: $(`boardColumnRow`), column: $(`boardColumn`),
+    textBox: $(`boardTextSettings`), chartBox: $(`boardChartSettings`), chartType: $(`boardChartType`), paletteButton: $(`boardPaletteButton`), chartLegend: $(`boardChartLegend`), chartLabels: $(`boardChartLabels`), chartInfo: $(`boardChartInfo`), crossBox: $(`boardCrossBox`), crossMore: $(`boardCrossMore`), colItem: $(`boardColItem`), slice: $(`boardSlice`), colSort: $(`boardColSort`), indicatorBox: $(`boardIndicatorSettings`), indicatorBody: $(`boardIndicatorBody`), valuesBox: $(`boardValuesSettings`), valuesList: $(`boardValuesList`), valuesAdd: $(`boardValuesAdd`), valuesButton: $(`boardValuesButton`), heading: $(`boardPanelHeading`), typeSelect: $(`boardType`), guide: $(`boardGuide`), imageBox: $(`boardImageSettings`), imageColumn: $(`boardImageColumn`), imageRank: $(`boardImageRank`), imageCaption: $(`boardImageCaption`), imageInfo: $(`boardImageInfo`), recordBox: $(`boardRecordSettings`), recordRows: $(`boardRecordRows`), recordAdd: $(`boardRecordAdd`), recordColumns: $(`boardRecordColumns`), recordSize: $(`boardRecordSize`), recordInfo: $(`boardRecordInfo`), source: $(`boardSource`), columnRow: $(`boardColumnRow`), column: $(`boardColumn`),
     text: $(`boardText`), field: $(`boardField`), size: $(`boardSize`), align: $(`boardAlign`), fill: $(`boardFill`),
     textInfo: $(`boardTextInfo`), cellState: $(`boardCellState`),
     tableBox: $(`boardTableSettings`), kind: $(`boardKind`), tableSel: $(`boardTable`), linkRow: $(`boardLinkRow`), link: $(`boardLink`), rowsHelp: $(`boardRowsHelp`),
@@ -1743,6 +1743,7 @@
     el.heading.textContent = tr(`boardValuesTitle`);
     el.heading.hidden = !valuesOpen;
     el.typeSelect.hidden = valuesOpen;
+    el.guide.hidden = true;
     el.remove.hidden = valuesOpen;
     if (valuesOpen) {
       el.titleRow.hidden = true;
@@ -1760,6 +1761,7 @@
     if (!block) return;
     setValue(el.title, block.title);
     setOptions(el.typeSelect, Model.TYPES.map((type) => [type, tr(TYPE_KEYS[type])]), block.type);
+    el.guide.hidden = !window.exportTdbGuide.has(block.type);
     el.titleRow.hidden = block.type === `text`;
     const dataBlock = block.type === `table` || block.type === `chart`;
     el.tableBox.hidden = !dataBlock;
@@ -2081,6 +2083,13 @@
     if (selectedId) commit(Model.updateBlock(model, selectedId, { title: el.title.value }));
   });
   el.remove.addEventListener(`click`, () => deleteBlock(selectedId));
+  el.guide.addEventListener(`click`, async () => {
+    const block = selectedBlock();
+    if (!block) return;
+    const result = await window.exportTdbGuide.open(block.type);
+    if (result === `ok`) el.notice.hidden = true;
+    else printNotice(tr(result === `blocked` ? `boardGuideBlocked` : `boardGuideFailed`));
+  });
   el.typeSelect.addEventListener(`change`, () => {
     if (selectedId) commit(Model.updateBlock(model, selectedId, { type: el.typeSelect.value }));
   });
