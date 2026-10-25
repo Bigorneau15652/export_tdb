@@ -318,6 +318,7 @@
       debugTitle: `Rapport de diagnostic`,
       debugClose: `Fermer`,
       boardDeleteBlock: `Supprimer le bloc`,
+      boardBlockType: `Type de bloc`,
       boardPageLabel: `Page {n} sur {total}`,
       boardNewPage: `Nouvelle page : déposez un bloc ici pour la créer`,
       boardEmpty: `Ce tableau de bord est vide. Cliquez sur Modifier puis sur Ajouter un bloc.`,
@@ -692,6 +693,7 @@
       debugTitle: `Diagnostic report`,
       debugClose: `Close`,
       boardDeleteBlock: `Delete the block`,
+      boardBlockType: `Type of block`,
       boardPageLabel: `Page {n} of {total}`,
       boardNewPage: `New page: drop a block here to create it`,
       boardEmpty: `This dashboard is empty. Click Edit then Add a block.`,
@@ -770,6 +772,9 @@
       const text = t(el.dataset.i18nLabel);
       el.setAttribute(`aria-label`, text);
       el.title = text;
+    });
+    root.querySelectorAll(`[data-i18n-hover]`).forEach((el) => {
+      el.dataset.tip = t(el.dataset.i18nHover);
     });
     root.querySelectorAll(`[data-i18n-tip]`).forEach((el) => {
       const text = t(el.dataset.i18nTip);

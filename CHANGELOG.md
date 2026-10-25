@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.12.0
+
+- Settings panel made compact. It now starts with the type of the block, in a menu, and a cross that closes the panel: the type can be changed at any time, and what a table and a chart have in common (table, rows, item, calculations, filters, sort) is kept when changing between them; for the other changes the settings start again (Ctrl+Z brings the previous ones back). The title "Block settings", the "Close" button and the explanations that were always shown (help text of the text block, order hint of the sort, help of the named values) are gone.
+- The "?" badges of the panel are gone: the explanation of a menu is shown when the mouse stays on its name. Only the badge of "Rows linked to the selected row by", which has a link to the window that counts the rows, is kept. The spaces between the menus are smaller. The delete button stays at the bottom, smaller.
+- Tests: the hover explanations, the single remaining badge, the type menu and what is kept when changing the type.
+
 ## 0.11.1
 
 - Tool bar: the diagnostic button now shows a developer behind a laptop, the named values button is an icon with the Greek letter pi (with its explanation under it on hover), and the page format button shows two sheets of different sizes so that it is no longer mistaken for the orientation button.
