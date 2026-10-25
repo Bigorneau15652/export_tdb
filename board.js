@@ -31,6 +31,7 @@
   const { STEP_MM } = Layout;
 
   const ZOOMS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+  const Icons = window.exportTdbIcons;
   const DRAG_DISTANCE = 4;
   const SAVE_DELAY_MS = 400;
   const TYPE_KEYS = { text: `typeText`, table: `typeTable`, record: `typeRecord`, chart: `typeChart`, image: `typeImage`, indicator: `typeIndicator` };
@@ -55,11 +56,10 @@
 
   const $ = (id) => document.getElementById(id);
   const el = {
-    panel: $(`panelBoard`), notice: $(`boardNotice`), edit: $(`boardEdit`), print: $(`boardPrint`), numbers: $(`boardNumbers`), footerText: $(`boardFooter`), tools: $(`boardTools`), help: $(`boardHelp`),
-    addType: $(`boardAddType`), add: $(`boardAdd`), format: $(`boardFormat`),
-    orientation: $(`boardOrientation`), margin: $(`boardMargin`), zoomOut: $(`boardZoomOut`), zoomFit: $(`boardZoomFit`),
-    zoomIn: $(`boardZoomIn`), saveState: $(`boardSaveState`), confirm: $(`boardConfirm`), confirmText: $(`boardConfirmText`),
-    confirmYes: $(`boardConfirmYes`), confirmNo: $(`boardConfirmNo`), scroll: $(`boardScroll`), canvas: $(`boardCanvas`),
+    panel: $(`panelBoard`), notice: $(`boardNotice`), edit: $(`boardEdit`), print: $(`boardPrint`), numbers: $(`boardNumbers`), footerText: $(`boardFooter`), tools: $(`boardTools`),
+    addMenu: $(`boardAddMenu`), formatButton: $(`boardFormatButton`), orientation: $(`boardOrientation`), marginButton: $(`boardMarginButton`),
+    footerButton: $(`boardFooterButton`), menu: $(`boardMenu`), debug: $(`boardDebug`), debugBox: $(`boardDebugBox`), debugText: $(`boardDebugText`), debugClose: $(`boardDebugClose`),
+    zoom: $(`boardZoom`), saveState: $(`boardSaveState`), scroll: $(`boardScroll`), canvas: $(`boardCanvas`),
     side: $(`boardPanel`), titleRow: $(`boardTitleRow`), title: $(`boardTitle`), remove: $(`boardDelete`), close: $(`boardClose`), refresh: $(`boardRefresh`),
     textBox: $(`boardTextSettings`), chartBox: $(`boardChartSettings`), chartType: $(`boardChartType`), chartPalette: $(`boardChartPalette`), chartLegend: $(`boardChartLegend`), chartLabels: $(`boardChartLabels`), chartInfo: $(`boardChartInfo`), crossBox: $(`boardCrossBox`), crossMore: $(`boardCrossMore`), colItem: $(`boardColItem`), slice: $(`boardSlice`), colSort: $(`boardColSort`), indicatorBox: $(`boardIndicatorSettings`), indicatorBody: $(`boardIndicatorBody`), valuesBox: $(`boardValuesSettings`), valuesList: $(`boardValuesList`), valuesAdd: $(`boardValuesAdd`), valuesButton: $(`boardValuesButton`), heading: $(`boardPanelHeading`), imageBox: $(`boardImageSettings`), imageColumn: $(`boardImageColumn`), imageRank: $(`boardImageRank`), imageCaption: $(`boardImageCaption`), imageInfo: $(`boardImageInfo`), recordBox: $(`boardRecordSettings`), recordRows: $(`boardRecordRows`), recordAdd: $(`boardRecordAdd`), recordColumns: $(`boardRecordColumns`), recordSize: $(`boardRecordSize`), recordInfo: $(`boardRecordInfo`), source: $(`boardSource`), columnRow: $(`boardColumnRow`), column: $(`boardColumn`),
     text: $(`boardText`), field: $(`boardField`), size: $(`boardSize`), align: $(`boardAlign`), fill: $(`boardFill`),
@@ -299,12 +299,45 @@
     }, SAVE_DELAY_MS);
   }
 
+  // The models before the last changes (to undo them) and the ones that were undone (to do them again). Changes made
+  // less than HISTORY_MERGE_MS after the previous one (typing a text) make a single step.
+  const history = { past: [], future: [], last: 0 };
+  const HISTORY_MAX = 100;
+  const HISTORY_MERGE_MS = 600;
+
+  // Keeps the model that a change is about to replace.
+  function remember(previous) {
+    const now = Date.now();
+    if (now - history.last > HISTORY_MERGE_MS) {
+      history.past.push(previous);
+      if (history.past.length > HISTORY_MAX) history.past.shift();
+    }
+    history.last = now;
+    history.future = [];
+  }
+
+  // Goes back to the previous model (`direction` -1), or forward to the one that was undone (1).
+  function undo(direction) {
+    const source = direction < 0 ? history.past : history.future;
+    if (!source.length || locked) return;
+    (direction < 0 ? history.future : history.past).push(model);
+    model = source.pop();
+    history.last = 0;
+    if (selectedId && !Model.findBlock(model, selectedId)) {
+      selectedId = null;
+      panelOpen = false;
+    }
+    render();
+    scheduleSave();
+  }
+
   // Replaces the model by a new one, draws it and saves it.
   function commit(next, options = {}) {
     if (next === model) {
       render(options);
       return;
     }
+    remember(model);
     model = Model.compactPages(next, flowPages());
     if (selectedId && !Model.findBlock(model, selectedId)) selectedId = null;
     render(options);
@@ -789,7 +822,7 @@
     node.appendChild(body);
   }
 
-  // Builds the element of one block, with its pencil and its three resize handles.
+  // Builds the element of one block, with its cross (which deletes it) and its three resize handles.
   function buildBlock(block) {
     const node = document.createElement(`div`);
     node.className = `block`;
@@ -822,12 +855,12 @@
       node.append(kind, title);
     }
     if (editing) {
-      const pencil = document.createElement(`button`);
-      pencil.type = `button`;
-      pencil.className = `pencil`;
-      pencil.textContent = `✎`;
-      pencil.setAttribute(`aria-label`, tr(`boardPencil`));
-      node.appendChild(pencil);
+      const cross = document.createElement(`button`);
+      cross.type = `button`;
+      cross.className = `cross`;
+      cross.textContent = `\u00d7`;
+      cross.setAttribute(`aria-label`, tr(`boardDeleteBlock`));
+      node.appendChild(cross);
       for (const handle of [`e`, `s`, `se`]) {
         const grip = document.createElement(`div`);
         grip.className = `handle ${handle}`;
@@ -1027,18 +1060,120 @@
   function syncTools() {
     el.edit.textContent = editing ? tr(`boardDone`) : tr(`boardEdit`);
     el.edit.disabled = locked;
+    el.edit.title = editing ? tr(`boardHelp`) : ``;
     el.tools.hidden = !editing;
     el.valuesButton.hidden = !editing;
-    el.help.hidden = !editing;
+    el.debug.hidden = !editing;
+    if (!editing) closeMenu(false);
     const showPanel = editing && (valuesOpen || (panelOpen && Boolean(selectedBlock())));
     el.valuesButton.setAttribute(`aria-expanded`, String(valuesOpen));
     el.side.hidden = !showPanel;
     $(`boardLayout`).classList.toggle(`withPanel`, showPanel);
-    el.format.value = model.page.format;
-    el.orientation.value = model.page.orientation;
-    el.margin.value = String(model.page.margin);
-    el.numbers.checked = model.page.numbers;
+    const landscape = model.page.orientation === `landscape`;
+    Icons.setIcon(el.orientation, model.page.orientation);
+    el.orientation.dataset.tip = tr(landscape ? `barOrientationLandscape` : `barOrientationPortrait`);
+    el.orientation.setAttribute(`aria-label`, el.orientation.dataset.tip);
+    el.numbers.setAttribute(`aria-pressed`, String(model.page.numbers));
+    el.numbers.classList.toggle(`on`, model.page.numbers);
+    el.footerButton.classList.toggle(`on`, Boolean(model.page.footer));
+    for (const item of el.menu.querySelectorAll(`[data-format]`)) item.classList.toggle(`current`, item.dataset.format === model.page.format);
+    for (const item of el.menu.querySelectorAll(`[data-margin]`)) item.classList.toggle(`current`, Number(item.dataset.margin) === model.page.margin);
     setValue(el.footerText, model.page.footer);
+    el.zoom.value = String(zoomIndex);
+  }
+
+  // ------------------------------------------------------------------ Menus of the tool bar
+
+  // The button that owns the open menu of the tool bar, if any.
+  let menuOwner = null;
+
+  // Closes the open menu, and gives the focus back to its button when asked.
+  function closeMenu(giveFocus) {
+    if (!menuOwner) return;
+    const owner = menuOwner;
+    menuOwner = null;
+    owner.setAttribute(`aria-expanded`, `false`);
+    el.menu.hidden = true;
+    if (giveFocus) owner.focus();
+  }
+
+  // Opens the menu `name` (types, format, margin or footer) under its button; a second click closes it.
+  function openMenu(name, button) {
+    if (menuOwner === button) {
+      closeMenu(true);
+      return;
+    }
+    closeMenu(false);
+    for (const part of el.menu.querySelectorAll(`[data-menu]`)) part.hidden = part.dataset.menu !== name;
+    menuOwner = button;
+    button.setAttribute(`aria-expanded`, `true`);
+    el.menu.hidden = false;
+    const base = el.panel.getBoundingClientRect();
+    const box = button.getBoundingClientRect();
+    const left = Math.max(0, Math.min(box.left - base.left, base.width - el.menu.offsetWidth));
+    el.menu.style.left = `${left}px`;
+    el.menu.style.top = `${box.bottom - base.top + 4}px`;
+    const first = el.menu.querySelector(`[data-menu="${name}"] button, [data-menu="${name}"] input`);
+    if (first) first.focus();
+  }
+
+  // Builds the lines of the menus that list choices: the types of blocks, the formats and the margins.
+  function buildMenus() {
+    const make = (parent, items, attribute, icon) => {
+      parent.textContent = ``;
+      for (const [value, label, iconName] of items) {
+        const item = document.createElement(`button`);
+        item.type = `button`;
+        item.className = `menuItem`;
+        item.dataset[attribute] = String(value);
+        if (iconName) item.appendChild(Icons.make(iconName));
+        const text = document.createElement(`span`);
+        text.textContent = label;
+        item.appendChild(text);
+        parent.appendChild(item);
+      }
+    };
+    make(el.menu.querySelector(`[data-menu="types"]`), Model.TYPES.map((type) => [type, tr(TYPE_KEYS[type]), type]), `type`);
+    make(el.menu.querySelector(`[data-menu="format"]`), Object.keys(FORMAT_KEYS).map((key) => [key, tr(FORMAT_KEYS[key])]), `format`);
+    make(el.menu.querySelector(`[data-menu="margin"]`), Layout.MARGINS.map((mm) => [mm, tr(`boardMarginValue`, { mm })]), `margin`);
+  }
+
+  // ------------------------------------------------------------------ Diagnostic
+
+  // Runs the diagnostic (reads the document again, tests the attachments) and copies its report to the clipboard.
+  // When the browser refuses the clipboard, the report is shown in a box where it can be copied by hand.
+  async function runDebug() {
+    el.saveState.textContent = tr(`debugRunning`);
+    el.saveState.className = `hint`;
+    const summary = {
+      format: model.page.format, orientation: model.page.orientation, margin: model.page.margin, pages: model.pages,
+      numbers: model.page.numbers, footer: model.page.footer, blocks: model.blocks.map((block) => ({ type: block.type, page: block.page })),
+      values: model.values.length, bytes: JSON.stringify(model).length, editing, locked
+    };
+    let text;
+    try {
+      text = await window.exportTdbDebug.diagnose(summary);
+    } catch (error) {
+      text = `The diagnostic failed: ${String(error && error.message ? error.message : error)}`;
+    }
+    let copied = false;
+    try {
+      await navigator.clipboard.writeText(text);
+      copied = true;
+    } catch {
+      el.debugText.value = text;
+      el.debugBox.hidden = false;
+      el.debugText.focus();
+      el.debugText.select();
+      try {
+        copied = document.execCommand(`copy`);
+      } catch {
+        copied = false;
+      }
+    }
+    if (copied) el.debugBox.hidden = true;
+    el.saveState.textContent = tr(copied ? `debugCopied` : `debugFailed`);
+    el.saveState.className = copied ? `hint` : `warning`;
   }
 
   // ------------------------------------------------------------------ Printing
@@ -1649,30 +1784,12 @@
 
   // ------------------------------------------------------------------ Deleting
 
-  // Asks to confirm the deletion of the selected block, in the page (no dialog box).
-  function askDelete() {
-    const block = selectedBlock();
-    if (!block) return;
-    el.confirmText.textContent = tr(`boardConfirmText`, { title: blockTitle(block) });
-    el.confirm.hidden = false;
-    el.confirmYes.focus();
-  }
-
-  // Closes the confirmation without deleting.
-  function cancelDelete() {
-    el.confirm.hidden = true;
-    const node = selectedId && el.canvas.querySelector(`.block[data-id="${selectedId}"]`);
-    if (node) node.focus({ preventScroll: true });
-  }
-
-  // Deletes the selected block after the confirmation.
-  function confirmDelete() {
-    const block = selectedBlock();
-    el.confirm.hidden = true;
-    if (!block) return;
+  // Deletes a block at once (no question: Ctrl+Z brings it back).
+  function deleteBlock(id) {
+    if (!Model.findBlock(model, id)) return;
     selectedId = null;
     panelOpen = false;
-    commit(Model.deleteBlock(model, block.id));
+    commit(Model.deleteBlock(model, id));
   }
 
   // ------------------------------------------------------------------ Pointer
@@ -1788,7 +1905,7 @@
       select(null, false);
       return;
     }
-    if (event.target.closest(`.pencil`)) return;
+    if (event.target.closest(`.cross`)) return;
     if (node.dataset.parent) {
       if (node.dataset.parent !== selectedId) select(node.dataset.parent, panelOpen);
       return;
@@ -1821,12 +1938,11 @@
     if (node) select(node.dataset.parent || node.dataset.id, true);
   });
 
-  // Opens the settings with the pencil.
+  // The cross of a block deletes it.
   el.canvas.addEventListener(`click`, (event) => {
-    if (!editing || !event.target.closest(`.pencil`)) return;
+    if (!editing || !event.target.closest(`.cross`)) return;
     const node = event.target.closest(`.block`);
-    select(node.dataset.id, true);
-    el.title.focus();
+    deleteBlock(node.dataset.id);
   });
 
   // ------------------------------------------------------------------ Keyboard
@@ -1842,7 +1958,7 @@
       commit(Model.moveBlock(model, block.id, { page: block.page, x: block.x + dx, y: block.y + dy }), { focus: true });
     } else if (event.key === `Delete` || event.key === `Backspace`) {
       event.preventDefault();
-      askDelete();
+      deleteBlock(block.id);
     } else if (event.key === `Enter` || event.key === `F2`) {
       event.preventDefault();
       select(block.id, true);
@@ -1861,29 +1977,30 @@
       flushCell();
       selectedId = null;
       panelOpen = false;
-      el.confirm.hidden = true;
     }
     render();
   }
 
-  // Adds a block of the chosen type and selects it.
-  function addBlock() {
-    const result = Model.addBlock(model, el.addType.value);
+  // Adds a block of the given type, selects it and opens its settings.
+  function addBlock(type) {
+    const result = Model.addBlock(model, type);
     if (!result.id) {
       el.notice.textContent = tr(`boardLimit`);
       el.notice.hidden = false;
       return;
     }
     el.notice.hidden = true;
+    valuesOpen = false;
     selectedId = result.id;
+    panelOpen = true;
     commit(result.model, { focus: true });
     const node = el.canvas.querySelector(`.block[data-id="${result.id}"]`);
     if (node && node.scrollIntoView) node.scrollIntoView({ block: `nearest` });
   }
 
-  // Moves the zoom one level up or down, or back to the page width.
-  function zoom(direction) {
-    zoomIndex = direction === 0 ? ZOOMS.indexOf(1) : Math.min(ZOOMS.length - 1, Math.max(0, zoomIndex + direction));
+  // Sets the zoom to a level of the slider (the page width is the level of 100 %).
+  function zoomTo(index) {
+    zoomIndex = Math.min(ZOOMS.length - 1, Math.max(0, index));
     render();
   }
 
@@ -1896,10 +2013,7 @@
 
   // Fills the lists of the tools with the translated names.
   function fillTools() {
-    fillSelect(el.addType, Model.TYPES.map((type) => [type, tr(TYPE_KEYS[type])]), `text`);
-    fillSelect(el.format, Object.keys(FORMAT_KEYS).map((key) => [key, tr(FORMAT_KEYS[key])]), model.page.format);
-    fillSelect(el.orientation, Layout.ORIENTATIONS.map((key) => [key, tr(ORIENTATION_KEYS[key])]), model.page.orientation);
-    fillSelect(el.margin, Layout.MARGINS.map((mm) => [mm, tr(`boardMarginValue`, { mm })]), model.page.margin);
+    buildMenus();
     fillSelect(el.source, Model.TEXT_SOURCES.map((key) => [key, tr(key === `fixed` ? `boardSourceFixed` : `boardSourceCell`)]), `fixed`);
     fillSelect(el.size, Model.TEXT_SIZES.map((key) => [key, tr(SIZE_KEYS[key])]), `normal`);
     fillSelect(el.align, Model.TEXT_ALIGNS.map((key) => [key, tr(ALIGN_KEYS[key])]), `left`);
@@ -1907,21 +2021,50 @@
   }
 
   el.edit.addEventListener(`click`, () => setEditing(!editing));
-  el.add.addEventListener(`click`, addBlock);
-  const pageChange = () => commit(Model.setPage(model, { format: el.format.value, orientation: el.orientation.value, margin: Number(el.margin.value) }));
-  el.format.addEventListener(`change`, pageChange);
-  el.orientation.addEventListener(`change`, pageChange);
-  el.margin.addEventListener(`change`, pageChange);
+  el.addMenu.addEventListener(`click`, () => openMenu(`types`, el.addMenu));
+  el.formatButton.addEventListener(`click`, () => openMenu(`format`, el.formatButton));
+  el.marginButton.addEventListener(`click`, () => openMenu(`margin`, el.marginButton));
+  el.footerButton.addEventListener(`click`, () => openMenu(`footer`, el.footerButton));
+  el.orientation.addEventListener(`click`, () => commit(Model.setPage(model, { orientation: model.page.orientation === `landscape` ? `portrait` : `landscape` })));
+  el.menu.addEventListener(`click`, (event) => {
+    const item = event.target.closest(`.menuItem`);
+    if (!item) return;
+    closeMenu(true);
+    if (item.dataset.type) addBlock(item.dataset.type);
+    else if (item.dataset.format) commit(Model.setPage(model, { format: item.dataset.format }));
+    else if (item.dataset.margin) commit(Model.setPage(model, { margin: Number(item.dataset.margin) }));
+  });
+  document.addEventListener(`click`, (event) => {
+    if (menuOwner && !el.menu.contains(event.target) && !menuOwner.contains(event.target)) closeMenu(false);
+  });
+  document.addEventListener(`keydown`, (event) => {
+    if (event.key === `Escape` && menuOwner) closeMenu(true);
+    // Ctrl+Z undoes the last change of the dashboard, Ctrl+Y or Ctrl+Shift+Z does it again (in a field the browser
+    // keeps its own undo of the text).
+    if (!editing || !(event.ctrlKey || event.metaKey) || event.altKey) return;
+    const key = event.key.toLowerCase();
+    if (key !== `z` && key !== `y`) return;
+    const target = event.target;
+    if (target && target.matches && target.matches(`input:not([type="range"]):not([type="checkbox"]), textarea, select, [contenteditable]`)) return;
+    event.preventDefault();
+    undo(key === `y` || event.shiftKey ? 1 : -1);
+  });
+  el.footerText.addEventListener(`keydown`, (event) => {
+    if (event.key === `Enter`) closeMenu(true);
+  });
   el.print.addEventListener(`click`, printDashboard);
-  el.numbers.addEventListener(`change`, () => commit(Model.setPage(model, { numbers: el.numbers.checked })));
+  el.numbers.addEventListener(`click`, () => commit(Model.setPage(model, { numbers: !model.page.numbers })));
   el.footerText.addEventListener(`input`, () => commit(Model.setPage(model, { footer: el.footerText.value })));
-  el.zoomOut.addEventListener(`click`, () => zoom(-1));
-  el.zoomIn.addEventListener(`click`, () => zoom(1));
-  el.zoomFit.addEventListener(`click`, () => zoom(0));
+  el.zoom.addEventListener(`input`, () => zoomTo(Number(el.zoom.value)));
+  el.zoom.addEventListener(`dblclick`, () => zoomTo(ZOOMS.indexOf(1)));
+  el.debug.addEventListener(`click`, runDebug);
+  el.debugClose.addEventListener(`click`, () => {
+    el.debugBox.hidden = true;
+  });
   el.title.addEventListener(`input`, () => {
     if (selectedId) commit(Model.updateBlock(model, selectedId, { title: el.title.value }));
   });
-  el.remove.addEventListener(`click`, askDelete);
+  el.remove.addEventListener(`click`, () => deleteBlock(selectedId));
   el.close.addEventListener(`click`, () => {
     valuesOpen = false;
     select(selectedId, false);
@@ -1938,8 +2081,6 @@
   el.valuesAdd.addEventListener(`click`, () => {
     if (model.values.length < Model.MAX_VALUES) commit(Model.setValues(model, [...model.values, { name: ``, kind: model.values.length ? model.values[model.values.length - 1].kind : `calc` }]));
   });
-  el.confirmYes.addEventListener(`click`, confirmDelete);
-  el.confirmNo.addEventListener(`click`, cancelDelete);
 
 
   // The settings of the table block that depend on the table are cleared when the table changes.
@@ -2104,13 +2245,8 @@
     render({ keepFocus: true });
   });
 
-  // The page is drawn again when the tab is shown (its width is known only then) and when the window changes size.
-  window.addEventListener(`exporttdb:tabchanged`, (event) => {
-    if (event.detail === `board`) render();
-  });
-  window.addEventListener(`resize`, () => {
-    if (window.exportTdbCurrentTab === `board`) render();
-  });
+  // The page is drawn again when the window changes size.
+  window.addEventListener(`resize`, () => render());
 
   // A saved model arrives from Grist (at the start and after each save, or when another user changes it).
   access.onModel((raw) => {

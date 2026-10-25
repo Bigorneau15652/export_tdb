@@ -11,74 +11,50 @@
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'self'; script-src 'self' https://grist.numerique.gouv.fr; img-src 'self' data: blob: https:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>export_tdb</title>
-  <link rel="stylesheet" href="explorer.css?v=0.10.1">
-  <link rel="stylesheet" href="board.css?v=0.10.1">
+  <link rel="stylesheet" href="explorer.css?v=0.11.0">
+  <link rel="stylesheet" href="board.css?v=0.11.0">
   <script src="https://grist.numerique.gouv.fr/grist-plugin-api.js"></script>
 </head>
 <body>
   <main id="app">
-    <h1><span data-i18n="title"></span> <small class="version" id="version">0.10.1</small></h1>
-    <div id="tabs" role="tablist">
-      <button type="button" role="tab" id="tabBoard" class="tab" aria-selected="true" data-i18n="tabBoard"></button>
-      <button type="button" role="tab" id="tabExplorer" class="tab" aria-selected="false" data-i18n="tabExplorer"></button>
-      <button type="button" role="tab" id="tabLab" class="tab" aria-selected="false" data-i18n="tabLab"></button>
-    </div>
+    <h1 id="boardTitleLine"><span data-i18n="title"></span> <small class="version" id="version">0.11.0</small></h1>
     <p id="status" role="status"></p>
     <p id="error" role="alert" hidden></p>
 
-    <div id="panelBoard" role="tabpanel">
+    <div id="panelBoard">
       <p id="boardNotice" class="warning" role="status" hidden></p>
       <div id="boardBar">
         <button type="button" id="boardEdit" class="button" data-i18n="boardEdit"></button>
-        <button type="button" id="boardPrint" class="button secondary" data-i18n="boardPrint"></button>
+        <div id="boardTools" class="barGroup" hidden>
+          <button type="button" id="boardAddMenu" class="iconButton primary" data-icon="plus" data-i18n-tip="barAdd" aria-haspopup="true" aria-expanded="false"></button>
+          <button type="button" id="boardFormatButton" class="iconButton" data-icon="format" data-i18n-tip="barFormat" aria-haspopup="true" aria-expanded="false"></button>
+          <button type="button" id="boardOrientation" class="iconButton" data-icon="landscape" data-i18n-tip="barOrientationLandscape"></button>
+          <button type="button" id="boardMarginButton" class="iconButton" data-icon="margin" data-i18n-tip="barMargin" aria-haspopup="true" aria-expanded="false"></button>
+          <button type="button" id="boardFooterButton" class="iconButton" data-icon="footer" data-i18n-tip="barFooter" aria-haspopup="true" aria-expanded="false"></button>
+          <button type="button" id="boardNumbers" class="iconButton" data-icon="numbers" data-i18n-tip="barNumbers" aria-pressed="false"></button>
+          <button type="button" id="boardRefresh" class="iconButton" data-icon="refresh" data-i18n-tip="barRefresh"></button>
+        </div>
+        <button type="button" id="boardPrint" class="iconButton" data-icon="print" data-i18n-tip="barPrint"></button>
+        <span class="barSpacer"></span>
         <button type="button" id="boardValuesButton" class="button secondary" aria-expanded="false" hidden data-i18n="boardValuesButton"></button>
+        <button type="button" id="boardDebug" class="iconButton" data-icon="bug" data-i18n-tip="barDebug" hidden></button>
         <span id="boardSaveState" class="hint" role="status"></span>
       </div>
-      <div id="boardTools" hidden>
-        <p id="boardHelp" class="hint" data-i18n="boardHelp"></p>
-        <div class="tools">
-          <div class="tool">
-            <label for="boardAddType"><span class="help" tabindex="0" role="img" data-i18n-tip="tipBoardAdd">?</span> <span data-i18n="boardAddType"></span></label>
-            <select id="boardAddType"></select>
-          </div>
-          <button type="button" id="boardAdd" class="button" data-i18n="boardAdd"></button>
-          <button type="button" id="boardRefresh" class="button secondary" data-i18n="boardRefresh"></button>
-        </div>
-        <div class="tools">
-          <div class="tool">
-            <label for="boardFormat"><span class="help" tabindex="0" role="img" data-i18n-tip="tipBoardFormat">?</span> <span data-i18n="boardFormat"></span></label>
-            <select id="boardFormat"></select>
-          </div>
-          <div class="tool">
-            <label for="boardOrientation"><span class="help" tabindex="0" role="img" data-i18n-tip="tipBoardOrientation">?</span> <span data-i18n="boardOrientation"></span></label>
-            <select id="boardOrientation"></select>
-          </div>
-          <div class="tool">
-            <label for="boardMargin"><span class="help" tabindex="0" role="img" data-i18n-tip="tipBoardMargin">?</span> <span data-i18n="boardMargin"></span></label>
-            <select id="boardMargin"></select>
-          </div>
-          <div class="tool">
-            <label for="boardFooter"><span class="help" tabindex="0" role="img" data-i18n-tip="tipBoardFooter">?</span> <span data-i18n="boardFooter"></span></label>
-            <input type="text" id="boardFooter" maxlength="120">
-            <label class="check"><input type="checkbox" id="boardNumbers"> <span data-i18n="boardNumbers"></span></label>
-          </div>
-          <div class="tool">
-            <p class="label"><span class="help" tabindex="0" role="img" data-i18n-tip="tipBoardZoom">?</span> <span data-i18n="boardZoom"></span></p>
-            <div class="row">
-              <button type="button" id="boardZoomOut" class="button secondary" data-i18n-label="boardZoomOut">&minus;</button>
-              <button type="button" id="boardZoomFit" class="button secondary" data-i18n="boardZoomFit"></button>
-              <button type="button" id="boardZoomIn" class="button secondary" data-i18n-label="boardZoomIn">+</button>
-            </div>
-          </div>
-        </div>
-        <div id="boardConfirm" class="warning" role="alertdialog" hidden>
-          <p id="boardConfirmText"></p>
-          <div class="row">
-            <button type="button" id="boardConfirmYes" class="button danger" data-i18n="boardConfirmYes"></button>
-            <button type="button" id="boardConfirmNo" class="button secondary" data-i18n="boardConfirmNo"></button>
-          </div>
+      <div id="boardMenu" class="barMenu" role="dialog" hidden>
+        <div data-menu="types" class="menuList" hidden></div>
+        <div data-menu="format" class="menuList" hidden></div>
+        <div data-menu="margin" class="menuList" hidden></div>
+        <div data-menu="footer" hidden>
+          <label for="boardFooter" data-i18n="boardFooter"></label>
+          <input type="text" id="boardFooter" maxlength="120">
         </div>
       </div>
+      <div id="boardDebugBox" class="debugBox" hidden>
+        <p class="label" data-i18n="debugTitle"></p>
+        <textarea id="boardDebugText" readonly rows="10" spellcheck="false"></textarea>
+        <button type="button" id="boardDebugClose" class="button secondary small" data-i18n="debugClose"></button>
+      </div>
+      <div id="boardZoomBar"><input type="range" id="boardZoom" min="0" max="5" step="1" value="2" data-i18n-tip="barZoom"></div>
       <div id="boardLayout">
         <div id="boardScroll"><div id="boardCanvas"></div></div>
         <aside id="boardPanel" hidden>
@@ -253,126 +229,39 @@
       </div>
     </div>
 
-    <div id="panelExplorer" role="tabpanel" hidden>
-    <p id="intro" data-i18n="intro"></p>
-
-    <section id="summary" hidden>
-      <p id="linked"></p>
-      <p id="seen"></p>
-      <p class="hint" data-i18n="moveHint"></p>
-      <label class="check"><input type="checkbox" id="reveal"> <span data-i18n="revealLabel"></span></label>
-      <button type="button" id="rerun" class="button" data-i18n="rerun"></button>
-    </section>
-
-    <section id="tests" hidden>
-      <h2 data-i18n="testsTitle"></h2>
-      <div class="row">
-        <button type="button" id="attachmentTest" class="button" data-i18n="attachmentTest"></button>
-      </div>
-      <h3 data-i18n="writeTitle"></h3>
-      <label for="writeColumn" data-i18n="writeColumn"></label>
-      <select id="writeColumn"></select>
-      <div class="row">
-        <button type="button" id="writePrepare" class="button" data-i18n="writePrepare"></button>
-      </div>
-      <div id="writeConfirmBox" hidden>
-        <p class="warning" data-i18n="writeWarning"></p>
-        <div class="row">
-          <button type="button" id="writeConfirm" class="button" data-i18n="writeConfirm"></button>
-          <button type="button" id="writeCancel" class="button secondary" data-i18n="writeCancel"></button>
-        </div>
-      </div>
-      <p id="writeProblem" role="alert" hidden></p>
-      <ul id="testResults"></ul>
-    </section>
-
-    <section id="structure" hidden>
-      <h2 data-i18n="colDescendants"></h2>
-      <ul id="descendants"></ul>
-      <h2 data-i18n="colTables"></h2>
-      <ul id="tableList"></ul>
-    </section>
-
-    <section id="reportBox" hidden>
-      <h2 data-i18n="reportTitle"></h2>
-      <div class="row">
-        <button type="button" id="copy" class="button" data-i18n="copy"></button>
-        <span id="copyState" role="status"></span>
-      </div>
-      <textarea id="report" readonly rows="14" spellcheck="false"></textarea>
-    </section>
-    </div>
-
-    <div id="panelLab" role="tabpanel" hidden>
-      <p data-i18n="labIntro"></p>
-      <p class="hint" data-i18n="labHelp"></p>
-      <p id="labMessage" role="status"></p>
-      <div id="labForm" hidden>
-        <label for="labStart"><span class="help" tabindex="0" role="img" data-i18n-tip="tipStart">?</span> <span data-i18n="labStart"></span></label>
-        <select id="labStart"></select>
-        <p id="labStartInfo" class="hint" role="status"></p>
-        <label for="labTable"><span class="help" tabindex="0" role="img" data-i18n-tip="tipTable">?</span> <span data-i18n="labTable"></span></label>
-        <select id="labTable"></select>
-        <label for="labPath"><span class="help" tabindex="0" role="img" data-i18n-tip="tipPath">?</span> <span data-i18n="labPath"></span></label>
-        <select id="labPath"></select>
-        <label for="labGroup"><span class="help" tabindex="0" role="img" data-i18n-tip="tipGroup">?</span> <span data-i18n="labGroupBy"></span></label>
-        <select id="labGroup"></select>
-        <label for="labGroup2"><span class="help" tabindex="0" role="img" data-i18n-tip="tipGroup2">?</span> <span data-i18n="labGroupBy2"></span></label>
-        <select id="labGroup2"></select>
-        <label class="check"><input type="checkbox" id="labMerge"> <span class="help" tabindex="0" role="img" data-i18n-tip="tipMerge">?</span> <span data-i18n="labMerge"></span></label>
-        <label for="labFn"><span class="help" tabindex="0" role="img" data-i18n-tip="tipFn">?</span> <span data-i18n="labFunction"></span></label>
-        <select id="labFn"></select>
-        <p class="label"><span class="help" tabindex="0" role="img" data-i18n-tip="tipColumns">?</span> <span data-i18n="labColumn"></span></p>
-        <div id="labColumns" class="columns"></div>
-        <fieldset class="filter" id="labFilter1"></fieldset>
-        <fieldset class="filter" id="labFilter2"></fieldset>
-        <label for="labSort"><span class="help" tabindex="0" role="img" data-i18n-tip="tipSort">?</span> <span data-i18n="labSort"></span></label>
-        <select id="labSort"></select>
-        <label class="check"><input type="checkbox" id="labAuto" checked> <span class="help" tabindex="0" role="img" data-i18n-tip="tipAuto">?</span> <span data-i18n="labAuto"></span></label>
-        <div class="row">
-          <button type="button" id="labRun" class="button" data-i18n="labRun"></button>
-          <button type="button" id="labRefresh" class="button secondary" data-i18n="labRefresh"></button>
-        </div>
-      </div>
-      <p id="labInfo" class="hint"></p>
-      <p id="labWarnings" class="warning" hidden></p>
-      <div class="tableWrap"><table id="labResult"></table></div>
-      <div class="row"><button type="button" id="labCopy" class="button" data-i18n="labCopy" hidden></button></div>
-    </div>
   </main>
 
-  <script src="shared/i18n.js?v=0.10.1"></script>
-  <script src="schema.js?v=0.10.1"></script>
-  <script src="shape.js?v=0.10.1"></script>
-  <script src="report.js?v=0.10.1"></script>
-  <script src="values.js?v=0.10.1"></script>
-  <script src="dataset.js?v=0.10.1"></script>
-  <script src="rowset.js?v=0.10.1"></script>
-  <script src="aggregate.js?v=0.10.1"></script>
-  <script src="format.js?v=0.10.1"></script>
-  <script src="expr.js?v=0.10.1"></script>
-  <script src="explorer.js?v=0.10.1"></script>
-  <script src="help.js?v=0.10.1"></script>
-  <script src="filter-ui.js?v=0.10.1"></script>
-  <script src="lab.js?v=0.10.1"></script>
-  <script src="layout.js?v=0.10.1"></script>
-  <script src="flow.js?v=0.10.1"></script>
-  <script src="model.js?v=0.10.1"></script>
-  <script src="grist-access.js?v=0.10.1"></script>
-  <script src="markdown.js?v=0.10.1"></script>
-  <script src="fields.js?v=0.10.1"></script>
-  <script src="record.js?v=0.10.1"></script>
-  <script src="image.js?v=0.10.1"></script>
-  <script src="indicator.js?v=0.10.1"></script>
-  <script src="vendor/echarts/echarts.custom.min.js?v=0.10.1"></script>
-  <script src="chart-option.js?v=0.10.1"></script>
-  <script src="data-cache.js?v=0.10.1"></script>
-  <script src="markdown-view.js?v=0.10.1"></script>
-  <script src="table-query.js?v=0.10.1"></script>
-  <script src="named.js?v=0.10.1"></script>
-  <script src="values-panel.js?v=0.10.1"></script>
-  <script src="indicator-panel.js?v=0.10.1"></script>
-  <script src="board.js?v=0.10.1"></script>
-  <script src="tabs.js?v=0.10.1"></script>
+  <script src="shared/i18n.js?v=0.11.0"></script>
+  <script src="schema.js?v=0.11.0"></script>
+  <script src="shape.js?v=0.11.0"></script>
+  <script src="report.js?v=0.11.0"></script>
+  <script src="values.js?v=0.11.0"></script>
+  <script src="dataset.js?v=0.11.0"></script>
+  <script src="rowset.js?v=0.11.0"></script>
+  <script src="aggregate.js?v=0.11.0"></script>
+  <script src="format.js?v=0.11.0"></script>
+  <script src="expr.js?v=0.11.0"></script>
+  <script src="explorer.js?v=0.11.0"></script>
+  <script src="help.js?v=0.11.0"></script>
+  <script src="filter-ui.js?v=0.11.0"></script>
+  <script src="layout.js?v=0.11.0"></script>
+  <script src="flow.js?v=0.11.0"></script>
+  <script src="model.js?v=0.11.0"></script>
+  <script src="grist-access.js?v=0.11.0"></script>
+  <script src="markdown.js?v=0.11.0"></script>
+  <script src="fields.js?v=0.11.0"></script>
+  <script src="record.js?v=0.11.0"></script>
+  <script src="image.js?v=0.11.0"></script>
+  <script src="indicator.js?v=0.11.0"></script>
+  <script src="vendor/echarts/echarts.custom.min.js?v=0.11.0"></script>
+  <script src="chart-option.js?v=0.11.0"></script>
+  <script src="data-cache.js?v=0.11.0"></script>
+  <script src="markdown-view.js?v=0.11.0"></script>
+  <script src="table-query.js?v=0.11.0"></script>
+  <script src="named.js?v=0.11.0"></script>
+  <script src="values-panel.js?v=0.11.0"></script>
+  <script src="indicator-panel.js?v=0.11.0"></script>
+  <script src="icons.js?v=0.11.0"></script>
+  <script src="board.js?v=0.11.0"></script>
 </body>
 </html>

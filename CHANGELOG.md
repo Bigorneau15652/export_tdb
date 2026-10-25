@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.11.0
+
+- The tool bar is now a single line of small icon buttons, so that it no longer takes the screen. In reading mode: "Edit" and the print button. In editing mode: "Finish editing", then the plus button (a menu of the types of blocks: choosing one creates the block and opens its settings), the page format, the orientation (one button that switches between landscape and portrait and shows the current one), the margins, the footer text, the page numbers (a button that changes colour when it is on), the refresh of the data and the print button; the named values and the diagnostic are set apart on the right. The "Add a block" button and all the "?" badges of the tool bar are gone: the explanation of a button is written under it when the mouse stays on it, without covering it. The line of explanations that was always shown is now the tip of the "Finish editing" button.
+- A thin zoom slider at the bottom right of the widget replaces the three zoom buttons (a double click brings it back to the width of the page).
+- The "Explorer" and "Query lab" tabs are gone, and so is the tab bar. The widget keeps what the dashboard needs from the explorer (the reading of the document and of the selected row). The diagnostic report of the explorer is now given by a "debug" button of the editing tool bar: one click reads the document again, tests the attachments (nothing is written in the document) and copies the report to the clipboard, with a new section that describes the dashboard (page, blocks, saved size). If the browser refuses the clipboard, the report is shown in a box to copy by hand. The test that writes a marker in a cell is no longer part of it. About 80 texts of the explorer and of the lab were removed from the translations.
+- The pencil of the blocks is gone: a double click opens the settings, and a cross (shown on the block under the mouse and on the selected block) deletes the block at once, with no question. So does the Delete key and the delete button of the settings. Ctrl+Z undoes the last change of the dashboard (a move, a deletion, a setting, up to 100 steps; typed text is grouped), Ctrl+Y or Ctrl+Shift+Z does it again. Inside a field the browser keeps its own Ctrl+Z for the text.
+- New file `icons.js` (the icons are drawn with createElementNS, never written as HTML).
+- Tests: the icons, the report with the dashboard, and in the page the menus of the tool bar, the orientation and numbers buttons, the zoom slider, the debug button, the cross and the undo.
+
 ## 0.10.1
 
 - Charts: the name of a series (in the legend) is now the name of the column alone for a sum (`SUB`), then the column and the calculation in lower case for the others (`SUB (average)`, `SUB (maximum)`). The heading of a table is unchanged. A name typed in the settings still wins.

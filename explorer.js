@@ -1,29 +1,19 @@
-// export_tdb explorer (version 0.1): reads the structure of the Grist document, the shape of the
-// values and the answers of a few API functions, and shows them as a report that the user copies
-// and sends to the developer. It proves what the dashboard widget can rely on before that widget
-// is written. It changes nothing in the document, except the write test that the user confirms
-// and that puts the original value back.
+// export_tdb context: reads the structure of the Grist document (schema, linked table, selected row) and keeps
+// what the dashboard needs, and builds the diagnostic report that the debug button copies to the clipboard. It
+// changes nothing in the document.
 (function () {
   const { t, applyTranslations } = window.exportTdbI18n;
-  const { buildSchema, findDescendants, describeStep } = window.exportTdbSchema;
+  const { buildSchema, findDescendants } = window.exportTdbSchema;
   const { describeColumn, describeValue } = window.exportTdbShape;
   const { buildReport } = window.exportTdbReport;
 
-  const VERSION = `0.10.1`;
+  const VERSION = `0.11.0`;
   // At most this many descendant tables are loaded to measure them and to look at their values.
   const MAX_TABLES = 12;
-  const TEST_MARKER = `__export_tdb_test__`;
   const IMAGE_WAIT_MS = 10000;
 
   const $ = (id) => document.getElementById(id);
-  const el = {
-    status: $(`status`), error: $(`error`), summary: $(`summary`), linked: $(`linked`), seen: $(`seen`),
-    reveal: $(`reveal`), rerun: $(`rerun`), tests: $(`tests`), attachmentTest: $(`attachmentTest`),
-    writeColumn: $(`writeColumn`), writePrepare: $(`writePrepare`), confirmBox: $(`writeConfirmBox`),
-    writeConfirm: $(`writeConfirm`), writeCancel: $(`writeCancel`), writeProblem: $(`writeProblem`),
-    testResults: $(`testResults`), structure: $(`structure`), descendants: $(`descendants`), tableList: $(`tableList`),
-    reportBox: $(`reportBox`), copy: $(`copy`), copyState: $(`copyState`), report: $(`report`)
-  };
+  const el = { status: $(`status`), error: $(`error`) };
 
   // What the exploration found so far.
   const state = {
@@ -31,7 +21,7 @@
     shapes: [], timings: [], tests: new Map(), metadataOk: false
   };
 
-  // The lab tab reads what the exploration found.
+  // The dashboard reads what the exploration found.
   window.exportTdbContext = { state, explored: () => Boolean(state.schema && state.linked) };
 
   // ---------------------------------------------------------------- Display
@@ -49,85 +39,25 @@
   // Records the result of a test of the API (a second run of the same test replaces the first).
   function recordTest(name, ok, detail) {
     state.tests.set(name, { name, ok, detail: detail || `` });
-    renderTests();
-    renderReport();
-  }
-
-  // Shows the answers of the tests of the API, one line each.
-  function renderTests() {
-    el.testResults.textContent = ``;
-    for (const test of state.tests.values()) {
-      const item = document.createElement(`li`);
-      item.className = test.ok ? `ok` : `bad`;
-      item.textContent = `${test.name}: ${test.ok ? t(`testOk`) : t(`testFailed`)}${test.detail ? ` - ${test.detail}` : ``}`;
-      el.testResults.appendChild(item);
-    }
-  }
-
-  // Lists of tables and of descendant tables with their paths.
-  function renderStructure() {
-    el.descendants.textContent = ``;
-    if (!state.descendants.length) {
-      const none = document.createElement(`li`);
-      none.textContent = t(`noDescendants`);
-      el.descendants.appendChild(none);
-    }
-    for (const entry of state.descendants) {
-      const item = document.createElement(`li`);
-      item.textContent = `${entry.table}: ${entry.paths.map((path) => path.map(describeStep).join(` ; `)).join(` | `)}`;
-      el.descendants.appendChild(item);
-    }
-    el.tableList.textContent = ``;
-    for (const id of state.schema.order) {
-      const table = state.schema.tables.get(id);
-      const item = document.createElement(`li`);
-      item.textContent = `${id} (${table.columns.length})`;
-      el.tableList.appendChild(item);
-    }
-  }
-
-  // Shows the linked table and the number of rows seen.
-  function renderSummary() {
-    el.linked.textContent = t(`linked`, { table: state.linked || `?` });
-    el.seen.textContent = t(`rowsSeen`, { count: state.rowsSeen.size });
   }
 
   // The shape of each value that Grist gave with the selected row, to see what a widget really receives.
   function recordShapes() {
     const table = state.schema && state.schema.tables.get(state.linked);
     if (!table || !state.record) return [];
-    return table.columns.map((column) => ({ column: column.id, type: column.type, shape: describeValue(state.record[column.id], el.reveal.checked) }));
+    return table.columns.map((column) => ({ column: column.id, type: column.type, shape: describeValue(state.record[column.id], false) }));
   }
 
-  // Rebuilds the text of the report from what was found.
-  function renderReport() {
+  // The text of the report from what was found. `dashboard` (optional) describes the dashboard: see buildReport.
+  function reportText(dashboard) {
     const schema = state.schema;
-    el.report.value = buildReport({
-      version: VERSION, reveal: el.reveal.checked, linked: state.linked,
+    return buildReport({
+      version: VERSION, reveal: false, linked: state.linked,
       record: state.record ? state.record.id : null, events: state.rowsSeen.size,
       tables: schema ? schema.order.map((id) => schema.tables.get(id)) : [], descendants: state.descendants,
       shapes: state.shapes, timings: state.timings, tests: [...state.tests.values()],
-      recordShapes: recordShapes()
+      recordShapes: recordShapes(), dashboard
     });
-    el.reportBox.hidden = false;
-  }
-
-  // The columns of the linked table in which a test of writing is allowed: text, not a formula.
-  function fillWriteColumns() {
-    el.writeColumn.textContent = ``;
-    const table = state.schema && state.schema.tables.get(state.linked);
-    const columns = table ? table.columns.filter((c) => c.base === `Text` && !c.isFormula) : [];
-    for (const column of columns) {
-      const option = document.createElement(`option`);
-      option.value = column.id;
-      option.textContent = `${column.id} (${column.label})`;
-      el.writeColumn.appendChild(option);
-    }
-    el.writePrepare.disabled = !columns.length;
-    if (!columns.length) {
-      el.writeProblem.textContent = t(`writeNoColumn`);
-      el.writeProblem.hidden = false;
-    }
   }
 
   // ------------------------------------------------------------ Exploration
@@ -147,7 +77,7 @@
     const rows = (data.id || []).length;
     state.timings.push({ table: table.id, rows, columns: table.columns.length, ms, manualSort: data.manualSort !== undefined });
     for (const column of table.columns) {
-      const described = describeColumn(data[column.id], el.reveal.checked);
+      const described = describeColumn(data[column.id], false);
       state.shapes.push({ table: table.id, column: column.id, type: column.type, shape: described.shape, filled: described.filled, empty: described.empty });
     }
   }
@@ -176,12 +106,6 @@
         setStatus(t(`running`, { table: id }));
         await loadAndDescribe(table);
       }
-      renderStructure();
-      fillWriteColumns();
-      renderSummary();
-      el.summary.hidden = false;
-      el.tests.hidden = false;
-      el.structure.hidden = false;
       setStatus(t(`done`));
       window.dispatchEvent(new CustomEvent(`exporttdb:explored`));
     } catch (error) {
@@ -191,7 +115,6 @@
       setStatus(``);
     } finally {
       state.running = false;
-      renderReport();
     }
   }
 
@@ -238,55 +161,16 @@
     }
   }
 
-  // Value of a cell read again from the document.
-  async function readCell(tableId, rowId, colId) {
-    const data = await grist.docApi.fetchTable(tableId);
-    const index = (data.id || []).indexOf(rowId);
-    if (index < 0) throw new Error(`row not found`);
-    return data[colId][index];
+  // The diagnostic report, after a new reading of the document and a test of the attachments (nothing is written in
+  // the document). `dashboard` describes the dashboard, see buildReport. Resolves to the text of the report.
+  async function diagnose(dashboard) {
+    state.tests.delete(`attachment token`);
+    await explore();
+    await testAttachment();
+    return reportText(dashboard);
   }
 
-  // Writes `value` in a cell with one method, then reads it back. Returns true when it is there.
-  async function writeAndCheck(method, tableId, rowId, colId, value) {
-    if (method === `applyUserActions`) {
-      await grist.docApi.applyUserActions([[`UpdateRecord`, tableId, rowId, { [colId]: value }]]);
-    } else {
-      await grist.getTable(tableId).update({ id: rowId, fields: { [colId]: value } });
-    }
-    return (await readCell(tableId, rowId, colId)) === value;
-  }
-
-  // Test of writing with the two methods of the API: marker, check, then the original value back.
-  async function runWriteTest() {
-    el.confirmBox.hidden = true;
-    el.writeProblem.hidden = true;
-    const tableId = state.linked;
-    const colId = el.writeColumn.value;
-    const rowId = state.record ? state.record.id : 0;
-    if (!rowId || !colId) return;
-    const original = await readCell(tableId, rowId, colId);
-    for (const method of [`applyUserActions`, `getTable().update`]) {
-      const name = `write with ${method}`;
-      const key = method === `applyUserActions` ? method : `getTable`;
-      let written = false;
-      try {
-        written = await writeAndCheck(key, tableId, rowId, colId, TEST_MARKER);
-        recordTest(name, written, written ? `marker written and read back` : `marker not found when read back`);
-      } catch (error) {
-        recordTest(name, false, String(error && error.message ? error.message : error));
-      }
-      try {
-        const restored = await writeAndCheck(key, tableId, rowId, colId, original);
-        if (!restored) throw new Error(`value differs after restoring`);
-      } catch {
-        el.writeProblem.textContent = t(`writeRestoreFailed`, { value: JSON.stringify(original) });
-        el.writeProblem.hidden = false;
-        recordTest(`restore after ${method}`, false, `see the message on the page`);
-        return;
-      }
-    }
-    recordTest(`restore of the original value`, true, ``);
-  }
+  window.exportTdbDebug = { diagnose };
 
   // ------------------------------------------------------------------- Start
 
@@ -296,35 +180,11 @@
     state.record = record;
     state.rowsSeen.add(record.id);
     window.dispatchEvent(new CustomEvent(`exporttdb:rowchanged`));
-    if (state.schema || state.running) {
-      renderSummary();
-      renderReport();
-    }
     if (!state.schema && !state.running) explore();
   }
 
   applyTranslations(document);
   setStatus(t(`pickRow`));
-  el.reveal.addEventListener(`change`, () => explore());
-  el.rerun.addEventListener(`click`, () => explore());
-  el.attachmentTest.addEventListener(`click`, testAttachment);
-  el.writePrepare.addEventListener(`click`, () => {
-    el.confirmBox.hidden = false;
-  });
-  el.writeCancel.addEventListener(`click`, () => {
-    el.confirmBox.hidden = true;
-  });
-  el.writeConfirm.addEventListener(`click`, runWriteTest);
-  el.copy.addEventListener(`click`, async () => {
-    try {
-      await navigator.clipboard.writeText(el.report.value);
-      el.copyState.textContent = t(`copied`);
-    } catch {
-      el.report.select();
-      el.copyState.textContent = t(`copyFailed`);
-    }
-  });
-
   grist.ready({ requiredAccess: `full` });
   // Raw values (references as row numbers, dates and lists in their encoded form) and every normal
   // column of the table, not only the columns shown in the right panel of the widget.
