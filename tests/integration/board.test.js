@@ -81,7 +81,7 @@ test(`adding blocks places them one after the other and saves the model`, async 
   await w.page.waitForFunction(() => window.__saved && window.__saved.length >= 1);
   const last = await w.page.evaluate(() => window.__saved[window.__saved.length - 1]);
   assert.equal(last.model.blocks.length, 2);
-  assert.match(await w.page.locator(`#boardSaveState`).innerText(), /Enregistré|Saved/);
+  assert.equal(await w.page.locator(`#boardSaveState`).innerText(), ``);
   assert.deepEqual(w.errors, []);
 });
 
@@ -1332,4 +1332,19 @@ test(`Ctrl+Z undoes a move, but leaves the undo of the text to the browser insid
   await w.page.keyboard.press(`Control+z`);
   assert.equal(await w.page.evaluate(() => window.__prevented), false);
   assert.deepEqual(w.errors, []);
+});
+
+test(`nothing is written after a save, only a failure is reported, and the named values button is an icon with a tip`, async () => {
+  const w = await openWithRow({ savedOptions: SAVED }, 1);
+  await edit(w);
+  await w.page.click(`#boardNumbers`);
+  await w.page.waitForFunction(() => window.__saved && window.__saved.length > 0);
+  assert.equal(await w.page.locator(`#boardSaveState`).innerText(), ``);
+  assert.equal(await w.page.locator(`#boardValuesButton`).innerText(), `\u03c0`);
+  assert.match(await w.page.locator(`#boardValuesButton`).getAttribute(`data-tip`), /nommées|Named values/);
+  const failing = await openWithRow({ savedOptions: SAVED, failOnSave: true }, 1);
+  await edit(failing);
+  await failing.page.click(`#boardNumbers`);
+  await failing.page.waitForFunction(() => document.getElementById(`boardSaveState`).textContent.length > 0);
+  assert.equal(await failing.page.locator(`#boardSaveState.warning`).count(), 1);
 });

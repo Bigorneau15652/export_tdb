@@ -4,7 +4,7 @@
 (function (root) {
   const PATHS = {
     plus: [`M12 5v14`, `M5 12h14`],
-    format: [`M7 3h8l4 4v14H7z`, `M15 3v4h4`],
+    format: [`M16 5H3v12h5`, `M8 9h13v12H8z`],
     landscape: [`M3 7h18v10H3z`],
     portrait: [`M7 3h10v18H7z`],
     margin: [`M4 4h16v16H4z`, `M8 8h8v8H8z`],
@@ -12,7 +12,7 @@
     numbers: [`M9 4L7 20`, `M17 4l-2 16`, `M4 9h16`, `M3 15h16`],
     refresh: [`M20 11a8 8 0 1 0-2.3 5.7`, `M20 5v6h-6`],
     print: [`M7 8V3h10v5`, `M7 17H4v-7h16v7h-3`, `M7 14h10v7H7z`],
-    bug: [`M9 9h6v8a3 3 0 0 1-6 0z`, `M9 6a3 3 0 0 1 6 0`, `M4 13h5`, `M15 13h5`, `M5 8l3 2`, `M19 8l-3 2`, `M5 19l3-2`, `M19 19l-3-2`],
+    developer: [`M9.5 5a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0`, `M6 12a6 6 0 0 1 12 0`, `M4 12h16v7H4z`, `M2 21h20`],
     text: [`M5 6h14`, `M12 6v13`, `M9 19h6`],
     table: [`M3 5h18v14H3z`, `M3 10h18`, `M9 5v14`, `M15 5v14`],
     record: [`M5 4h14v16H5z`, `M8 9h8`, `M8 13h8`, `M8 17h5`],

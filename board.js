@@ -284,9 +284,9 @@
 
   // ------------------------------------------------------------------ Saving
 
-  // Shows the result of the last save.
+  // Shows the result of the last save: only a failure is written.
   function showSaveState(ok) {
-    el.saveState.textContent = ok === null ? `` : ok ? tr(`boardSaved`) : tr(`boardSaveFailed`);
+    el.saveState.textContent = ok === false ? tr(`boardSaveFailed`) : ``;
     el.saveState.className = ok === false ? `warning` : `hint`;
   }
 
