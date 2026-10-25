@@ -27,7 +27,7 @@ test(`every text asked by name in the page and the scripts exists`, () => {
   for (const file of files) {
     const text = fs.readFileSync(path.join(root, file), `utf8`);
     for (const match of text.matchAll(/\b(?:tr|t)\(`(\w+)`/g)) asked.add(match[1]);
-    for (const match of text.matchAll(/data-i18n(?:-tip|-label)?="(\w+)"/g)) asked.add(match[1]);
+    for (const match of text.matchAll(/data-i18n(?:-tip|-label|-hover)?="(\w+)"/g)) asked.add(match[1]);
   }
   assert.ok(asked.size > 100);
   assert.deepEqual([...asked].filter((key) => !french.includes(key)), []);

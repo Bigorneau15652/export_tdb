@@ -310,3 +310,5 @@ body.printBody { margin: 0; background: #e4e7eb; color: #1f2933; font-family: sa
 .barMenu .menuItem[data-palette] .swatches { display: flex; flex: 0 0 100%; }
 .barMenu .swatches span { flex: 1 1 0; height: 12px; }
 .iconButton[aria-expanded="true"]::after { display: none !important; }
+#boardPanelHead .iconButton[data-tip]:hover::after, #boardPanelHead .iconButton[data-tip]:focus-visible::after { left: auto; right: 0; }
+#boardGuide { width: 28px; height: 26px; }

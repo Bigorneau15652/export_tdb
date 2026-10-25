@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.14.0
+
+- Course windows, first part: a button with a student cap, at the top of the settings panel next to the type of block, opens the course of the block in a window of the browser of its own. The window can be moved (to another screen too), resized and kept open while a block is set; a cross at its top right (or the Escape key) closes it, and a second click on the cap changes its content. Courses exist for the Text, Table and Sheet blocks; the cap is hidden for the other types until their courses are written (next version).
+- A course tells what the block is for, how to set it step by step, each setting of the panel with its explanation, examples (the settings to make and a small result drawn with invented values) and good to know. The names of the menus are not typed in the texts: they are written between double brackets and replaced by the real name of the menu, and a test checks that each one is a menu of the panel. The courses are written in French and in English.
+- The messages and explanations of the panel that named old things are corrected: the Explorer tab (gone since version 0.11.0), the "grouping column" (the menu is "Item") and the link of the rows ("Linked to the selected row by").
+- New files `guide.html`, `guide.css`, `guide.js` and `guide-content.js`; the page of the course window has no script and its own strict Content-Security-Policy.
+- Tests: every text of the courses exists in French and in English, every menu named is a real menu, the sections and the samples, and in the page the opening of the course window and its content.
+
 ## 0.13.0
 
 - Nine palettes of twenty colours, chosen with a palette button of the tool bar for all the charts of the dashboard (the menu shows the name and the twenty colours of each palette): Classic (the colours of the earlier default palette, then lighter ones), Acid (very saturated), Pastel, Warm colours, Cool colours, three ramps of one hue (red, green, blue, from dark to light) and Greys. The palette is a setting of the page, so the menu "Palette" of each chart is gone.
