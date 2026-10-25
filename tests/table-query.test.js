@@ -339,7 +339,11 @@ test(`a grouped table and a cross table give the numbers for a chart`, () => {
   assert.deepEqual(grouped.chart.categories, [`(empty)`, `Classroom`, `Office`]);
   assert.equal(grouped.chart.series.length, 2);
   assert.deepEqual(grouped.chart.series[0].values, [8.25, 35, 32.5]);
-  assert.equal(grouped.chart.series[0].name, grouped.headers[1].text);
+  assert.equal(grouped.chart.series[0].name, `Area`);
+  assert.equal(grouped.chart.series[1].name, `Count`);
+  assert.equal(grouped.headers[1].text, `Sum (Area)`);
+  const average = run(`Sites`, 1, { ...GROUPED, columns: [{ path: `Area`, fn: `avg` }, { path: `Seats`, fn: `max`, label: `Places` }] });
+  assert.deepEqual(average.chart.series.map((one) => one.name), [`Area (average)`, `Places`]);
   const cross = run(`Sites`, 1, { ...CROSS });
   assert.deepEqual(cross.chart.categories, [`(empty)`, `Classroom`, `Office`]);
   assert.deepEqual(cross.chart.series.map((s) => s.name), [`Ground`, `Level 1`]);

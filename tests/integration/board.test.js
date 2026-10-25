@@ -1208,6 +1208,31 @@ test(`a scatter chart is drawn from the first two columns of a list and explains
 test(`a scatter chart on a grouped table asks to remove the grouping`, async () => {
   const w = await openWithRow({ savedOptions: chartModel({ ...CHART_CONFIG, chart: `scatter` }) }, 1);
   await edit(w);
-  assert.match(await w.page.locator(`.block[data-id="ch1"]`).innerText(), /regroupement|grouping/i);
+  assert.match(await w.page.locator(`.block[data-id="ch1"]`).innerText(), /sans item|without an item/i);
   assert.deepEqual(w.errors, []);
+});
+
+test(`choosing the scatter plot on a grouped chart takes away the item and hides the calculations of the columns`, async () => {
+  const w = await openWithRow({ savedOptions: chartModel({ ...CHART_CONFIG }) }, 1);
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="ch1"]`, { position: { x: 20, y: 30 } });
+  await w.page.selectOption(`#boardChartType`, `scatter`);
+  const config = (await model(w.page)).blocks[0].config;
+  assert.deepEqual([config.chart, config.mode, config.groupBy.filter(Boolean).length, config.colItem], [`scatter`, `list`, 0, ``]);
+  assert.equal(await w.page.locator(`#boardGroup1`).isHidden(), true);
+  assert.equal(await w.page.locator(`#boardColumnRows .colrow .colFn`).first().isHidden(), true);
+  assert.match(await w.page.locator(`#boardColumnsLabel`).innerText(), /horizontal/i);
+  await w.page.selectOption(`#boardChartType`, `bar`);
+  assert.equal(await w.page.locator(`#boardGroup1`).isVisible(), true);
+  assert.deepEqual(w.errors, []);
+});
+
+test(`the legend of a stacked chart names the column alone for a sum and adds the calculation otherwise`, async () => {
+  const sum = await openWithRow({ savedOptions: chartModel({ ...CHART_CONFIG, chart: `stack`, legend: `bottom`, columns: [{ path: `Area`, fn: `sum` }, { path: `Seats`, fn: `avg` }] }) }, 1);
+  await sum.page.waitForFunction(() => document.querySelector(`.block[data-id="ch1"] .chartPlot svg`));
+  const texts = await sum.page.$$eval(`.block[data-id="ch1"] svg text`, (list) => list.map((node) => node.textContent));
+  assert.ok(texts.includes(`Area`), texts.join(`|`));
+  assert.ok(texts.some((text) => /^Seats \((average|moyenne)\)$/i.test(text)), texts.join(`|`));
+  assert.ok(!texts.some((text) => /^(Sum|Somme) /.test(text)));
+  assert.deepEqual(sum.errors, []);
 });

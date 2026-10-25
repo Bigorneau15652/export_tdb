@@ -258,3 +258,7 @@ body.printBody { margin: 0; background: #e4e7eb; color: #1f2933; font-family: sa
   .printSheet .page { width: 100vw !important; height: 100vh !important; margin: 0; box-shadow: none; break-after: page; page-break-after: always; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .printSheet .page:last-child { break-after: auto; page-break-after: auto; }
 }
+
+/* Scatter plot: no item and no calculation per column, only the columns and their names. */
+#boardTableSettings.forScatter .notScatter { display: none; }
+#boardTableSettings.forScatter .colrow .colFn, #boardTableSettings.forScatter .colrow .stepButton { display: none; }

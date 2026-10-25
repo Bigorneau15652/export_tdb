@@ -427,6 +427,13 @@
       ...groupBy.map((group) => ({ text: pathLabel(dataset, config.table, group.path), numeric: false })),
       ...measures.map((measure) => ({ text: measure.label || `${words[measure.fn]}${measure.path ? ` (${pathLabel(dataset, config.table, measure.path)})` : ``}`, numeric: true }))
     ];
+    // The name of a series of a chart: the name of the column alone for a sum, then `Column (average)` and so on.
+    const seriesName = (measure, at) => {
+      if (measure.label) return measure.label;
+      if (!measure.path) return words[measure.fn];
+      const name = pathLabel(dataset, config.table, measure.path);
+      return measure.fn === `sum` ? name : `${name} (${String(words[measure.fn]).toLowerCase()})`;
+    };
     const shown = result.rows.slice(0, MAX_ROWS);
     const body = shown.map((row) => [...row.keys, ...row.values.map((value, index) => numberText(value, measures[index].fn, measures[index].decimals))]);
     const total = config.total ? [words.total, ...groupBy.slice(1).map(() => ``), ...result.totals.map((value, index) => numberText(value, measures[index].fn, measures[index].decimals))] : null;
@@ -438,7 +445,7 @@
     }
     const chart = {
       categories: shown.map((row) => row.keys[0]),
-      series: measures.map((measure, at) => ({ name: headers[groupBy.length + at].text, values: shown.map((row) => row.values[at]) }))
+      series: measures.map((measure, at) => ({ name: seriesName(measure, at), values: shown.map((row) => row.values[at]) }))
     };
     return { headers, rows: body, total, chart, truncated: result.rows.length > shown.length };
   }

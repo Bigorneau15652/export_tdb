@@ -1534,7 +1534,9 @@
     el.crossBox.hidden = !config.groupBy[0];
     el.crossMore.hidden = config.mode !== `cross`;
     el.addColumn.hidden = config.mode === `cross` && config.columns.length > 0;
-    $(`boardColumnsLabel`).textContent = tr(config.mode === `cross` ? `boardCellCalc` : `boardColumns`);
+    const scatter = block.type === `chart` && config.chart === `scatter`;
+    el.tableBox.classList.toggle(`forScatter`, scatter);
+    $(`boardColumnsLabel`).textContent = tr(scatter ? `boardScatterColumns` : config.mode === `cross` ? `boardCellCalc` : `boardColumns`);
     setOptions(el.colItem, [[``, tr(`boardColItemNone`)], ...choices.map((choice) => [choice.path, choice.label])], config.colItem);
     const colColumn = config.colItem ? schema.tables.get(config.table).columns.find((column) => column.id === config.colItem.split(`.`)[0]) : null;
     setOptions(el.colSort, [[`key`, tr(`colSortKey`)], ...(colColumn && colColumn.kind === `ref` ? [[`ref`, tr(`colSortRef`)]] : [])], config.colSort);
@@ -2004,7 +2006,15 @@
   });
   el.slice.addEventListener(`change`, () => changeConfig({ slice: Number(el.slice.value) }));
   el.colSort.addEventListener(`change`, () => changeConfig({ colSort: el.colSort.value }));
-  el.chartType.addEventListener(`change`, () => changeConfig({ chart: el.chartType.value }));
+  el.chartType.addEventListener(`change`, () => {
+    const block = selectedBlock();
+    // A scatter plot is made from a plain list: the item and the item in columns are taken away.
+    if (block && el.chartType.value === `scatter` && block.config.mode !== `list`) {
+      changeConfig({ chart: `scatter`, groupBy: [``], colItem: ``, sort: { ...block.config.sort, by: `none` }, columns: fitColumns({ ...block, config: { ...block.config, groupBy: [``], colItem: `` } }, false) });
+      return;
+    }
+    changeConfig({ chart: el.chartType.value });
+  });
   el.chartPalette.addEventListener(`change`, () => changeConfig({ palette: el.chartPalette.value }));
   el.chartLegend.addEventListener(`change`, () => changeConfig({ legend: el.chartLegend.value }));
   el.chartLabels.addEventListener(`change`, () => changeConfig({ labels: el.chartLabels.value }));
