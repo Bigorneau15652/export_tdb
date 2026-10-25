@@ -376,7 +376,8 @@
     if (typeof changes.title === `string`) next.title = changes.title.slice(0, MAX_TITLE);
     if (TYPES.includes(changes.type) && changes.type !== block.type) {
       next.type = changes.type;
-      next.config = cleanConfig(changes.type, {});
+      // What the two types have in common (a table and a chart share their data) is kept; the rest starts again.
+      next.config = cleanConfig(changes.type, block.config);
     }
     if (changes.config && typeof changes.config === `object`) next.config = cleanConfig(next.type, { ...next.config, ...changes.config });
     return { ...model, blocks: model.blocks.map((item) => (item.id === id ? next : item)) };

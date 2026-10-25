@@ -56,13 +56,13 @@ test(`the widget opens on the dashboard in reading mode, without tools`, async (
   assert.deepEqual(w.errors, []);
 });
 
-test(`the edit button shows the tools and every menu has a help badge`, async () => {
+test(`the edit button shows the tools and every button has its tip`, async () => {
   const w = await openBoard();
   await edit(w);
   assert.equal(await w.page.locator(`#boardTools`).isVisible(), true);
-  const tips = await w.page.$$eval(`#panelBoard .help`, (list) => list.map((badge) => badge.dataset.tip));
-  assert.ok(tips.length >= 6);
-  assert.ok(tips.every((text) => text && text.length > 20));
+  const tips = await w.page.$$eval(`#boardBar .iconButton[data-tip]`, (list) => list.map((button) => button.dataset.tip));
+  assert.ok(tips.length >= 8);
+  assert.ok(tips.every((text) => text && text.length > 5));
   await w.page.click(`#boardEdit`);
   assert.equal(await w.page.locator(`#boardTools`).isHidden(), true);
   assert.deepEqual(w.errors, []);
@@ -207,7 +207,7 @@ test(`a double click opens the settings and the title is changed there`, async (
   const block = (await model(w.page)).blocks.find((b) => b.id === `bbb2`);
   assert.equal(block.title, `Présentation de l'école`);
   assert.match(await w.page.locator(`.block[data-id="bbb2"]`).innerText(), /Présentation de l'école/);
-  assert.equal(await w.page.locator(`#boardType`).count(), 0);
+  assert.equal(await w.page.locator(`#boardType`).inputValue(), `table`);
   assert.deepEqual(w.errors, []);
 });
 
@@ -732,26 +732,61 @@ test(`the rows menu says in a short sentence which rows are kept and keeps the a
   assert.deepEqual(w.errors, []);
 });
 
-test(`a help badge shows one bubble only: no native title next to the drawn one`, async () => {
-  const w = await openBoard();
-  await edit(w);
-  const badges = await w.page.$$eval(`#panelBoard .help`, (list) => list.map((b) => [b.hasAttribute(`title`), Boolean(b.dataset.tip)]));
-  assert.ok(badges.length > 5);
-  assert.ok(badges.every(([hasTitle, hasTip]) => !hasTitle && hasTip));
-});
-
-test(`a help badge opens a bubble on click and its cross closes it`, async () => {
+test(`the settings have no help badge except the one of the rows, and every label explains itself on hover`, async () => {
   const w = await openBoard({ savedOptions: SAVED });
   await edit(w);
   await w.page.dblclick(`.block[data-id="bbb2"]`, { position: { x: 20, y: 30 } });
-  await w.page.click(`#boardPanel .help`);
+  const badges = await w.page.$$eval(`#boardPanel .help`, (list) => list.map((badge) => [badge.id, Boolean(badge.dataset.tip), badge.hasAttribute(`title`)]));
+  assert.deepEqual(badges.map(([id]) => id), [`boardRowsHelp`]);
+  assert.ok(badges.every(([, hasTip, hasTitle]) => hasTip && !hasTitle));
+  const labels = await w.page.$$eval(`#boardPanel label[data-i18n-hover]`, (list) => list.map((label) => label.dataset.tip));
+  assert.ok(labels.length >= 5);
+  assert.ok(labels.every((text) => text && text.length > 10));
+  await w.page.hover(`label[for="boardTable"]`);
+  assert.equal(await w.page.locator(`label[for="boardTable"]`).evaluate((node) => getComputedStyle(node, `::after`).content !== `none`), true);
+  assert.equal(await w.page.locator(`#boardPanel .hint:visible`).filter({ hasText: /./ }).count() < 3, true);
+  assert.deepEqual(w.errors, []);
+});
+
+test(`the row help badge opens a bubble on click and its cross closes it`, async () => {
+  const w = await openWithRow({ savedOptions: tableModel({ table: `Rooms`, link: `Rooms.Site`, columns: [{ path: `Area` }] }) }, 1);
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 20, y: 30 } });
+  await w.page.waitForSelector(`#boardRowsHelp`, { state: `visible` });
+  await w.page.click(`#boardRowsHelp`);
   assert.equal(await w.page.locator(`.helpBubble`).count(), 1);
   assert.ok((await w.page.locator(`.helpBubble`).innerText()).length > 3);
   await w.page.click(`.helpBubble .helpClose`);
   assert.equal(await w.page.locator(`.helpBubble`).count(), 0);
-  await w.page.click(`#boardPanel .help`);
+  await w.page.click(`#boardRowsHelp`);
   await w.page.keyboard.press(`Escape`);
   assert.equal(await w.page.locator(`.helpBubble`).count(), 0);
+  assert.deepEqual(w.errors, []);
+});
+
+test(`the type of block is the first menu of the settings and changing it keeps what a table and a chart share`, async () => {
+  const config = { table: `Rooms`, link: `Rooms.Site`, groupBy: [`Usage`], columns: [{ path: `Area`, fn: `sum` }] };
+  const w = await openWithRow({ savedOptions: tableModel(config) }, 1);
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 20, y: 30 } });
+  assert.equal(await w.page.locator(`#boardPanelHead`).isVisible(), true);
+  assert.equal(await w.page.locator(`#boardType`).inputValue(), `table`);
+  assert.equal(await w.page.locator(`#boardPanel .sectionTitle, #boardPanel #boardType`).first().getAttribute(`id`), `boardType`);
+  await w.page.selectOption(`#boardType`, `chart`);
+  let block = (await model(w.page)).blocks[0];
+  assert.deepEqual([block.type, block.config.table, block.config.groupBy[0], block.config.columns[0].path], [`chart`, `Rooms`, `Usage`, `Area`]);
+  assert.equal(await w.page.locator(`#boardChartSettings`).isVisible(), true);
+  await w.page.waitForTimeout(700);
+  await w.page.selectOption(`#boardType`, `text`);
+  block = (await model(w.page)).blocks[0];
+  assert.deepEqual([block.type, block.config.source, block.config.text], [`text`, `fixed`, ``]);
+  await w.page.keyboard.press(`Escape`);
+  await w.page.click(`#boardCanvas`, { position: { x: 5, y: 5 } });
+  await w.page.keyboard.press(`Control+z`);
+  assert.equal((await model(w.page)).blocks[0].type, `chart`);
+  await w.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 20, y: 30 } });
+  await w.page.click(`#boardClose`);
+  assert.equal(await w.page.locator(`#boardPanel`).isHidden(), true);
   assert.deepEqual(w.errors, []);
 });
 
