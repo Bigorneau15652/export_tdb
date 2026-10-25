@@ -34,7 +34,9 @@
   const MAX_RECORD_ITEMS = 24;
   const MAX_VALUES = 40;
   const CHART_TYPES = [`bar`, `stack`, `barh`, `barhStack`, `line`, `area`, `pie`, `donut`, `treemap`, `scatter`];
-  const CHART_PALETTES = [`franche`, `douce`, `contrastee`, `froide`];
+  const CHART_PALETTES = [`classic`, `acid`, `pastel`, `warm`, `cool`, `red`, `green`, `blue`, `grey`];
+  // The palettes of the earlier versions, when the palette was chosen for each chart, and the one that replaces them.
+  const OLD_PALETTES = { franche: `classic`, douce: `pastel`, contrastee: `classic`, froide: `cool` };
   const CHART_LEGENDS = [`none`, `top`, `bottom`, `right`];
   const CHART_LABELS = [`none`, `values`, `percent`];
   const INDICATOR_COLORS = [`none`, `green`, `orange`, `red`, `blue`, `grey`];
@@ -56,7 +58,7 @@
 
   // A model with one empty page: screen format, landscape, 10 mm margins.
   function emptyModel() {
-    return { version: FORMAT_VERSION, page: { format: `screen`, orientation: `landscape`, margin: DEFAULT_MARGIN, numbers: false, footer: `` }, pages: 1, blocks: [], values: [] };
+    return { version: FORMAT_VERSION, page: { format: `screen`, orientation: `landscape`, margin: DEFAULT_MARGIN, numbers: false, footer: ``, palette: `classic` }, pages: 1, blocks: [], values: [] };
   }
 
   // A value that must be one of the allowed ones, or the first allowed one.
@@ -140,12 +142,11 @@
   }
 
   // The settings of a chart block cleaned: the data are chosen like those of a table block (the same keys), then
-  // the type of chart, the palette, the position of the legend and the labels of the values.
+  // the type of chart, the position of the legend and the labels of the values.
   function cleanChart(raw) {
     return {
       ...cleanTable(raw),
       chart: oneOf(raw.chart, CHART_TYPES),
-      palette: oneOf(raw.palette, CHART_PALETTES),
       legend: CHART_LEGENDS.includes(raw.legend) ? raw.legend : `bottom`,
       labels: oneOf(raw.labels, CHART_LABELS)
     };
@@ -242,9 +243,13 @@
 
   // Page settings cleaned: unknown values give the defaults. `numbers` shows the page numbers and `footer` is a free
   // text, both written in the bottom margin of every page.
-  function cleanPage(raw) {
+  function cleanPage(raw, blocks) {
     const source = raw && typeof raw === `object` ? raw : {};
+    // A dashboard saved before the palette was a setting of the page takes the palette of its first chart.
+    const chart = Array.isArray(blocks) ? blocks.find((item) => item && item.type === `chart` && item.config && typeof item.config.palette === `string`) : null;
+    const old = chart ? OLD_PALETTES[chart.config.palette] || (CHART_PALETTES.includes(chart.config.palette) ? chart.config.palette : ``) : ``;
     return {
+      palette: CHART_PALETTES.includes(source.palette) ? source.palette : old || `classic`,
       format: Object.prototype.hasOwnProperty.call(FORMATS, source.format) ? source.format : `screen`,
       orientation: ORIENTATIONS.includes(source.orientation) ? source.orientation : `landscape`,
       margin: MARGINS.includes(source.margin) ? source.margin : DEFAULT_MARGIN,
@@ -297,7 +302,7 @@
     if (raw === null || raw === undefined) return { model: emptyModel(), warnings, locked: false };
     if (typeof raw !== `object` || Array.isArray(raw)) return { model: emptyModel(), warnings: [`invalid`], locked: false };
     if (typeof raw.version === `number` && raw.version > FORMAT_VERSION) return { model: emptyModel(), warnings: [`version`], locked: true };
-    const page = cleanPage(raw.page);
+    const page = cleanPage(raw.page, raw.blocks);
     const list = Array.isArray(raw.blocks) ? raw.blocks : [];
     if (list.length > MAX_BLOCKS) warnings.push(`blocks`);
     const ids = new Set();

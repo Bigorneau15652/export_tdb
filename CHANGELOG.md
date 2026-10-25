@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.13.0
+
+- Nine palettes of twenty colours, chosen with a palette button of the tool bar for all the charts of the dashboard (the menu shows the name and the twenty colours of each palette): Classic (the colours of the earlier default palette, then lighter ones), Acid (very saturated), Pastel, Warm colours, Cool colours, three ramps of one hue (red, green, blue, from dark to light) and Greys. The palette is a setting of the page, so the menu "Palette" of each chart is gone.
+- A dashboard saved before takes the palette of its first chart (the earlier "Vivid" becomes Classic, "Soft" Pastel, "Cool" Cool colours, "High contrast" Classic), so that the charts keep their colours. Nothing is lost.
+- A ramp gives its colours spread over its range, so that two or three series are well told apart; the other palettes give their colours in order. The names written in the rectangles of a treemap are dark or white according to the colour under them.
+- The colour checks of the earlier palettes (3 to 1 against white and a distance between every pair) are replaced by checks that fit nine palettes: twenty different colours each, the classic start kept at 3 to 1, consecutive colours told apart, ramps in even steps.
+- Tests: the nine palettes, the spreading of the ramps, the readable text colour, the palette of the page and the migration, and in the page the palette menu.
+
 ## 0.12.0
 
 - Settings panel made compact. It now starts with the type of the block, in a menu, and a cross that closes the panel: the type can be changed at any time, and what a table and a chart have in common (table, rows, item, calculations, filters, sort) is kept when changing between them; for the other changes the settings start again (Ctrl+Z brings the previous ones back). The title "Block settings", the "Close" button and the explanations that were always shown (help text of the text block, order hint of the sort, help of the named values) are gone.

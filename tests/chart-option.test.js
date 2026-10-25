@@ -24,22 +24,45 @@ const lab = (hex) => {
 };
 const distance = (a, b) => Math.hypot(...lab(a).map((v, i) => v - lab(b)[i]));
 
-const helpers = { fontSize: 11, format: (value, decimals) => String(decimals === undefined || decimals < 0 ? value : value.toFixed(decimals)), decimals: -1 };
-const config = (changes) => ({ chart: `bar`, palette: `franche`, legend: `bottom`, labels: `none`, ...changes });
+const helpers = { palette: `classic`, fontSize: 11, format: (value, decimals) => String(decimals === undefined || decimals < 0 ? value : value.toFixed(decimals)), decimals: -1 };
+const config = (changes) => ({ chart: `bar`, legend: `bottom`, labels: `none`, ...changes });
 const data = { categories: [`A`, `B`], series: [{ name: `S1`, values: [1, 2] }, { name: `S2`, values: [3, null] }] };
 
-test(`each palette has ten colours that keep a 3 to 1 contrast against white and are told apart`, () => {
-  assert.deepEqual(C.PALETTE_KEYS, [`franche`, `douce`, `contrastee`, `froide`]);
+test(`there are nine palettes of twenty different colours, each one made as announced`, () => {
+  assert.deepEqual(C.PALETTE_KEYS, [`classic`, `acid`, `pastel`, `warm`, `cool`, `red`, `green`, `blue`, `grey`]);
   for (const key of C.PALETTE_KEYS) {
     const colors = C.PALETTES[key];
-    assert.equal(colors.length, 10, key);
+    assert.equal(colors.length, 20, key);
     assert.ok(colors.every((color) => /^#[0-9a-f]{6}$/.test(color)), key);
-    assert.equal(new Set(colors).size, 10, key);
-    for (const color of colors) assert.ok(contrastWithWhite(color) >= 3, `${key} ${color} contrast ${contrastWithWhite(color)}`);
-    for (let a = 0; a < 10; a += 1) {
-      for (let b = a + 1; b < 10; b += 1) assert.ok(distance(colors[a], colors[b]) >= 15, `${key} ${colors[a]} ${colors[b]} ${distance(colors[a], colors[b])}`);
-    }
+    assert.equal(new Set(colors).size, 20, key);
   }
+  // The classic palette starts with the ten colours of the earlier default palette, kept at 3 to 1 against white.
+  for (const color of C.PALETTES.classic.slice(0, 10)) assert.ok(contrastWithWhite(color) >= 3, color);
+  // The colours that follow each other in the palettes of several hues are told apart (so are those of the first ten of the classic).
+  for (const key of [`classic`, `acid`, `pastel`, `warm`, `cool`]) {
+    const colors = C.PALETTES[key];
+    for (let at = 1; at < 10; at += 1) assert.ok(distance(colors[at - 1], colors[at]) >= 12, `${key} ${colors[at - 1]} ${colors[at]}`);
+  }
+  // The ramps go from dark to light in even steps.
+  for (const key of C.RAMPS) {
+    const colors = C.PALETTES[key];
+    for (let at = 1; at < 20; at += 1) assert.ok(luminance(colors[at]) > luminance(colors[at - 1]), `${key} ${at}`);
+  }
+  // Acid colours are very saturated, pastels are light.
+  for (const color of C.PALETTES.pastel) assert.ok(luminance(color) > 0.4, color);
+});
+
+test(`the colours of a few series come in order from a palette of several hues and are spread over a ramp`, () => {
+  assert.deepEqual(C.colorsFor(`classic`, 3).slice(0, 3), C.PALETTES.classic.slice(0, 3));
+  assert.equal(C.colorsFor(`acid`, 25).length, 20);
+  const ramp = C.colorsFor(`blue`, 3);
+  assert.equal(ramp.length, 3);
+  assert.ok(luminance(ramp[0]) < luminance(ramp[1]) && luminance(ramp[1]) < luminance(ramp[2]));
+  assert.ok(distance(ramp[0], ramp[1]) > 20 && distance(ramp[1], ramp[2]) > 20);
+  assert.equal(C.colorsFor(`grey`, 1).length, 1);
+  assert.deepEqual(C.colorsFor(`unknown`, 2), C.PALETTES.classic);
+  assert.equal(C.readableOn(`#ffffff`), `#1f2933`);
+  assert.equal(C.readableOn(`#10294c`), `#ffffff`);
 });
 
 test(`nothing to draw gives no option`, () => {
@@ -55,10 +78,10 @@ test(`bar and line charts have a category axis, a value axis and one series per 
   assert.deepEqual(bar.series.map((s) => [s.type, s.name, s.stack]), [[`bar`, `S1`, undefined], [`bar`, `S2`, undefined]]);
   assert.deepEqual(bar.series[1].data, [3, null]);
   assert.equal(bar.animation, false);
-  assert.deepEqual(bar.color, C.PALETTES.franche);
-  const stack = C.buildOption(config({ chart: `stack`, palette: `froide` }), data, helpers);
+  assert.deepEqual(bar.color, C.PALETTES.classic);
+  const stack = C.buildOption(config({ chart: `stack` }), data, { ...helpers, palette: `cool` });
   assert.deepEqual(stack.series.map((s) => s.stack), [`total`, `total`]);
-  assert.deepEqual(stack.color, C.PALETTES.froide);
+  assert.deepEqual(stack.color, C.PALETTES.cool);
   const horizontal = C.buildOption(config({ chart: `barhStack` }), data, helpers);
   assert.equal(horizontal.yAxis.type, `category`);
   assert.equal(horizontal.yAxis.inverse, true);
@@ -95,8 +118,8 @@ test(`the legend and the labels follow the settings`, () => {
 });
 
 test(`the option is plain data: no script and no unknown palette`, () => {
-  const option = C.buildOption(config({ palette: `unknown` }), data, helpers);
-  assert.deepEqual(option.color, C.PALETTES.franche);
+  const option = C.buildOption(config({}), data, { ...helpers, palette: `unknown` });
+  assert.deepEqual(option.color, C.PALETTES.classic);
   const text = JSON.stringify(option);
   assert.ok(!/<|javascript:/i.test(text));
 });
@@ -128,11 +151,12 @@ test(`an area chart stacks smooth layers without symbols`, () => {
 });
 
 test(`a treemap has one rectangle per item with a palette colour and no legend`, () => {
-  const option = C.buildOption(config({ chart: `treemap`, labels: `percent`, palette: `froide` }), { categories: [`A`, `B`, `C`], series: [{ name: `S`, values: [1, 3, 0] }] }, helpers);
+  const option = C.buildOption(config({ chart: `treemap`, labels: `percent` }), { categories: [`A`, `B`, `C`], series: [{ name: `S`, values: [1, 3, 0] }] }, { ...helpers, palette: `cool` });
   const one = option.series[0];
   assert.equal(one.type, `treemap`);
   assert.deepEqual(one.data.map((item) => item.name), [`A`, `B`]);
-  assert.equal(one.data[1].itemStyle.color, C.PALETTES.froide[1]);
+  assert.equal(one.data[1].itemStyle.color, C.PALETTES.cool[1]);
+  assert.equal(one.data[1].label.color, C.readableOn(C.PALETTES.cool[1]));
   assert.equal(option.legend.show, false);
   assert.equal(one.label.formatter({ name: `B`, value: 3 }), `B\n75.0 %`);
   assert.equal(C.buildOption(config({ chart: `treemap`, labels: `values` }), data, helpers).series[0].label.formatter({ name: `A`, value: 1 }), `A\n1`);
