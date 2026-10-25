@@ -1,8 +1,7 @@
 /* Styles of the dashboard tab. Colours are explicit on every element so that the dark mode of the
    operating system can never make text invisible. */
 #app { max-width: none; }
-body[data-tab="board"] #status, body[data-tab="board"] #error { display: none; }
-#panelExplorer, #panelLab { max-width: 900px; }
+#status { display: none; }
 #boardBar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; }
 .tools { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 12px; margin: 8px 0; }
 .tool { min-width: 140px; }
@@ -34,8 +33,9 @@ input[type="number"]:focus-visible, input[type="text"]:focus-visible { outline: 
 .block:focus-visible { outline: 3px solid #f2b705; outline-offset: 1px; }
 .block.dragging { opacity: 0.45; }
 .ghost { position: absolute; z-index: 3; border: 2px dashed #1c5d8c; background: rgba(28, 93, 140, 0.18); pointer-events: none; }
-.pencil, .handle { display: none; }
-.block.selected .pencil { display: block; position: absolute; top: 2px; right: 2px; width: 26px; height: 26px; padding: 0; border: 1px solid #1c5d8c; border-radius: 4px; background: #1c5d8c; color: #ffffff; font-size: 15px; line-height: 1; cursor: pointer; }
+.cross, .handle { display: none; }
+#boardCanvas.editing .block:hover .cross, #boardCanvas.editing .block.selected .cross { display: block; position: absolute; top: 2px; right: 2px; width: 22px; height: 22px; padding: 0; border: 1px solid #8a1c1c; border-radius: 4px; background: #ffffff; color: #8a1c1c; font-size: 16px; font-weight: 700; line-height: 1; cursor: pointer; }
+#boardCanvas.editing .block .cross:hover { background: #8a1c1c; color: #ffffff; }
 .block.selected .handle { display: block; position: absolute; background: #1c5d8c; }
 .handle.e { top: 30px; right: 0; width: 7px; bottom: 12px; cursor: ew-resize; }
 .handle.s { left: 0; bottom: 0; height: 7px; right: 12px; cursor: ns-resize; }
@@ -262,3 +262,31 @@ body.printBody { margin: 0; background: #e4e7eb; color: #1f2933; font-family: sa
 /* Scatter plot: no item and no calculation per column, only the columns and their names. */
 #boardTableSettings.forScatter .notScatter { display: none; }
 #boardTableSettings.forScatter .colrow .colFn, #boardTableSettings.forScatter .colrow .stepButton { display: none; }
+
+/* Tool bar: one line of small icon buttons. The explanation of a button is written under it on hover or focus. */
+#panelBoard { position: relative; }
+#boardBar { flex-wrap: wrap; gap: 6px; margin: 4px 0 6px; }
+#boardBar .barGroup { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 0 6px; border-left: 1px solid #9aa5b1; border-right: 1px solid #9aa5b1; }
+#boardBar .barSpacer { flex: 1 1 12px; }
+.iconButton { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; padding: 0; border: 2px solid #52606d; border-radius: 6px; background: #ffffff; color: #1f2933; cursor: pointer; }
+.iconButton:hover { background: #e4e7eb; }
+.iconButton:focus-visible { outline: 3px solid #f2b705; outline-offset: 2px; }
+.iconButton.primary { border-color: #1c5d8c; background: #1c5d8c; color: #ffffff; }
+.iconButton.primary:hover { background: #2a74ab; border-color: #2a74ab; }
+.iconButton.on, .iconButton[aria-pressed="true"] { border-color: #1c5d8c; background: #1c5d8c; color: #ffffff; }
+.iconButton[aria-expanded="true"] { background: #cbd2d9; }
+.iconButton[data-tip]:hover::after, .iconButton[data-tip]:focus-visible::after { content: attr(data-tip); position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; width: max-content; max-width: 240px; padding: 5px 8px; border-radius: 4px; background: #1f2933; color: #ffffff; font-size: 12px; font-weight: 400; line-height: 1.3; text-align: left; white-space: normal; pointer-events: none; }
+#boardDebug[data-tip]:hover::after, #boardDebug[data-tip]:focus-visible::after, #boardPrint[data-tip]:hover::after { left: auto; right: 0; }
+.barMenu { position: absolute; z-index: 20; min-width: 190px; padding: 6px; border: 2px solid #52606d; border-radius: 6px; background: #ffffff; box-shadow: 0 4px 14px rgba(31, 41, 51, 0.3); }
+.barMenu .menuList { display: flex; flex-direction: column; gap: 2px; }
+.barMenu .menuItem { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border: 0; border-radius: 4px; background: #ffffff; color: #1f2933; font: inherit; text-align: left; cursor: pointer; }
+.barMenu .menuItem:hover { background: #e4e7eb; }
+.barMenu .menuItem:focus-visible { outline: 3px solid #f2b705; }
+.barMenu .menuItem.current { background: #d8e6f1; font-weight: 700; }
+.barMenu label { display: block; margin: 0 0 4px; font-size: 12px; font-weight: 600; color: #1f2933; }
+.barMenu input[type="text"] { width: 260px; max-width: 100%; }
+.debugBox { margin: 6px 0; padding: 8px; border: 2px solid #52606d; border-radius: 6px; background: #ffffff; }
+.debugBox textarea { display: block; width: 100%; margin: 4px 0; font-family: monospace; font-size: 12px; }
+#boardZoomBar { position: fixed; right: 12px; bottom: 8px; z-index: 15; padding: 2px 8px; border: 1px solid #9aa5b1; border-radius: 12px; background: rgba(255, 255, 255, 0.92); }
+#boardZoomBar input[type="range"] { display: block; width: 110px; height: 14px; margin: 0; accent-color: #1c5d8c; cursor: pointer; }
+#boardLayout { padding-bottom: 40px; }

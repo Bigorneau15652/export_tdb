@@ -27,8 +27,8 @@ async function edit(w) {
 
 // Adds a block of a type through the tools.
 async function addBlock(w, type) {
-  await w.page.selectOption(`#boardAddType`, type);
-  await w.page.click(`#boardAdd`);
+  await w.page.click(`#boardAddMenu`);
+  await w.page.click(`.menuItem[data-type="${type}"]`);
 }
 
 const model = (page) => page.evaluate(() => window.exportTdbBoard.getModel());
@@ -49,7 +49,7 @@ const SAVED = {
 
 test(`the widget opens on the dashboard in reading mode, without tools`, async () => {
   const w = await openBoard();
-  assert.equal(await w.page.getAttribute(`#tabBoard`, `aria-selected`), `true`);
+  assert.equal(await w.page.locator(`#tabs`).count(), 0);
   assert.equal(await w.page.locator(`#boardTools`).isHidden(), true);
   assert.equal(await w.page.locator(`.page`).count(), 1);
   assert.match(await w.page.locator(`#boardCanvas`).innerText(), /vide|empty/);
@@ -101,7 +101,6 @@ test(`pages are added when a block does not fit and removed when they are empty,
     if (!onLast.length) break;
     await w.page.click(`.block[data-id="${onLast[0].id}"]`, { position: { x: 20, y: 20 } });
     await w.page.keyboard.press(`Delete`);
-    await w.page.click(`#boardConfirmYes`);
   }
   assert.equal((await model(w.page)).pages, pages - 1);
   assert.equal(await w.page.locator(`.page`).count(), pages);
@@ -149,7 +148,7 @@ test(`a simple click selects a block without moving it`, async () => {
   await w.page.mouse.click(first.x + 20, first.y + 30);
   assert.equal(await w.page.locator(`.block[data-id="aaa1"].selected`).count(), 1);
   assert.equal((await model(w.page)).blocks[0].x, 0);
-  assert.equal(await w.page.locator(`.block[data-id="aaa1"] .pencil`).isVisible(), true);
+  assert.equal(await w.page.locator(`.block[data-id="aaa1"] .cross`).isVisible(), true);
 });
 
 test(`the bottom right handle resizes a block and Shift keeps the proportions`, async () => {
@@ -193,12 +192,6 @@ test(`arrows move the selected block by one step and Delete asks before removing
   let table = (await model(w.page)).blocks.find((b) => b.id === `bbb2`);
   assert.deepEqual([table.x, table.y], [2, 11]);
   await w.page.keyboard.press(`Delete`);
-  assert.equal(await w.page.locator(`#boardConfirm`).isVisible(), true);
-  assert.match(await w.page.locator(`#boardConfirmText`).innerText(), /Surfaces/);
-  await w.page.click(`#boardConfirmNo`);
-  assert.equal((await model(w.page)).blocks.length, 2);
-  await w.page.keyboard.press(`Delete`);
-  await w.page.click(`#boardConfirmYes`);
   assert.equal((await model(w.page)).blocks.length, 1);
   assert.equal(await w.page.locator(`.block`).count(), 1);
   assert.deepEqual(w.errors, []);
@@ -218,11 +211,10 @@ test(`a double click opens the settings and the title is changed there`, async (
   assert.deepEqual(w.errors, []);
 });
 
-test(`the pencil opens the settings and Close hides them`, async () => {
+test(`a double click opens the settings and Close hides them`, async () => {
   const w = await openBoard({ savedOptions: SAVED });
   await edit(w);
-  await w.page.click(`.block[data-id="aaa1"]`, { position: { x: 20, y: 30 } });
-  await w.page.click(`.block[data-id="aaa1"] .pencil`);
+  await w.page.dblclick(`.block[data-id="aaa1"]`, { position: { x: 20, y: 30 } });
   assert.equal(await w.page.locator(`#boardPanel`).isVisible(), true);
   assert.equal(await w.page.locator(`#boardX`).count(), 0);
   await w.page.click(`#boardClose`);
@@ -233,10 +225,11 @@ test(`changing the format changes the page size and keeps the blocks without ove
   const w = await openBoard({ savedOptions: SAVED });
   const before = await box(w.page, `.page`);
   await edit(w);
-  await w.page.selectOption(`#boardOrientation`, `landscape`);
+  await w.page.click(`#boardOrientation`);
   const after = await box(w.page, `.page`);
   assert.ok(after.width / after.height > before.width / before.height);
-  await w.page.selectOption(`#boardFormat`, `a5`);
+  await w.page.click(`#boardFormatButton`);
+  await w.page.click(`.menuItem[data-format="a5"]`);
   const small = (await model(w.page));
   assert.equal(small.page.format, `a5`);
   assert.equal(small.blocks.length, 2);
@@ -272,13 +265,15 @@ test(`narrow panel in dark mode: no horizontal overflow and the settings open as
   assert.deepEqual(w.errors, []);
 });
 
-test(`the zoom buttons change the size of the page and Fit brings it back`, async () => {
+test(`the zoom slider changes the size of the page and a double click brings it back`, async () => {
   const w = await openBoard();
   await edit(w);
   const base = (await box(w.page, `.page`)).width;
-  await w.page.click(`#boardZoomIn`);
+  await w.page.locator(`#boardZoom`).fill(`4`);
   assert.ok((await box(w.page, `.page`)).width > base);
-  await w.page.click(`#boardZoomFit`);
+  await w.page.locator(`#boardZoom`).fill(`0`);
+  assert.ok((await box(w.page, `.page`)).width < base);
+  await w.page.dblclick(`#boardZoom`);
   assert.ok(Math.abs((await box(w.page, `.page`)).width - base) < 2);
 });
 
@@ -463,13 +458,78 @@ test(`fields still work when Grist sends no column with the selected row`, async
   assert.deepEqual(w.errors, []);
 });
 
-test(`the explorer report shows what Grist gave with the selected row`, async () => {
-  const w = await openExplorer(browser, server.url, { viewport: { width: 1000, height: 800 } });
-  await w.selectRow(1);
-  await finished(w.page);
-  const report = await w.page.inputValue(`#report`);
+test(`the debug button copies the report with what Grist gave and a description of the dashboard`, async () => {
+  const w = await openWithRow({ savedOptions: SAVED }, 1);
+  await w.context.grantPermissions([`clipboard-read`, `clipboard-write`]);
+  await edit(w);
+  await w.page.click(`#boardDebug`);
+  await w.page.waitForFunction(() => /copié|copied/i.test(document.getElementById(`boardSaveState`).textContent), null, { timeout: 20000 });
+  const report = await w.page.evaluate(() => navigator.clipboard.readText());
+  assert.match(report, /export_tdb report/);
   assert.match(report, /7\. Values that Grist gave with the selected row/);
   assert.match(report, /Name \[Text\] text\(/);
+  assert.match(report, /attachment token/);
+  assert.match(report, /8\. Dashboard/);
+  assert.match(report, /Blocks: 2 \(text p1, table p1\)/);
+  assert.ok(!/__export_tdb_test__|write with/.test(report));
+  assert.deepEqual(w.errors, []);
+});
+
+test(`when the clipboard is refused the report is shown in a box`, async () => {
+  const w = await openWithRow({ savedOptions: SAVED }, 1);
+  await edit(w);
+  await w.page.evaluate(() => {
+    navigator.clipboard.writeText = () => Promise.reject(new Error(`refused`));
+    document.execCommand = () => false;
+  });
+  await w.page.click(`#boardDebug`);
+  await w.page.waitForFunction(() => !document.getElementById(`boardDebugBox`).hidden, null, { timeout: 20000 });
+  assert.match(await w.page.inputValue(`#boardDebugText`), /8\. Dashboard/);
+  assert.equal(await w.page.locator(`#boardSaveState.warning`).count(), 1);
+  await w.page.click(`#boardDebugClose`);
+  assert.equal(await w.page.locator(`#boardDebugBox`).isHidden(), true);
+});
+
+test(`the tool bar is one line of icon buttons, with menus for the blocks, the format and the margins`, async () => {
+  const w = await openWithRow({ savedOptions: SAVED }, 1);
+  assert.equal(await w.page.locator(`#boardAddMenu`).isHidden(), true);
+  assert.equal(await w.page.locator(`#boardPrint`).isVisible(), true);
+  await edit(w);
+  const bar = await box(w.page, `#boardBar`);
+  assert.ok(bar.height < 60, `the bar is ${bar.height} px high`);
+  assert.equal(await w.page.locator(`#boardBar .help`).count(), 0);
+  await w.page.click(`#boardAddMenu`);
+  assert.equal(await w.page.locator(`.menuItem[data-type]`).count(), 6);
+  assert.equal(await w.page.locator(`.menuItem[data-type] svg`).count(), 6);
+  await w.page.click(`.menuItem[data-type="record"]`);
+  assert.equal(await w.page.locator(`#boardMenu`).isHidden(), true);
+  assert.equal((await model(w.page)).blocks.length, 3);
+  assert.equal(await w.page.locator(`#boardRecordSettings`).isVisible(), true);
+  await w.page.click(`#boardMarginButton`);
+  await w.page.click(`.menuItem[data-margin="5"]`);
+  assert.equal((await model(w.page)).page.margin, 5);
+  await w.page.click(`#boardFormatButton`);
+  assert.equal(await w.page.locator(`.menuItem[data-format="a4"]`).count(), 1);
+  await w.page.keyboard.press(`Escape`);
+  assert.equal(await w.page.locator(`#boardMenu`).isHidden(), true);
+  assert.deepEqual(w.errors, []);
+});
+
+test(`the orientation button switches and shows the current orientation, the numbers button shows when it is on`, async () => {
+  const w = await openWithRow({ savedOptions: SAVED }, 1);
+  await edit(w);
+  const before = await w.page.locator(`#boardOrientation`).getAttribute(`data-tip`);
+  await w.page.click(`#boardOrientation`);
+  const after = await w.page.locator(`#boardOrientation`).getAttribute(`data-tip`);
+  assert.notEqual(before, after);
+  assert.equal((await model(w.page)).page.orientation, `landscape`);
+  assert.equal(await w.page.locator(`#boardNumbers`).getAttribute(`aria-pressed`), `false`);
+  await w.page.click(`#boardNumbers`);
+  assert.equal(await w.page.locator(`#boardNumbers`).getAttribute(`aria-pressed`), `true`);
+  assert.equal((await model(w.page)).page.numbers, true);
+  await w.page.hover(`#boardNumbers`);
+  assert.equal(await w.page.locator(`#boardNumbers`).evaluate((node) => getComputedStyle(node, `::after`).content !== `none`), true);
+  assert.deepEqual(w.errors, []);
 });
 
 // A saved model with one table block of the given settings.
@@ -678,10 +738,6 @@ test(`a help badge shows one bubble only: no native title next to the drawn one`
   const badges = await w.page.$$eval(`#panelBoard .help`, (list) => list.map((b) => [b.hasAttribute(`title`), Boolean(b.dataset.tip)]));
   assert.ok(badges.length > 5);
   assert.ok(badges.every(([hasTitle, hasTip]) => !hasTitle && hasTip));
-  await w.page.click(`.block, #boardAdd`).catch(() => {});
-  const lab = await openBoard();
-  await lab.page.click(`#tabLab`);
-  assert.equal(await lab.page.$$eval(`#panelLab .help[title]`, (list) => list.length), 0);
 });
 
 test(`a help badge opens a bubble on click and its cross closes it`, async () => {
@@ -1146,8 +1202,9 @@ test(`the footer text and the page numbers are set in the tools and saved with t
   const w = await openWithRow({ savedOptions: printModel() }, 1);
   assert.equal(await w.page.locator(`.pageFooter`).count(), 0);
   await edit(w);
+  await w.page.click(`#boardFooterButton`);
   await w.page.fill(`#boardFooter`, `Report {x}`);
-  await w.page.check(`#boardNumbers`);
+  await w.page.click(`#boardNumbers`);
   await w.page.waitForFunction(() => document.querySelectorAll(`.pageFooter`).length === 2);
   const page = (await model(w.page)).page;
   assert.deepEqual([page.footer, page.numbers], [`Report {x}`, true]);
@@ -1235,4 +1292,44 @@ test(`the legend of a stacked chart names the column alone for a sum and adds th
   assert.ok(texts.some((text) => /^Seats \((average|moyenne)\)$/i.test(text)), texts.join(`|`));
   assert.ok(!texts.some((text) => /^(Sum|Somme) /.test(text)));
   assert.deepEqual(sum.errors, []);
+});
+
+test(`the cross of a block deletes it at once and Ctrl+Z brings it back, Ctrl+Y deletes it again`, async () => {
+  const w = await openBoard({ savedOptions: SAVED });
+  await edit(w);
+  assert.equal(await w.page.locator(`.block[data-id="aaa1"] .pencil`).count(), 0);
+  await w.page.click(`.block[data-id="aaa1"]`, { position: { x: 20, y: 30 } });
+  await w.page.click(`.block[data-id="aaa1"] .cross`);
+  assert.equal((await model(w.page)).blocks.length, 1);
+  assert.equal(await w.page.locator(`#boardConfirm`).count(), 0);
+  await w.page.keyboard.press(`Control+z`);
+  assert.equal((await model(w.page)).blocks.length, 2);
+  assert.equal(await w.page.locator(`.block[data-id="aaa1"]`).count(), 1);
+  await w.page.keyboard.press(`Control+y`);
+  assert.equal((await model(w.page)).blocks.length, 1);
+  await w.page.keyboard.press(`Control+z`);
+  await w.page.keyboard.press(`Control+z`);
+  assert.equal((await model(w.page)).blocks.length, 2);
+  assert.deepEqual(w.errors, []);
+});
+
+test(`Ctrl+Z undoes a move, but leaves the undo of the text to the browser inside a field`, async () => {
+  const w = await openBoard({ savedOptions: SAVED });
+  await edit(w);
+  await w.page.click(`.block[data-id="bbb2"]`, { position: { x: 20, y: 30 } });
+  await w.page.keyboard.press(`ArrowRight`);
+  await w.page.waitForTimeout(700);
+  await w.page.keyboard.press(`ArrowRight`);
+  assert.equal((await model(w.page)).blocks.find((b) => b.id === `bbb2`).x, 2);
+  await w.page.keyboard.press(`Control+z`);
+  assert.equal((await model(w.page)).blocks.find((b) => b.id === `bbb2`).x, 1);
+  await w.page.keyboard.press(`Control+z`);
+  assert.equal((await model(w.page)).blocks.find((b) => b.id === `bbb2`).x, 0);
+  await w.page.dblclick(`.block[data-id="bbb2"]`, { position: { x: 20, y: 30 } });
+  await w.page.fill(`#boardTitle`, `Changed`);
+  await w.page.focus(`#boardTitle`);
+  await w.page.evaluate(() => document.addEventListener(`keydown`, (event) => { window.__prevented = event.defaultPrevented; }));
+  await w.page.keyboard.press(`Control+z`);
+  assert.equal(await w.page.evaluate(() => window.__prevented), false);
+  assert.deepEqual(w.errors, []);
 });

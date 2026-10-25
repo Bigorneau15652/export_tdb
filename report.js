@@ -2,11 +2,13 @@
 // tests of the Grist API answered. The report is meant to be copied and sent to the developer.
 // This file has no access to the page or to Grist: it is pure logic, tested with Node.
 (function (root) {
-  // Report text. `data` is { version, reveal, linked, record, tables, descendants, shapes, tests, events }.
+  // Report text. `data` is { version, reveal, linked, record, tables, descendants, shapes, tests, events } and, when the
+  // dashboard is described, `dashboard`: { format, orientation, margin, pages, numbers, footer, blocks: [{ type, page }],
+  // values, bytes, editing, locked }.
   function buildReport(data) {
     const lines = [];
     const add = (text = ``) => lines.push(text);
-    add(`export_tdb explorer ${data.version}`);
+    add(`export_tdb report ${data.version}`);
     add(`Values shown: ${data.reveal ? `yes` : `no (shapes only)`}`);
     add();
     add(`1. Linked table`);
@@ -36,6 +38,16 @@
     add();
     add(`7. Values that Grist gave with the selected row (column, type, shape)`);
     for (const row of data.recordShapes || []) add(`${row.column} [${row.type}] ${row.shape}`);
+    if (data.dashboard) {
+      const board = data.dashboard;
+      add();
+      add(`8. Dashboard`);
+      add(`Page: ${board.format}, ${board.orientation}, margin ${board.margin} mm, ${board.pages} page(s), numbers ${board.numbers ? `on` : `off`}, footer ${board.footer ? `set` : `empty`}`);
+      add(`Blocks: ${board.blocks.length}${board.blocks.length ? ` (${board.blocks.map((block) => `${block.type} p${block.page + 1}`).join(`, `)})` : ``}`);
+      add(`Named values: ${board.values}`);
+      add(`Saved size: ${board.bytes} bytes`);
+      add(`Mode: ${board.editing ? `editing` : `reading`}${board.locked ? `, locked (model not readable)` : ``}`);
+    }
     return lines.join(`\n`);
   }
 
