@@ -1,14 +1,23 @@
 // The options of a chart for the drawing library: from the settings of a chart block and its data (the categories
-// and the series that the table engine gives), builds the object that ECharts reads. The four palettes are here, each
-// of ten colours that keep at least a 3 to 1 contrast against white and are told apart from each other. This file has no
+// and the series that the table engine gives), builds the object that ECharts reads. The nine palettes are here, each
+// of twenty colours. This file has no
 // access to the page or to Grist: it is pure logic, tested with Node.
 (function (root) {
+  // The nine palettes of twenty colours. `classic` goes first (its ten first colours are the ones of the earlier
+  // default palette), then `acid` (saturated), `pastel`, `warm`, `cool`, three ramps of one hue (red, green, blue)
+  // and the greys. The ramps go from dark to light.
   const PALETTES = {
-    franche: [`#1f5fa8`, `#d97300`, `#2a9d4a`, `#c62d2d`, `#7a4cc2`, `#00828a`, `#b58900`, `#8a5a2b`, `#d6419b`, `#5a6773`],
-    douce: [`#4f7cac`, `#c9803a`, `#5f9c6d`, `#b5645f`, `#8b78b5`, `#4a9399`, `#a58c3c`, `#9a7456`, `#b86a98`, `#6f7b86`],
-    contrastee: [`#0072b2`, `#d55e00`, `#009e73`, `#cc79a7`, `#b07400`, `#7b3f9e`, `#444444`, `#2c8aa6`, `#8c3b3b`, `#4d7a2c`],
-    froide: [`#0b3d66`, `#2b73a8`, `#00828a`, `#2f9e8f`, `#4d7a2c`, `#6a5acd`, `#3b4f8c`, `#5a6773`, `#7a8f2c`, `#1a7f5a`]
+    classic: [`#1f5fa8`, `#d97300`, `#2a9d4a`, `#c62d2d`, `#7a4cc2`, `#00828a`, `#b58900`, `#8a5a2b`, `#d6419b`, `#5a6773`, `#6fa3d9`, `#f0a860`, `#7fcf93`, `#e57c7c`, `#b79be0`, `#5cc1c8`, `#dcc25a`, `#c49a76`, `#eb93c4`, `#9aa5b1`],
+    acid: [`#ff0000`, `#00ff19`, `#3300ff`, `#ff4d00`, `#00ff66`, `#7f00ff`, `#ff9900`, `#00ffb3`, `#cc00ff`, `#ffe500`, `#00ffff`, `#ff00e6`, `#ccff00`, `#00b2ff`, `#ff0099`, `#80ff00`, `#0066ff`, `#ff004c`, `#33ff00`, `#0019ff`],
+    pastel: [`#efb3b3`, `#b3efb9`, `#bfb3ef`, `#efc5b3`, `#b3efcb`, `#d1b3ef`, `#efd7b3`, `#b3efdd`, `#e3b3ef`, `#efe9b3`, `#b3efef`, `#efb3e9`, `#e3efb3`, `#b3ddef`, `#efb3d7`, `#d1efb3`, `#b3cbef`, `#efb3c5`, `#bfefb3`, `#b3b9ef`],
+    warm: [`#a00d0d`, `#d94012`, `#ef8e39`, `#f4d07b`, `#a0920d`, `#d91212`, `#ef6339`, `#f4b47b`, `#a0740d`, `#d9c512`, `#ef3939`, `#f4977b`, `#a0520d`, `#d99d12`, `#efdd39`, `#f47b7b`, `#a02f0d`, `#d96f12`, `#efb839`, `#f4e87b`],
+    cool: [`#1a9375`, `#23acc7`, `#4987df`, `#8e86ea`, `#611a93`, `#23c79e`, `#49c6df`, `#86afea`, `#241a93`, `#8323c7`, `#49dfb9`, `#86d9ea`, `#1a4d93`, `#3123c7`, `#a049df`, `#86ead1`, `#1a7f93`, `#2368c7`, `#5549df`, `#c086ea`],
+    red: [`#4c1010`, `#5c1313`, `#6c1717`, `#7c1a1a`, `#8c1e1e`, `#9b2121`, `#ab2424`, `#bb2828`, `#cb2b2b`, `#d43535`, `#d84545`, `#db5555`, `#de6565`, `#e27575`, `#e58585`, `#e99595`, `#eca5a5`, `#efb5b5`, `#f3c5c5`, `#f6d5d5`],
+    green: [`#104c1a`, `#135c1f`, `#176c25`, `#1a7c2a`, `#1e8c30`, `#219b35`, `#24ab3b`, `#28bb40`, `#2bcb46`, `#35d450`, `#45d85e`, `#55db6c`, `#65de79`, `#75e287`, `#85e595`, `#95e9a3`, `#a5ecb1`, `#b5efbf`, `#c5f3cd`, `#d5f6da`],
+    blue: [`#10294c`, `#13325c`, `#173a6c`, `#1a437c`, `#1e4b8c`, `#21549b`, `#245dab`, `#2865bb`, `#2b6ecb`, `#3578d4`, `#4582d8`, `#558ddb`, `#6598de`, `#75a2e2`, `#85ade5`, `#95b8e9`, `#a5c3ec`, `#b5cdef`, `#c5d8f3`, `#d5e3f6`],
+    grey: [`#141414`, `#202020`, `#2b2b2b`, `#363636`, `#414141`, `#4d4d4d`, `#585858`, `#636363`, `#6f6f6f`, `#7a7a7a`, `#858585`, `#909090`, `#9c9c9c`, `#a7a7a7`, `#b2b2b2`, `#bebebe`, `#c9c9c9`, `#d4d4d4`, `#dfdfdf`, `#ebebeb`]
   };
+  const RAMPS = [`red`, `green`, `blue`, `grey`];
   const PALETTE_KEYS = Object.keys(PALETTES);
   const CHART_TYPES = [`bar`, `stack`, `barh`, `barhStack`, `line`, `area`, `pie`, `donut`, `treemap`, `scatter`];
   const LEGENDS = [`none`, `top`, `bottom`, `right`];
@@ -82,6 +91,28 @@
     return { show: true, color: TEXT_COLOR, fontSize, formatter: pie ? (params) => `${params.name}\n${text(params)}` : (params) => text(params), ...(pie ? {} : { position: `top` }) };
   }
 
+  // The colours to use for `count` series, slices or rectangles. A palette of several hues gives its colours in order. A
+  // ramp (one hue, dark to light) gives colours spread over its range, so that two series are well told apart.
+  function colorsFor(key, count) {
+    const list = PALETTES[key] || PALETTES.classic;
+    if (!RAMPS.includes(key) || count >= list.length) return list;
+    if (count <= 1) return [list[4]];
+    const first = 1;
+    const last = list.length - 4;
+    return Array.from({ length: count }, (_, at) => list[Math.round(first + (at * (last - first)) / (count - 1))]);
+  }
+
+  // The colour of a text written on a colour: dark on a light colour, white on a dark one.
+  function readableOn(hex) {
+    const value = parseInt(hex.slice(1), 16);
+    const channel = (shift) => {
+      const part = ((value >> shift) & 255) / 255;
+      return part <= 0.03928 ? part / 12.92 : ((part + 0.055) / 1.055) ** 2.4;
+    };
+    const luminance = 0.2126 * channel(16) + 0.7152 * channel(8) + 0.0722 * channel(0);
+    return luminance > 0.4 ? TEXT_COLOR : `#ffffff`;
+  }
+
   // The options for ECharts, or null when there is nothing to draw. `config` holds chart, palette, legend and
   // labels; `data` is { categories, series: [{ name, values }] }, or for a scatter chart { xName, yName, series: [{ name,
   // points: [[x, y]] }] }; `helpers` holds `fontSize` (pixels) and `format(number, decimals)` (the French way to write a
@@ -100,11 +131,12 @@
     const names = isPie || treemap ? data.categories : data.series.map((one) => one.name);
     // A treemap writes the names in its rectangles and a single series of points needs no legend.
     const legendPlace = treemap || (scatter && data.series.length < 2) ? `none` : config.legend;
+    const colors = colorsFor(helpers.palette, isPie || treemap ? data.categories.length : data.series.length);
     const legend = legendOf(legendPlace, names, width, height, fontSize);
     const reserve = legend.reserve;
     const base = {
       animation: false,
-      color: PALETTES[config.palette] || PALETTES.franche,
+      color: colors,
       backgroundColor: `transparent`,
       textStyle: { fontFamily: `sans-serif`, fontSize, color: TEXT_COLOR },
       legend: legend.option
@@ -122,7 +154,6 @@
     }
     if (treemap) {
       const series = data.series[0];
-      const colors = PALETTES[config.palette] || PALETTES.franche;
       const items = data.categories.map((name, at) => ({ name, value: numberOf(series.values[at]) || 0 })).filter((item) => item.value > 0);
       if (!items.length) return null;
       const sum = items.reduce((total, item) => total + item.value, 0);
@@ -131,9 +162,12 @@
         ...base,
         series: [{
           type: `treemap`, left: 0, top: 0, right: 0, bottom: 0, roam: false, nodeClick: false, breadcrumb: { show: false }, squareRatio: 1,
-          label: { show: true, color: `#ffffff`, fontSize, fontWeight: `bold`, formatter: text, overflow: `truncate` },
+          label: { show: true, fontSize, fontWeight: `bold`, formatter: text, overflow: `truncate` },
           itemStyle: { borderColor: `#ffffff`, borderWidth: 2, gapWidth: 2 }, emphasis: { disabled: true },
-          data: items.map((item, at) => ({ ...item, itemStyle: { color: colors[at % colors.length] } }))
+          data: items.map((item, at) => {
+            const color = colors[at % colors.length];
+            return { ...item, itemStyle: { color }, label: { color: readableOn(color) } };
+          })
         }]
       };
     }
@@ -172,7 +206,7 @@
     };
   }
 
-  const api = { PALETTES, PALETTE_KEYS, CHART_TYPES, LEGENDS, LABELS, buildOption };
+  const api = { PALETTES, RAMPS, colorsFor, readableOn, PALETTE_KEYS, CHART_TYPES, LEGENDS, LABELS, buildOption };
   if (typeof module !== `undefined` && module.exports) module.exports = api;
   else root.exportTdbChartOption = api;
 })(typeof window !== `undefined` ? window : globalThis);

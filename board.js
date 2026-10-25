@@ -61,7 +61,7 @@
     footerButton: $(`boardFooterButton`), menu: $(`boardMenu`), debug: $(`boardDebug`), debugBox: $(`boardDebugBox`), debugText: $(`boardDebugText`), debugClose: $(`boardDebugClose`),
     zoom: $(`boardZoom`), saveState: $(`boardSaveState`), scroll: $(`boardScroll`), canvas: $(`boardCanvas`),
     side: $(`boardPanel`), titleRow: $(`boardTitleRow`), title: $(`boardTitle`), remove: $(`boardDelete`), close: $(`boardClose`), refresh: $(`boardRefresh`),
-    textBox: $(`boardTextSettings`), chartBox: $(`boardChartSettings`), chartType: $(`boardChartType`), chartPalette: $(`boardChartPalette`), chartLegend: $(`boardChartLegend`), chartLabels: $(`boardChartLabels`), chartInfo: $(`boardChartInfo`), crossBox: $(`boardCrossBox`), crossMore: $(`boardCrossMore`), colItem: $(`boardColItem`), slice: $(`boardSlice`), colSort: $(`boardColSort`), indicatorBox: $(`boardIndicatorSettings`), indicatorBody: $(`boardIndicatorBody`), valuesBox: $(`boardValuesSettings`), valuesList: $(`boardValuesList`), valuesAdd: $(`boardValuesAdd`), valuesButton: $(`boardValuesButton`), heading: $(`boardPanelHeading`), typeSelect: $(`boardType`), imageBox: $(`boardImageSettings`), imageColumn: $(`boardImageColumn`), imageRank: $(`boardImageRank`), imageCaption: $(`boardImageCaption`), imageInfo: $(`boardImageInfo`), recordBox: $(`boardRecordSettings`), recordRows: $(`boardRecordRows`), recordAdd: $(`boardRecordAdd`), recordColumns: $(`boardRecordColumns`), recordSize: $(`boardRecordSize`), recordInfo: $(`boardRecordInfo`), source: $(`boardSource`), columnRow: $(`boardColumnRow`), column: $(`boardColumn`),
+    textBox: $(`boardTextSettings`), chartBox: $(`boardChartSettings`), chartType: $(`boardChartType`), paletteButton: $(`boardPaletteButton`), chartLegend: $(`boardChartLegend`), chartLabels: $(`boardChartLabels`), chartInfo: $(`boardChartInfo`), crossBox: $(`boardCrossBox`), crossMore: $(`boardCrossMore`), colItem: $(`boardColItem`), slice: $(`boardSlice`), colSort: $(`boardColSort`), indicatorBox: $(`boardIndicatorSettings`), indicatorBody: $(`boardIndicatorBody`), valuesBox: $(`boardValuesSettings`), valuesList: $(`boardValuesList`), valuesAdd: $(`boardValuesAdd`), valuesButton: $(`boardValuesButton`), heading: $(`boardPanelHeading`), typeSelect: $(`boardType`), imageBox: $(`boardImageSettings`), imageColumn: $(`boardImageColumn`), imageRank: $(`boardImageRank`), imageCaption: $(`boardImageCaption`), imageInfo: $(`boardImageInfo`), recordBox: $(`boardRecordSettings`), recordRows: $(`boardRecordRows`), recordAdd: $(`boardRecordAdd`), recordColumns: $(`boardRecordColumns`), recordSize: $(`boardRecordSize`), recordInfo: $(`boardRecordInfo`), source: $(`boardSource`), columnRow: $(`boardColumnRow`), column: $(`boardColumn`),
     text: $(`boardText`), field: $(`boardField`), size: $(`boardSize`), align: $(`boardAlign`), fill: $(`boardFill`),
     textInfo: $(`boardTextInfo`), cellState: $(`boardCellState`),
     tableBox: $(`boardTableSettings`), kind: $(`boardKind`), tableSel: $(`boardTable`), linkRow: $(`boardLinkRow`), link: $(`boardLink`), rowsHelp: $(`boardRowsHelp`),
@@ -451,7 +451,7 @@
       const height = plot.clientHeight;
       if (width < 30 || height < 30) continue;
       const decimals = block.config.columns.length && Number.isInteger(block.config.columns[0].decimals) ? block.config.columns[0].decimals : block.config.decimals;
-      const option = ChartOption.buildOption(block.config, data, { fontSize: Math.max(8, TABLE_MM * mmPx), format: Format.formatNumber, decimals, width, height });
+      const option = ChartOption.buildOption(block.config, data, { fontSize: Math.max(8, TABLE_MM * mmPx), format: Format.formatNumber, decimals, width, height, palette: model.page.palette });
       if (!option) continue;
       const instance = Echarts.init(plot, null, { renderer: `svg`, width, height });
       instance.setOption(option);
@@ -552,7 +552,6 @@
   function fillChartSettings(block) {
     const config = block.config;
     setOptions(el.chartType, ChartOption.CHART_TYPES.map((name) => [name, tr(CHART_TYPE_KEYS[name])]), config.chart);
-    setOptions(el.chartPalette, ChartOption.PALETTE_KEYS.map((name) => [name, tr(`palette_${name}`)]), config.palette);
     setOptions(el.chartLegend, ChartOption.LEGENDS.map((name) => [name, tr(`legend_${name}`)]), config.legend);
     setOptions(el.chartLabels, ChartOption.LABELS.map((name) => [name, tr(`labels_${name}`)]), config.labels);
     const result = tableResult(block);
@@ -1076,6 +1075,7 @@
     el.numbers.setAttribute(`aria-pressed`, String(model.page.numbers));
     el.numbers.classList.toggle(`on`, model.page.numbers);
     el.footerButton.classList.toggle(`on`, Boolean(model.page.footer));
+    for (const item of el.menu.querySelectorAll(`[data-palette]`)) item.classList.toggle(`current`, item.dataset.palette === model.page.palette);
     for (const item of el.menu.querySelectorAll(`[data-format]`)) item.classList.toggle(`current`, item.dataset.format === model.page.format);
     for (const item of el.menu.querySelectorAll(`[data-margin]`)) item.classList.toggle(`current`, Number(item.dataset.margin) === model.page.margin);
     setValue(el.footerText, model.page.footer);
@@ -1134,6 +1134,17 @@
       }
     };
     make(el.menu.querySelector(`[data-menu="types"]`), Model.TYPES.map((type) => [type, tr(TYPE_KEYS[type]), type]), `type`);
+    make(el.menu.querySelector(`[data-menu="palette"]`), ChartOption.PALETTE_KEYS.map((key) => [key, tr(`palette_${key}`)]), `palette`);
+    for (const item of el.menu.querySelectorAll(`[data-palette]`)) {
+      const strip = document.createElement(`span`);
+      strip.className = `swatches`;
+      for (const color of ChartOption.PALETTES[item.dataset.palette]) {
+        const swatch = document.createElement(`span`);
+        swatch.style.backgroundColor = color;
+        strip.appendChild(swatch);
+      }
+      item.appendChild(strip);
+    }
     make(el.menu.querySelector(`[data-menu="format"]`), Object.keys(FORMAT_KEYS).map((key) => [key, tr(FORMAT_KEYS[key])]), `format`);
     make(el.menu.querySelector(`[data-menu="margin"]`), Layout.MARGINS.map((mm) => [mm, tr(`boardMarginValue`, { mm })]), `margin`);
   }
@@ -2025,6 +2036,7 @@
 
   el.edit.addEventListener(`click`, () => setEditing(!editing));
   el.addMenu.addEventListener(`click`, () => openMenu(`types`, el.addMenu));
+  el.paletteButton.addEventListener(`click`, () => openMenu(`palette`, el.paletteButton));
   el.formatButton.addEventListener(`click`, () => openMenu(`format`, el.formatButton));
   el.marginButton.addEventListener(`click`, () => openMenu(`margin`, el.marginButton));
   el.footerButton.addEventListener(`click`, () => openMenu(`footer`, el.footerButton));
@@ -2034,6 +2046,7 @@
     if (!item) return;
     closeMenu(true);
     if (item.dataset.type) addBlock(item.dataset.type);
+    else if (item.dataset.palette) commit(Model.setPage(model, { palette: item.dataset.palette }));
     else if (item.dataset.format) commit(Model.setPage(model, { format: item.dataset.format }));
     else if (item.dataset.margin) commit(Model.setPage(model, { margin: Number(item.dataset.margin) }));
   });
@@ -2162,7 +2175,6 @@
     }
     changeConfig({ chart: el.chartType.value });
   });
-  el.chartPalette.addEventListener(`change`, () => changeConfig({ palette: el.chartPalette.value }));
   el.chartLegend.addEventListener(`change`, () => changeConfig({ legend: el.chartLegend.value }));
   el.chartLabels.addEventListener(`change`, () => changeConfig({ labels: el.chartLabels.value }));
   el.recordAdd.addEventListener(`click`, () => {

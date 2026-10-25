@@ -1086,7 +1086,7 @@ test(`a chart is drawn in SVG inside the strict policy of the page`, async () =>
   assert.deepEqual(w.errors, []);
 });
 
-test(`the settings of a chart choose the type, the palette, the legend and the labels`, async () => {
+test(`the settings of a chart choose the type, the legend and the labels, and the palette of the page colours it`, async () => {
   const w = await openWithRow({ savedOptions: chartModel({ ...CHART_CONFIG }) }, 1);
   await edit(w);
   await w.page.dblclick(`.block[data-id="ch1"]`, { position: { x: 20, y: 10 } });
@@ -1096,14 +1096,19 @@ test(`the settings of a chart choose the type, the palette, the legend and the l
   assert.equal(await w.page.locator(`#boardSlice`).isHidden(), true);
   assert.match(await w.page.locator(`#boardTableHeading`).innerText(), /graphique|chart/i);
   await w.page.selectOption(`#boardChartType`, `donut`);
-  await w.page.selectOption(`#boardChartPalette`, `froide`);
+  assert.equal(await w.page.locator(`#boardChartPalette`).count(), 0);
+  await w.page.click(`#boardPaletteButton`);
+  assert.equal(await w.page.locator(`.menuItem[data-palette]`).count(), 9);
+  assert.equal(await w.page.locator(`.menuItem[data-palette="cool"] .swatches span`).count(), 20);
+  await w.page.click(`.menuItem[data-palette="cool"]`);
+  assert.equal((await model(w.page)).page.palette, `cool`);
   await w.page.selectOption(`#boardChartLegend`, `right`);
   await w.page.selectOption(`#boardChartLabels`, `percent`);
   const config = (await model(w.page)).blocks[0].config;
-  assert.deepEqual([config.chart, config.palette, config.legend, config.labels], [`donut`, `froide`, `right`, `percent`]);
+  assert.deepEqual([config.chart, config.legend, config.labels], [`donut`, `right`, `percent`]);
   await w.page.waitForFunction(() => document.querySelector(`.block[data-id="ch1"] .chartPlot svg`));
   const fills = await w.page.$$eval(`.block[data-id="ch1"] svg path`, (list) => list.map((node) => node.getAttribute(`fill`)));
-  assert.ok(fills.some((fill) => /#0b3d66/i.test(fill || ``)), fills.join(`|`));
+  assert.ok(fills.some((fill) => fill && fill.toLowerCase() === `#1a9375`), fills.join(`|`));
   assert.deepEqual(w.errors, []);
 });
 

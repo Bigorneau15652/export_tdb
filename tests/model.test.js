@@ -20,7 +20,7 @@ function assertValid(model) {
 test(`nothing saved gives an empty model with one screen page`, () => {
   const { model, warnings, locked } = M.validateModel(null);
   assert.deepEqual(model, M.emptyModel());
-  assert.deepEqual(model.page, { format: `screen`, orientation: `landscape`, margin: 10, numbers: false, footer: `` });
+  assert.deepEqual(model.page, { format: `screen`, orientation: `landscape`, margin: 10, numbers: false, footer: ``, palette: `classic` });
   assert.equal(model.pages, 1);
   assert.deepEqual(warnings, []);
   assert.equal(locked, false);
@@ -42,8 +42,8 @@ test(`a model from a newer version is not read and is locked`, () => {
 });
 
 test(`unknown page settings give the defaults and valid ones are kept`, () => {
-  assert.deepEqual(M.validateModel({ version: 1, page: { format: `a3`, orientation: `portrait`, margin: 5, numbers: true, footer: `Report` } }).model.page, { format: `a3`, orientation: `portrait`, margin: 5, numbers: true, footer: `Report` });
-  assert.deepEqual(M.validateModel({ version: 1, page: { format: `<b>`, orientation: 3, margin: 7, numbers: `yes`, footer: 5 } }).model.page, { format: `screen`, orientation: `landscape`, margin: 10, numbers: false, footer: `` });
+  assert.deepEqual(M.validateModel({ version: 1, page: { format: `a3`, orientation: `portrait`, margin: 5, numbers: true, footer: `Report`, palette: `warm` } }).model.page, { palette: `warm`, format: `a3`, orientation: `portrait`, margin: 5, numbers: true, footer: `Report` });
+  assert.deepEqual(M.validateModel({ version: 1, page: { format: `<b>`, orientation: 3, margin: 7, numbers: `yes`, footer: 5 } }).model.page, { format: `screen`, orientation: `landscape`, margin: 10, numbers: false, footer: ``, palette: `classic` });
   assert.equal(M.validateModel({ version: 1, page: { footer: `x`.repeat(500) } }).model.page.footer.length, M.MAX_FOOTER);
 });
 
@@ -357,12 +357,13 @@ test(`a table with an item in lines and an item in columns is a cross table`, ()
 });
 
 test(`the settings of a chart block are the settings of a table block and the settings of the drawing`, () => {
-  const config = M.cleanConfig(`chart`, { table: `Rooms`, groupBy: [`Usage`], chart: `donut`, palette: `froide`, legend: `right`, labels: `percent`, columns: [{ path: `Area`, fn: `sum` }] });
-  assert.deepEqual([config.chart, config.palette, config.legend, config.labels, config.mode, config.table], [`donut`, `froide`, `right`, `percent`, `group`, `Rooms`]);
+  const config = M.cleanConfig(`chart`, { table: `Rooms`, groupBy: [`Usage`], chart: `donut`, legend: `right`, labels: `percent`, columns: [{ path: `Area`, fn: `sum` }] });
+  assert.deepEqual([config.chart, config.legend, config.labels, config.mode, config.table], [`donut`, `right`, `percent`, `group`, `Rooms`]);
+  assert.equal(config.palette, undefined);
   assert.equal(config.columns.length, 1);
   assert.deepEqual(M.cleanConfig(`chart`, {}).chart, `bar`);
   const bad = M.cleanConfig(`chart`, { chart: `radar`, palette: `x`, legend: `diagonal`, labels: `all` });
-  assert.deepEqual([bad.chart, bad.palette, bad.legend, bad.labels], [`bar`, `franche`, `bottom`, `none`]);
+  assert.deepEqual([bad.chart, bad.legend, bad.labels], [`bar`, `bottom`, `none`]);
   assert.equal(M.cleanConfig(`chart`, { legend: `none` }).legend, `none`);
   const options = require(`../chart-option.js`);
   assert.deepEqual(M.CHART_TYPES, options.CHART_TYPES);
@@ -381,4 +382,16 @@ test(`the settings of an image block are cleaned`, () => {
 test(`the new kinds of chart are kept and an unknown one is not`, () => {
   for (const kind of [`area`, `treemap`, `scatter`]) assert.equal(M.cleanConfig(`chart`, { chart: kind }).chart, kind);
   assert.equal(M.cleanConfig(`chart`, { chart: `radar` }).chart, `bar`);
+});
+
+test(`the palette is a setting of the page, and a dashboard saved before takes the palette of its first chart`, () => {
+  assert.equal(M.validateModel({ version: 1, page: { palette: `blue` } }).model.page.palette, `blue`);
+  assert.equal(M.validateModel({ version: 1, page: { palette: `nothing` } }).model.page.palette, `classic`);
+  const chart = (palette) => ({ id: `c1`, type: `chart`, page: 0, x: 0, y: 0, w: 10, h: 8, config: { palette } });
+  assert.equal(M.validateModel({ version: 1, page: {}, blocks: [chart(`douce`)] }).model.page.palette, `pastel`);
+  assert.equal(M.validateModel({ version: 1, page: {}, blocks: [chart(`froide`)] }).model.page.palette, `cool`);
+  assert.equal(M.validateModel({ version: 1, page: {}, blocks: [chart(`franche`)] }).model.page.palette, `classic`);
+  assert.equal(M.validateModel({ version: 1, page: {}, blocks: [chart(`red`)] }).model.page.palette, `red`);
+  assert.equal(M.validateModel({ version: 1, page: { palette: `grey` }, blocks: [chart(`douce`)] }).model.page.palette, `grey`);
+  assert.equal(M.setPage(M.emptyModel(), { palette: `acid` }).page.palette, `acid`);
 });
