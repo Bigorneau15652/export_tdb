@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.20.2
+
+- README rewritten in English and in French for the current widget: what it does, the six blocks, installation, first steps, security, tests and licence. It names no table, column or figure of any real document. The explorer and the query lab, gone since version 0.11.0, are no longer described.
+
 ## 0.20.1
 
 - Settings panel: the line "Composed label (optional)" is gone. The composed label of an item is now unfolded by a small triangle that stands in front of the "?" on the line of "Item", and the same for "Second item". The model and the insertion list appear under the select of their item, with an example written in the empty field. A label is open when the block already has a model, closed otherwise, and the triangle keeps its state while the settings are filled again (before, it could close by itself).
