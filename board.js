@@ -443,6 +443,8 @@
       if (header.numeric) cell.className = `num`;
       head.appendChild(cell);
     });
+    // The button that folds all the groups sits in the heading of the first column, where it covers no text.
+    if (!printing && result.groups && result.groups.some((group) => group >= 0)) head.cells[0].appendChild(buildFoldAll(block, result));
     const body = table.createTBody();
     const addRow = (texts, className) => {
       const row = body.insertRow();
@@ -853,7 +855,6 @@
     }
     const result = tableResult(block);
     if (result.ok) {
-      if (!printing && result.groups && result.groups.some((group) => group >= 0)) node.appendChild(buildFoldAll(block, result));
       (result.slices || [result]).forEach((slice, at) => {
         const part = drawTable(slice, block);
         if (at) part.classList.add(`sliceNext`);

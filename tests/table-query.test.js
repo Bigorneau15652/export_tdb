@@ -117,7 +117,7 @@ test(`decimals can be imposed`, () => {
 test(`a grouping gives one line per group with a total, sorted by label or by value`, () => {
   const base = { mode: `group`, table: `Rooms`, link: `Rooms.Site`, total: true, groupBy: [`Usage`], columns: [{ path: `Area`, fn: `sum` }, { fn: `count` }] };
   const byKey = run(`Sites`, 1, base);
-  assert.deepEqual(byKey.headers.map((h) => h.text), [`Usage`, `Sum (Area)`, `Count`]);
+  assert.deepEqual(byKey.headers.map((h) => h.text), [`Usage`, `Area`, `Count`]);
   assert.deepEqual(byKey.rows, [[`(empty)`, `8,25`, `1`], [`Classroom`, `35`, `1`], [`Office`, `32,5`, `2`]]);
   assert.deepEqual(byKey.total, [`Total`, `75,75`, `4`]);
   const byValue = run(`Sites`, 1, { ...base, sort: { by: `value`, dir: `desc` } });
@@ -342,7 +342,7 @@ test(`a grouped table and a cross table give the numbers for a chart`, () => {
   assert.deepEqual(grouped.chart.series[0].values, [8.25, 35, 32.5]);
   assert.equal(grouped.chart.series[0].name, `Area`);
   assert.equal(grouped.chart.series[1].name, `Count`);
-  assert.equal(grouped.headers[1].text, `Sum (Area)`);
+  assert.equal(grouped.headers[1].text, `Area`);
   const average = run(`Sites`, 1, { ...GROUPED, columns: [{ path: `Area`, fn: `avg` }, { path: `Seats`, fn: `max`, label: `Places` }] });
   assert.deepEqual(average.chart.series.map((one) => one.name), [`Area (average)`, `Places`]);
   const cross = run(`Sites`, 1, { ...CROSS });
@@ -444,4 +444,9 @@ test(`the second item is cleaned: never alone, never the same column as the firs
   assert.deepEqual(config({ groupBy: [``, `Floor`] }).groupBy, [``, ``]);
   assert.deepEqual(config({ groupBy: [`Usage`, `Usage`] }).groupBy, [`Usage`, ``]);
   assert.deepEqual(config({ groupBy: [`Usage`, `Floor`] }).groupBy, [`Usage`, `Floor`]);
+});
+
+test(`the heading of a sum is the name of the column alone, the other calculations keep their word`, () => {
+  const result = run(`Sites`, 1, { mode: `group`, table: `Rooms`, link: `Rooms.Site`, groupBy: [`Usage`], columns: [{ path: `Area`, fn: `sum` }, { path: `Area`, fn: `avg` }, { path: `Area`, fn: `sum`, label: `Own` }, { fn: `count` }] });
+  assert.deepEqual(result.headers.map((header) => header.text), [`Usage`, `Area`, `Average (Area)`, `Own`, `Count`]);
 });
