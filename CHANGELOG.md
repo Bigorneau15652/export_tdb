@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.19.1
+
+- Tables with two items: choosing the second item for the first time now ticks "Subtotal on the line of each value of the first item" by itself, so that the total of each group is seen at once. Before, the box had to be ticked by hand and the line of the group showed no figures until then. The box can still be unticked, and a table already saved keeps its choice.
+- Tests: the box is ticked when the second item is chosen and the line of the group shows a figure.
+
 ## 0.19.0
 
 - Grouped tables with two items are now nested and can be folded. Each value of the first item is written on a bold line (with the total of its lines on the same line when "Subtotal on the line of each value of the first item" is ticked), and below it the detail lines, which only write the value of the second item, indented. The two columns of items become one column, titled with the name of the first item. This replaces the subtotal lines under the groups of version 0.18.0, and the setting "Text of the subtotal" is gone.

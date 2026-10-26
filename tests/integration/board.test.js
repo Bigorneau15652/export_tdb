@@ -1500,8 +1500,9 @@ test(`a second item nests the lines, a triangle folds a group, the button above 
   assert.equal(await w.page.locator(`#boardSubtotalBox`).isVisible(), false);
   await w.page.selectOption(`#boardGroup2`, `Floor`);
   await w.page.locator(`#boardSubtotalBox`).waitFor({ state: `visible`, timeout: 5000 });
-  await w.page.check(`#boardSubtotals`);
+  assert.equal(await w.page.locator(`#boardSubtotals`).isChecked(), true, `the subtotals are ticked when the second item is chosen`);
   await w.page.waitForFunction(() => document.querySelectorAll(`.block[data-id="tb1"] tr.groupRow`).length > 0);
+  assert.notEqual(await w.page.locator(`.block[data-id="tb1"] tr.groupRow td`).nth(1).innerText(), ``);
   assert.deepEqual((await model(w.page)).blocks[0].config.groupBy, [`Usage`, `Floor`]);
   const visibleChildren = () => w.page.locator(`.block[data-id="tb1"] tr.childRow:visible`).count();
   const total = await visibleChildren();

@@ -2256,7 +2256,10 @@
   });
   el.group2.addEventListener(`change`, () => {
     const block = selectedBlock();
-    if (block) changeConfig({ groupBy: [block.config.groupBy[0] || ``, el.group2.value] });
+    if (!block) return;
+    // Choosing a second item for the first time ticks the subtotals, so that the figures of each group are seen at once.
+    const first = !block.config.groupBy[1] && Boolean(el.group2.value);
+    changeConfig({ groupBy: [block.config.groupBy[0] || ``, el.group2.value], ...(first ? { subtotals: true } : {}) });
   });
   el.subtotals.addEventListener(`change`, () => changeConfig({ subtotals: el.subtotals.checked }));
   el.colItem.addEventListener(`change`, () => {
