@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.17.0
+
+- Tables and charts: a new setting, "Composed label (optional)", under "Item". It is a model with column names between braces (for example `{Number} {Name}`), typed by hand or built with the list "Insert a column in the label", which adds the column at the cursor. The columns of a linked table are written `Reference.Column`.
+- With an item, the model replaces the label of each line of a grouped table, of the lines of a cross table and of the categories of a chart. The groups stay those of the item column: two different rows with the same composed text stay two lines. Without an item (a list), the model adds a first column with no heading, and the word of the total line goes into that column.
+- A column of the model that does not exist is reported in the message under the table, and the tables that the model crosses are loaded with the others.
+- The course of the Table block explains the setting and gives a fourth example.
+- Tests: the model in a list, a grouped table, a cross table and a chart, the groups kept apart, the unknown column, the loading of the crossed tables, the replacement of fields, and in the page the typing, the insertion list and the text of the total line.
+
 ## 0.16.1
 
 - Sheet block: the setting "Columns of the grid" is gone. The cells always share one line, in equal parts, and their number follows the information that is added. All the existing sheets follow this rule (the saved number of columns is ignored).

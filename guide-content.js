@@ -30,9 +30,9 @@
     table: {
       title: `guide_table_title`,
       intro: `guide_table_intro`,
-      steps: [`guide_table_step1`, `guide_table_step2`, `guide_table_step3`, `guide_table_step4`, `guide_table_step5`, `guide_table_step6`],
+      steps: [`guide_table_step1`, `guide_table_step2`, `guide_table_step3`, `guide_table_step4`, `guide_table_step5`, `guide_table_step6`, `guide_table_step7`],
       menus: [
-        [`boardKind`, `tipBoardKind`], [`boardTableLabel`, `tipBoardTable`], [`boardRows`, `tipBoardRows`], [`boardItem`, `tipBoardItem`], [`boardMerge`, `tipMerge`],
+        [`boardKind`, `tipBoardKind`], [`boardTableLabel`, `tipBoardTable`], [`boardRows`, `tipBoardRows`], [`boardItem`, `tipBoardItem`], [`boardLabelTemplate`, `tipBoardLabel`], [`boardMerge`, `tipMerge`],
         [`boardColItem`, `tipBoardColItem`], [`boardSlice`, `tipBoardSlice`], [`boardColumns`, `tipBoardColumns`], [`boardTotalBelow`, `tipBoardTotal`], [`boardTotalLabel`, `tipBoardTotalLabel`],
         [`boardTotalRight`, `tipBoardTotalRight`], [`labFilters`, `tipFilter`], [`labSort`, `tipSort`]
       ],
@@ -49,6 +49,10 @@
         {
           title: `guide_table_ex3_title`, settings: [`guide_table_ex3_a`, `guide_table_ex3_b`, `guide_table_ex3_c`],
           sample: { kind: `table`, headers: [`@guideWordFloor`, `@guideOffice`, `@guideClassroom`], rows: [[`@guideGround`, `80`, `40,5`], [`@guideFloor1`, `12`, `35`]] }
+        },
+        {
+          title: `guide_table_ex4_title`, settings: [`guide_table_ex4_a`, `guide_table_ex4_b`],
+          sample: { kind: `table`, headers: [``, `@guideWordArea`], rows: [[`@guideRoomOffice`, `20,5`], [`@guideRoomClass`, `35`]] }
         }
       ],
       notes: [`guide_table_note1`, `guide_table_note2`, `guide_table_note3`]

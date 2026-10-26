@@ -382,3 +382,31 @@ test(`the text of the total line is the one the user wrote, or Total when there 
   assert.equal(run(`Sites`, 1, { ...group, totalLabel: `All uses` }).total[0], `All uses`);
   assert.equal(run(`Sites`, 1, { ...CROSS, total: true, totalLabel: `All` }).total[0], `All`);
 });
+
+test(`a composed label replaces the label of the item of a grouped table and is a first column of a list`, () => {
+  const label = `{Building.Name}  {Building.Year}`;
+  const list = run(`Sites`, 1, { table: `Rooms`, link: `Rooms.Site`, total: true, labelTemplate: `{Number} - ${label}`, columns: [{ path: `Area`, fn: `sum` }] });
+  assert.deepEqual(list.headers.map((header) => header.text), [``, `Area`]);
+  assert.deepEqual(list.rows[0], [`A-001 - Building A 1965`, `20,5`]);
+  assert.deepEqual(list.total, [`Total`, `75,75`]);
+  const group = run(`Sites`, 1, { mode: `group`, table: `Rooms`, link: `Rooms.Site`, total: true, groupBy: [`Building`], labelTemplate: label, columns: [{ path: `Area`, fn: `sum` }] });
+  assert.deepEqual(group.rows, [[`Building A 1965`, `55,5`], [`Building B 1990`, `20,25`]]);
+  assert.equal(group.headers[0].text, `Building`);
+  assert.deepEqual(group.chart.categories, [`Building A 1965`, `Building B 1990`]);
+  const cross = run(`Sites`, 1, { ...CROSS, groupBy: [`Building`], merge: false, labelTemplate: label });
+  assert.deepEqual(cross.rows.map((row) => row[0]), [`Building A 1965`, `Building B 1990`]);
+});
+
+test(`a composed label keeps the groups of the column, so two rows with the same text stay apart`, () => {
+  const group = run(`Sites`, 1, { mode: `group`, table: `Rooms`, link: `Rooms.Site`, groupBy: [`Building`], labelTemplate: `Same`, columns: [{ path: `Area`, fn: `sum` }] });
+  assert.equal(group.rows.length, 2);
+  assert.deepEqual(group.rows.map((row) => row[0]), [`Same`, `Same`]);
+});
+
+test(`a composed label with an unknown column is reported, and the tables it crosses are loaded`, () => {
+  const wrong = run(`Sites`, 1, { table: `Rooms`, link: `Rooms.Site`, labelTemplate: `{Nope}`, columns: [{ path: `Area` }] });
+  assert.equal(wrong.ok, false);
+  assert.match(wrong.detail, /Nope/);
+  const tables = Q.tablesFor(schema, `Sites`, config({ table: `Rooms`, link: `Rooms.Site`, labelTemplate: `{Building.Name}`, columns: [{ path: `Area` }] }));
+  assert.ok(tables.includes(`Buildings`));
+});

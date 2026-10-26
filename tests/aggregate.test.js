@@ -177,3 +177,10 @@ test(`the grouping gives the same sums as a naive calculation on random tables`,
     assert.ok(Math.abs(result.totals[0] - total) < 1e-6);
   }
 });
+
+test(`a function that writes the label of a group changes the label and not the groups`, () => {
+  const result = groupRows(dataset, `Buildings`, [0, 1, 2, 3], { groupBy: [{ path: `Site`, labelOf: (row) => `Row ${row}` }], measures: [{ fn: `count` }], emptyLabel: `-` });
+  assert.ok(result.rows.every((row) => /^Row \d$/.test(row.keys[0])));
+  const plain = groupRows(dataset, `Buildings`, [0, 1, 2, 3], { groupBy: [{ path: `Site` }], measures: [{ fn: `count` }], emptyLabel: `-` });
+  assert.equal(result.rows.length, plain.rows.length);
+});

@@ -125,3 +125,11 @@ test(`the columns that can hold a picture are the attachments and the text colum
   assert.equal(byPath.Site, undefined);
   assert.deepEqual(F.imageChoices(schema, `Nothing`), []);
 });
+
+test(`fillTemplate replaces each field between braces and leaves the rest of the text`, () => {
+  const read = (path) => ({ Number: `101`, 'Building.Name': `A` })[path] || ``;
+  assert.equal(F.fillTemplate(`{Number} — {Building.Name}!`, read), `101 — A!`);
+  assert.equal(F.fillTemplate(`no field`, read), `no field`);
+  assert.equal(F.fillTemplate(`{Unknown}x`, read), `x`);
+  assert.equal(F.fillTemplate(`{A.B.C.D.E}`, () => `boom`), ``);
+});

@@ -51,6 +51,7 @@
   const MAX_FILTERS = 3;
   const MAX_GROUPS = 2;
   const MAX_LABEL = 60;
+  const MAX_TEMPLATE = 200;
   const MAX_FILTER_TEXT = 200;
   const PATH_PATTERN = /^[A-Za-z_][A-Za-z0-9_]{0,63}(\.[A-Za-z_][A-Za-z0-9_]{0,63}){0,3}$/;
   const LINK_PATTERN = /^[A-Za-z_][A-Za-z0-9_]{0,63}\.[A-Za-z_][A-Za-z0-9_]{0,63}(>[A-Za-z_][A-Za-z0-9_]{0,63}\.[A-Za-z_][A-Za-z0-9_]{0,63}){0,5}$/;
@@ -120,6 +121,7 @@
       sort: { by: oneOf(sort.by, SORT_BYS), column: matching(sort.column, PATH_PATTERN), dir: sort.dir === `desc` ? `desc` : `asc`, order: cleanOrder(sort.order) },
       total: raw.total === true,
       totalLabel: typeof raw.totalLabel === `string` ? raw.totalLabel.slice(0, MAX_LABEL) : ``,
+      labelTemplate: typeof raw.labelTemplate === `string` ? raw.labelTemplate.slice(0, MAX_TEMPLATE) : ``,
       totalRight: raw.totalRight === true,
       totalRightFn: FUNCTIONS.includes(raw.totalRightFn) ? raw.totalRightFn : `sum`,
       ...(Number.isInteger(raw.totalRightDecimals) && raw.totalRightDecimals >= -1 && raw.totalRightDecimals <= 4 ? { totalRightDecimals: raw.totalRightDecimals } : {}),
