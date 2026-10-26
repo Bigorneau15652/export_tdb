@@ -244,7 +244,7 @@ test(`the settings of a table block are cleaned`, () => {
     filters: [{ path: `Area`, op: `gt`, value: { kind: `const`, value: 10 } }, { path: `Area`, op: `evil` }, { path: `A`, op: `eq`, value: { kind: `field`, path: `B.C` } }, { path: `A`, op: `empty` }, { path: `A`, op: `eq` }],
     sort: { by: `value`, column: `Area`, dir: `desc` }, total: true, decimals: 2, extra: 1
   });
-  assert.deepEqual(Object.keys(config).sort(), [`colItem`, `colSort`, `columns`, `decimals`, `filters`, `groupBy`, `link`, `merge`, `mode`, `slice`, `sort`, `start`, `table`, `total`, `totalRight`, `totalRightFn`]);
+  assert.deepEqual(Object.keys(config).sort(), [`colItem`, `colSort`, `columns`, `decimals`, `filters`, `groupBy`, `link`, `merge`, `mode`, `slice`, `sort`, `start`, `table`, `total`, `totalLabel`, `totalRight`, `totalRightFn`]);
   assert.equal(config.mode, `group`);
   assert.equal(M.cleanConfig(`table`, { mode: `group` }).mode, `list`);
   assert.equal(M.cleanConfig(`table`, { mode: `list`, groupBy: [`Usage`] }).mode, `group`);
@@ -394,4 +394,12 @@ test(`the palette is a setting of the page, and a dashboard saved before takes t
   assert.equal(M.validateModel({ version: 1, page: {}, blocks: [chart(`red`)] }).model.page.palette, `red`);
   assert.equal(M.validateModel({ version: 1, page: { palette: `grey` }, blocks: [chart(`douce`)] }).model.page.palette, `grey`);
   assert.equal(M.setPage(M.emptyModel(), { palette: `acid` }).page.palette, `acid`);
+});
+
+test(`a record block accepts up to six cells per line and the label of the total is cut to its length`, () => {
+  assert.deepEqual(M.RECORD_COLUMNS, [1, 2, 3, 4, 5, 6]);
+  assert.equal(M.cleanConfig(`record`, { columns: 5 }).columns, 5);
+  assert.equal(M.cleanConfig(`record`, { columns: 7 }).columns, 2);
+  assert.equal(M.cleanConfig(`table`, { totalLabel: `x`.repeat(200) }).totalLabel.length, 60);
+  assert.equal(M.cleanConfig(`table`, { totalLabel: 5 }).totalLabel, ``);
 });

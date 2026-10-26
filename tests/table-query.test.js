@@ -373,3 +373,12 @@ test(`a scatter list leaves out the rows without two numbers and is absent for o
   assert.equal(run(`Sites`, 1, { table: `Rooms`, link: `Rooms.Site`, columns: [{ path: `Area` }, { path: `Seats` }] }).scatter, undefined);
   assert.equal(runChart({ table: `Rooms`, link: `Rooms.Site`, chart: `scatter`, columns: [{ path: `Area` }] }).scatter, undefined);
 });
+
+test(`the text of the total line is the one the user wrote, or Total when there is none`, () => {
+  const list = { table: `Rooms`, link: `Rooms.Site`, total: true, columns: [{ path: `Number` }, { path: `Area`, fn: `sum` }] };
+  assert.equal(run(`Sites`, 1, list).total[0], `Total`);
+  assert.equal(run(`Sites`, 1, { ...list, totalLabel: `Total of the site` }).total[0], `Total of the site`);
+  const group = { mode: `group`, table: `Rooms`, link: `Rooms.Site`, total: true, groupBy: [`Usage`], columns: [{ path: `Area`, fn: `sum` }] };
+  assert.equal(run(`Sites`, 1, { ...group, totalLabel: `All uses` }).total[0], `All uses`);
+  assert.equal(run(`Sites`, 1, { ...CROSS, total: true, totalLabel: `All` }).total[0], `All`);
+});

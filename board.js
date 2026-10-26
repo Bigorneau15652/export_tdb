@@ -68,7 +68,7 @@
     explain: $(`boardExplain`), explainBody: $(`boardExplainBody`), explainHead: $(`boardExplainHead`), explainClose: $(`boardExplainClose`), more: $(`boardMore`), totalRight: $(`boardTotalRight`), totalRightRow: $(`boardTotalRightRow`), totalRightFn: $(`boardTotalRightFn`), totalRightLess: $(`boardTotalRightLess`), totalRightMore: $(`boardTotalRightMore`), moreLinks: $(`boardMoreLinks`),
     groupRow: $(`boardGroupRow`), group1: $(`boardGroup1`), merge: $(`boardMerge`),
     columnRows: $(`boardColumnRows`), addColumn: $(`boardAddColumn`), sortBy: $(`boardSortBy`), sortColumn: $(`boardSortColumn`),
-    sortDir: $(`boardSortDir`), total: $(`boardTotal`), tableInfo: $(`boardTableInfo`),
+    sortDir: $(`boardSortDir`), total: $(`boardTotal`), totalLabel: $(`boardTotalLabel`), totalLabelRow: $(`boardTotalLabelRow`), tableInfo: $(`boardTableInfo`),
     filterToggle: $(`boardFilterToggle`), filterBody: $(`boardFilterBody`), sortToggle: $(`boardSortToggle`), sortBody: $(`boardSortBody`), sortOrderBox: $(`boardSortOrderBox`), sortOrder: $(`boardSortOrder`)
   };
   const filterBoxes = [$(`boardFilter1`), $(`boardFilter2`), $(`boardFilter3`)];
@@ -1708,6 +1708,8 @@
     setToggle(el.filterToggle, el.filterBody, filtersOpen);
     setToggle(el.sortToggle, el.sortBody, sortOpen);
     el.total.checked = config.total;
+    el.totalLabelRow.hidden = !config.total;
+    setValue(el.totalLabel, config.totalLabel);
     const rightOn = Query.rightTotalPossible(config);
     el.totalRight.disabled = !rightOn;
     el.totalRight.checked = config.totalRight && rightOn;
@@ -2215,6 +2217,7 @@
   el.sortColumn.addEventListener(`change`, changeSort);
   el.sortDir.addEventListener(`change`, changeSort);
   el.total.addEventListener(`change`, () => changeConfig({ total: el.total.checked }));
+  el.totalLabel.addEventListener(`input`, () => changeConfig({ totalLabel: el.totalLabel.value }));
   el.totalRight.addEventListener(`change`, () => changeConfig({ totalRight: el.totalRight.checked }));
   el.totalRightFn.addEventListener(`change`, () => changeConfig({ totalRightFn: el.totalRightFn.value }));
   const stepRight = (delta) => {
