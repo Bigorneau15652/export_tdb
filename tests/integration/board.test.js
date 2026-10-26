@@ -734,18 +734,22 @@ test(`the rows menu says in a short sentence which rows are kept and keeps the a
   assert.deepEqual(w.errors, []);
 });
 
-test(`the settings have no help badge except the one of the rows, and every label explains itself on hover`, async () => {
+test(`every setting that has an explanation shows it only on its own question mark, at the left of the label`, async () => {
   const w = await openBoard({ savedOptions: SAVED });
   await edit(w);
   await w.page.dblclick(`.block[data-id="bbb2"]`, { position: { x: 20, y: 30 } });
   const badges = await w.page.$$eval(`#boardPanel .help`, (list) => list.map((badge) => [badge.id, Boolean(badge.dataset.tip), badge.hasAttribute(`title`)]));
-  assert.deepEqual(badges.map(([id]) => id), [`boardRowsHelp`]);
+  assert.ok(badges.length >= 6);
   assert.ok(badges.every(([, hasTip, hasTitle]) => hasTip && !hasTitle));
   const labels = await w.page.$$eval(`#boardPanel label[data-i18n-hover]`, (list) => list.map((label) => label.dataset.tip));
   assert.ok(labels.length >= 5);
   assert.ok(labels.every((text) => text && text.length > 10));
   await w.page.hover(`label[for="boardTable"]`);
-  assert.equal(await w.page.locator(`label[for="boardTable"]`).evaluate((node) => getComputedStyle(node, `::after`).content !== `none`), true);
+  assert.equal(await w.page.locator(`label[for="boardTable"]`).evaluate((node) => getComputedStyle(node, `::after`).content === `none`), true);
+  const mark = w.page.locator(`label[for="boardTable"] > .helpMark`);
+  assert.equal(await mark.count(), 1);
+  await mark.hover();
+  assert.equal(await mark.evaluate((node) => getComputedStyle(node, `::after`).content !== `none`), true);
   assert.equal(await w.page.locator(`#boardPanel .hint:visible`).filter({ hasText: /./ }).count() < 3, true);
   assert.deepEqual(w.errors, []);
 });

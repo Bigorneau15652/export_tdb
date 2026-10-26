@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.18.1
+
+- Settings panel: the explanation of a setting no longer opens when the pointer crosses its label. Each setting that has an explanation now shows a small "?" at the left of its label, and the explanation opens only when the pointer is on the "?" (or when it has the keyboard focus). A click on the "?" does not toggle a tick box.
+- Tests: the label alone shows nothing, the "?" shows the explanation, and every explained setting has its "?".
+
 ## 0.18.0
 
 - Grouped tables: a new setting "Second item (optional)" adds a second level of grouping (one line per pair of values, classed by the first item). When it is chosen, "Subtotal for each value of the first item" adds, after the lines of each value, a bold line that calculates the same columns on those lines, and "Text of the subtotal" sets its first word (Subtotal by default, followed by the value of the group). The grand total stays the line "Total line".
