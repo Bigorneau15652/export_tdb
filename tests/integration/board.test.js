@@ -1449,3 +1449,15 @@ test(`the composed label and the text of the total line are typed in the panel a
   assert.equal((await model(w.page)).blocks[0].config.labelTemplate, `{Number} - {Building.Name}{Usage}`);
   assert.deepEqual(w.errors, []);
 });
+
+test(`a composed label that names a missing column still draws the table and says which column is missing`, async () => {
+  const config = { mode: `list`, table: `Rooms`, link: `Rooms.Site`, columns: [{ path: `Area`, fn: `sum` }] };
+  const w = await openWithRow({ savedOptions: tableModel(config) }, 1);
+  await w.page.waitForFunction(() => document.querySelectorAll(`.block[data-id="tb1"] .dt tr`).length > 1);
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 20, y: 30 } });
+  await w.page.fill(`#boardLabelTemplate`, `{Number} {Nope}`);
+  await w.page.waitForFunction(() => document.querySelector(`.block[data-id="tb1"] .dt tbody tr td`).textContent === `A-001`);
+  assert.match(await w.page.locator(`#boardTableInfo`).innerText(), /Nope/);
+  assert.deepEqual(w.errors, []);
+});

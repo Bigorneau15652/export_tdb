@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.17.1
+
+- Composed label: a column of the model that the table does not have no longer stops the table. The table is drawn with an empty text in place of that column, and the message under the settings names the missing columns and says to pick them in the insertion list. Before, the whole block showed "Calculation impossible" in English.
+- The explanation of the setting says that only the columns of the insertion list exist, reminds that the spaces and signs between the braces must be typed (for example `{Number} - {Name}`), and tells that with an item the model must use columns that are the same for every line of the group.
+- Tests: the table drawn with an unknown column and the missing column named, in the engine and in the page.
+
 ## 0.17.0
 
 - Tables and charts: a new setting, "Composed label (optional)", under "Item". It is a model with column names between braces (for example `{Number} {Name}`), typed by hand or built with the list "Insert a column in the label", which adds the column at the cursor. The columns of a linked table are written `Reference.Column`.
