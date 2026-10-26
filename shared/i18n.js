@@ -492,6 +492,7 @@
       boardFoldAll: `Tout replier`,
       boardUnfoldAll: `Tout déplier`,
       tipSubtotals: `Avec deux items, le tableau écrit chaque valeur du premier item sur une ligne en gras, suivie de ses lignes de détail (la valeur du deuxième item). Cette case écrit sur la ligne en gras le total des lignes du groupe. Un triangle replie chaque groupe, et le bouton au-dessus du tableau replie tout : ces boutons n'apparaissent qu'au survol et ne sont pas imprimés.`,
+      boardLabelPlaceholder: `Par exemple {Numero} - {Nom}`,
       boardPageLabel: `Page {n} sur {total}`,
       boardNewPage: `Nouvelle page : déposez un bloc ici pour la créer`,
       boardEmpty: `Ce tableau de bord est vide. Cliquez sur Modifier puis sur Ajouter un bloc.`,
@@ -1040,6 +1041,7 @@
       boardFoldAll: `Fold all`,
       boardUnfoldAll: `Unfold all`,
       tipSubtotals: `With two items, the table writes each value of the first item on a bold line, followed by its detail lines (the value of the second item). This box writes on the bold line the total of the lines of the group. A triangle folds each group and the button above the table folds all: these buttons only appear on hover and are not printed.`,
+      boardLabelPlaceholder: `For example {Number} - {Name}`,
       boardPageLabel: `Page {n} of {total}`,
       boardNewPage: `New page: drop a block here to create it`,
       boardEmpty: `This dashboard is empty. Click Edit then Add a block.`,
@@ -1113,6 +1115,9 @@
     document.documentElement.lang = lang;
     root.querySelectorAll(`[data-i18n]`).forEach((el) => {
       el.textContent = t(el.dataset.i18n);
+    });
+    root.querySelectorAll(`[data-i18n-placeholder]`).forEach((el) => {
+      el.placeholder = t(el.dataset.i18nPlaceholder);
     });
     root.querySelectorAll(`[data-i18n-label]`).forEach((el) => {
       const text = t(el.dataset.i18nLabel);

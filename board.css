@@ -312,9 +312,10 @@ body.printBody { margin: 0; background: #e4e7eb; color: #1f2933; font-family: sa
 #boardPanel .check { margin: 3px 0; }
 #boardPanel select, #boardPanel input[type="text"], #boardPanel input[type="number"] { min-height: 26px; }
 #boardPanel .row { margin: 4px 0; }
-/* The composed label of an item is folded under a triangle. */
-#boardPanel details.labelDetails { margin: 3px 0; }
-#boardPanel details.labelDetails > summary { cursor: pointer; }
+/* The composed label of an item is folded under a triangle that stands in front of the "?" of the item. */
+#boardPanel .labelFold { margin: 0 4px 0 0; padding: 0; border: none; background: transparent; color: inherit; font: inherit; line-height: 1; vertical-align: middle; cursor: pointer; }
+#boardPanel .labelFold:focus-visible { outline: 3px solid #f2b705; outline-offset: 1px; }
+#boardPanel .labelBox { margin: 2px 0 4px; }
 
 /* The explanation of a setting opens only on its small "?", which stands at the left of the label. */
 #boardPanel .helpMark { margin-right: 5px; vertical-align: middle; cursor: help; }

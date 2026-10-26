@@ -1737,12 +1737,12 @@
     setOptions(el.labelField, fieldItems, ``);
     setValue(el.labelTemplate2, config.labelTemplate2);
     setOptions(el.labelField2, fieldItems, ``);
-    el.labelRow2.hidden = !config.groupBy[1];
     // The composed labels are folded away unless the block already has one, so that the panel stays light.
     if (el.labelRow.dataset.block !== block.id) {
       el.labelRow.dataset.block = block.id;
-      el.labelRow.open = Boolean(config.labelTemplate);
-      el.labelRow2.open = Boolean(config.labelTemplate2);
+      el.labelRow.hidden = !config.labelTemplate;
+      el.labelRow2.hidden = !config.labelTemplate2;
+      syncLabelFolds();
     }
     setOptions(el.kind, [[`dynamic`, tr(`kindDynamic`)], [`fixed`, tr(`kindFixed`)]], fixed ? `fixed` : `dynamic`);
     const tables = fixed
@@ -2483,6 +2483,35 @@
     }
   }
   installHelpMarks();
+
+  // The triangles in front of the "?" of the two items: each one unfolds the composed label of its item.
+  const labelFolds = [];
+  function syncLabelFolds() {
+    for (const { box, button } of labelFolds) {
+      button.textContent = box.hidden ? `\u25B8` : `\u25BE`;
+      button.setAttribute(`aria-expanded`, String(!box.hidden));
+    }
+  }
+  function installLabelFolds() {
+    for (const [id, box] of [[`boardGroup1`, el.labelRow], [`boardGroup2`, el.labelRow2]]) {
+      const label = document.querySelector(`#boardPanel label[for="${id}"]`);
+      if (!label) continue;
+      const button = document.createElement(`button`);
+      button.type = `button`;
+      button.className = `labelFold`;
+      button.setAttribute(`aria-label`, tr(`boardLabelTemplate`));
+      button.title = tr(`boardLabelTemplate`);
+      button.addEventListener(`click`, (event) => {
+        event.preventDefault();
+        box.hidden = !box.hidden;
+        syncLabelFolds();
+      });
+      label.insertBefore(button, label.firstChild);
+      labelFolds.push({ box, button });
+    }
+    syncLabelFolds();
+  }
+  installLabelFolds();
 
   window.exportTdbBoard = { getModel: () => model };
 })();
