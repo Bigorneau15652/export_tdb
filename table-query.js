@@ -470,19 +470,38 @@
       return measure.fn === `sum` ? name : `${name} (${String(words[measure.fn]).toLowerCase()})`;
     };
     const shown = result.rows.slice(0, MAX_ROWS);
-    const body = shown.map((row) => [...row.keys, ...row.values.map((value, index) => numberText(value, measures[index].fn, measures[index].decimals))]);
+    // The lines of the table: the groups and, when asked, a subtotal line after the groups of each value of the first
+    // item. The groups of one value are put side by side, in the order in which the values first appear.
+    let lines = shown.map((row) => ({ kind: `row`, keys: row.keys, values: row.values }));
+    if (config.subtotals && groupBy.length > 1) {
+      const sums = aggregate.groupRows(dataset, config.table, rows, { groupBy: [groupBy[0]], measures, sort: { by: `key`, dir: `asc` }, emptyLabel: words.empty });
+      if (sums.error) return { error: sums.error };
+      const sumOf = new Map(sums.rows.map((row) => [row.keys[0], row.values]));
+      const order = [];
+      const byKey = new Map();
+      for (const line of lines) {
+        if (!byKey.has(line.keys[0])) {
+          byKey.set(line.keys[0], []);
+          order.push(line.keys[0]);
+        }
+        byKey.get(line.keys[0]).push(line);
+      }
+      const word = config.subtotalLabel || words.subtotal || ``;
+      lines = order.flatMap((key) => [...byKey.get(key), { kind: `sub`, keys: [`${word} ${key}`.trim(), ...groupBy.slice(1).map(() => ``)], values: sumOf.get(key) || measures.map(() => null) }]);
+    }
+    const body = lines.map((line) => [...line.keys, ...line.values.map((value, index) => numberText(value, measures[index].fn, measures[index].decimals))]);
     const total = config.total ? [totalWord(config, words), ...groupBy.slice(1).map(() => ``), ...result.totals.map((value, index) => numberText(value, measures[index].fn, measures[index].decimals))] : null;
     if (config.totalRight && rightTotalPossible(config)) {
       const fn = config.totalRightFn;
       headers.push({ text: words.total, numeric: true });
-      shown.forEach((row, at) => body[at].push(numberText(combine(row.values, fn), fn, rightDecimals(config))));
+      lines.forEach((line, at) => body[at].push(numberText(combine(line.values, fn), fn, rightDecimals(config))));
       if (total) total.push(numberText(combine(result.totals, fn), fn, rightDecimals(config)));
     }
     const chart = {
       categories: shown.map((row) => row.keys[0]),
       series: measures.map((measure, at) => ({ name: seriesName(measure, at), values: shown.map((row) => row.values[at]) }))
     };
-    return { headers, rows: body, total, chart, truncated: result.rows.length > shown.length, labelProblems: label.unknown || [] };
+    return { headers, rows: body, kinds: lines.map((line) => line.kind), total, chart, truncated: result.rows.length > shown.length, labelProblems: label.unknown || [] };
   }
 
   // Computes a table block for the selected row `record` of the table `linked`. `config` is the cleaned

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.18.0
+
+- Grouped tables: a new setting "Second item (optional)" adds a second level of grouping (one line per pair of values, classed by the first item). When it is chosen, "Subtotal for each value of the first item" adds, after the lines of each value, a bold line that calculates the same columns on those lines, and "Text of the subtotal" sets its first word (Subtotal by default, followed by the value of the group). The grand total stays the line "Total line".
+- The second item is ignored without a first item, with the same column as the first and in a cross table. Changing the first item keeps the second one.
+- Tests: the subtotals add up to the groups and to the grand total, the cleaning of the second item and, in the page, the choice of the second item and the bold lines.
+
 ## 0.17.2
 
 - Tables: a table that is too long for its frame now uses the free room under it on its own page before the rest goes on the following pages. The frame grows down to the top of the next block under it in the same columns, or to the bottom of the page when there is none, and only as much as the rows need. Before, the first page stayed at the size the block was created with while the following pages took the room they needed.

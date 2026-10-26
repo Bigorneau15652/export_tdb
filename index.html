@@ -11,13 +11,13 @@
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'self'; script-src 'self' https://grist.numerique.gouv.fr; img-src 'self' data: blob: https:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>export_tdb</title>
-  <link rel="stylesheet" href="explorer.css?v=0.17.2">
-  <link rel="stylesheet" href="board.css?v=0.17.2">
+  <link rel="stylesheet" href="explorer.css?v=0.18.0">
+  <link rel="stylesheet" href="board.css?v=0.18.0">
   <script src="https://grist.numerique.gouv.fr/grist-plugin-api.js"></script>
 </head>
 <body>
   <main id="app">
-    <h1 id="boardTitleLine"><span data-i18n="title"></span> <small class="version" id="version">0.17.2</small></h1>
+    <h1 id="boardTitleLine"><span data-i18n="title"></span> <small class="version" id="version">0.18.0</small></h1>
     <p id="status" role="status"></p>
     <p id="error" role="alert" hidden></p>
 
@@ -90,6 +90,17 @@
             </div>
             <div id="boardGroupRow" hidden>
               <label class="check" data-i18n-hover="tipMerge"><input type="checkbox" id="boardMerge"> <span data-i18n="boardMerge"></span></label>
+            </div>
+            <div id="boardGroup2Row" class="tableOnly" hidden>
+              <label for="boardGroup2" data-i18n-hover="tipBoardItem2"><span data-i18n="boardItem2"></span></label>
+              <select id="boardGroup2"></select>
+              <div id="boardSubtotalBox" hidden>
+                <label class="check" data-i18n-hover="tipSubtotals"><input type="checkbox" id="boardSubtotals"> <span data-i18n="boardSubtotals"></span></label>
+                <div id="boardSubtotalLabelRow" hidden>
+                  <label for="boardSubtotalLabel"><span data-i18n="boardSubtotalLabel"></span></label>
+                  <input type="text" id="boardSubtotalLabel" maxlength="60">
+                </div>
+              </div>
             </div>
             <div id="boardCrossBox" hidden>
               <label for="boardColItem" data-i18n-hover="tipBoardColItem"><span data-i18n="boardColItem"></span></label>
@@ -223,39 +234,39 @@
 
   </main>
 
-  <script src="shared/i18n.js?v=0.17.2"></script>
-  <script src="schema.js?v=0.17.2"></script>
-  <script src="shape.js?v=0.17.2"></script>
-  <script src="report.js?v=0.17.2"></script>
-  <script src="values.js?v=0.17.2"></script>
-  <script src="dataset.js?v=0.17.2"></script>
-  <script src="rowset.js?v=0.17.2"></script>
-  <script src="aggregate.js?v=0.17.2"></script>
-  <script src="format.js?v=0.17.2"></script>
-  <script src="expr.js?v=0.17.2"></script>
-  <script src="explorer.js?v=0.17.2"></script>
-  <script src="help.js?v=0.17.2"></script>
-  <script src="filter-ui.js?v=0.17.2"></script>
-  <script src="layout.js?v=0.17.2"></script>
-  <script src="flow.js?v=0.17.2"></script>
-  <script src="model.js?v=0.17.2"></script>
-  <script src="grist-access.js?v=0.17.2"></script>
-  <script src="markdown.js?v=0.17.2"></script>
-  <script src="fields.js?v=0.17.2"></script>
-  <script src="record.js?v=0.17.2"></script>
-  <script src="image.js?v=0.17.2"></script>
-  <script src="indicator.js?v=0.17.2"></script>
-  <script src="vendor/echarts/echarts.custom.min.js?v=0.17.2"></script>
-  <script src="chart-option.js?v=0.17.2"></script>
-  <script src="data-cache.js?v=0.17.2"></script>
-  <script src="markdown-view.js?v=0.17.2"></script>
-  <script src="table-query.js?v=0.17.2"></script>
-  <script src="named.js?v=0.17.2"></script>
-  <script src="values-panel.js?v=0.17.2"></script>
-  <script src="indicator-panel.js?v=0.17.2"></script>
-  <script src="guide-content.js?v=0.17.2"></script>
-  <script src="guide.js?v=0.17.2"></script>
-  <script src="icons.js?v=0.17.2"></script>
-  <script src="board.js?v=0.17.2"></script>
+  <script src="shared/i18n.js?v=0.18.0"></script>
+  <script src="schema.js?v=0.18.0"></script>
+  <script src="shape.js?v=0.18.0"></script>
+  <script src="report.js?v=0.18.0"></script>
+  <script src="values.js?v=0.18.0"></script>
+  <script src="dataset.js?v=0.18.0"></script>
+  <script src="rowset.js?v=0.18.0"></script>
+  <script src="aggregate.js?v=0.18.0"></script>
+  <script src="format.js?v=0.18.0"></script>
+  <script src="expr.js?v=0.18.0"></script>
+  <script src="explorer.js?v=0.18.0"></script>
+  <script src="help.js?v=0.18.0"></script>
+  <script src="filter-ui.js?v=0.18.0"></script>
+  <script src="layout.js?v=0.18.0"></script>
+  <script src="flow.js?v=0.18.0"></script>
+  <script src="model.js?v=0.18.0"></script>
+  <script src="grist-access.js?v=0.18.0"></script>
+  <script src="markdown.js?v=0.18.0"></script>
+  <script src="fields.js?v=0.18.0"></script>
+  <script src="record.js?v=0.18.0"></script>
+  <script src="image.js?v=0.18.0"></script>
+  <script src="indicator.js?v=0.18.0"></script>
+  <script src="vendor/echarts/echarts.custom.min.js?v=0.18.0"></script>
+  <script src="chart-option.js?v=0.18.0"></script>
+  <script src="data-cache.js?v=0.18.0"></script>
+  <script src="markdown-view.js?v=0.18.0"></script>
+  <script src="table-query.js?v=0.18.0"></script>
+  <script src="named.js?v=0.18.0"></script>
+  <script src="values-panel.js?v=0.18.0"></script>
+  <script src="indicator-panel.js?v=0.18.0"></script>
+  <script src="guide-content.js?v=0.18.0"></script>
+  <script src="guide.js?v=0.18.0"></script>
+  <script src="icons.js?v=0.18.0"></script>
+  <script src="board.js?v=0.18.0"></script>
 </body>
 </html>
