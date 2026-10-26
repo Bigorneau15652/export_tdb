@@ -2384,5 +2384,28 @@
 
   fillTools();
   render();
+  // Puts a small "?" at the left of every setting that has an explanation: the explanation opens when the pointer is on
+  // the "?" (or when it has the focus), not on the whole label. A click on it does not toggle the setting.
+  function installHelpMarks() {
+    for (const owner of document.querySelectorAll(`#boardPanel [data-i18n-hover]`)) {
+      if (owner.querySelector(`:scope > .helpMark`)) continue;
+      const mark = document.createElement(`span`);
+      mark.className = `help helpMark`;
+      mark.tabIndex = 0;
+      mark.setAttribute(`role`, `img`);
+      mark.textContent = `?`;
+      const sync = () => {
+        mark.dataset.tip = owner.dataset.tip || ``;
+        mark.setAttribute(`aria-label`, mark.dataset.tip);
+      };
+      sync();
+      mark.addEventListener(`mouseenter`, sync);
+      mark.addEventListener(`focus`, sync);
+      mark.addEventListener(`click`, (event) => event.preventDefault());
+      owner.insertBefore(mark, owner.firstChild);
+    }
+  }
+  installHelpMarks();
+
   window.exportTdbBoard = { getModel: () => model };
 })();
