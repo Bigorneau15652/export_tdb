@@ -47,3 +47,17 @@ test(`every row is placed once, in order, whatever the heights and the places`, 
     assert.equal(at + result.leftover, heights.length);
   }
 });
+
+test(`a table can grow down to the next block under it in its columns, or to the bottom of the page`, () => {
+  assert.equal(F.roomBelow([table], table, grid), 35);
+  const under = { id: `u`, page: 0, x: 10, y: 20, w: 5, h: 4 };
+  assert.equal(F.roomBelow([table, under], table, grid), 17);
+  const beside = { id: `s`, page: 0, x: 40, y: 20, w: 5, h: 4 };
+  assert.equal(F.roomBelow([table, beside], table, grid), 35);
+  const otherPage = { id: `p`, page: 1, x: 10, y: 20, w: 5, h: 4 };
+  assert.equal(F.roomBelow([table, otherPage], table, grid), 35);
+  const above = { id: `a`, page: 0, x: 10, y: 0, w: 5, h: 2 };
+  assert.equal(F.roomBelow([table, above], table, grid), 35);
+  const tall = { id: `t2`, page: 0, x: 2, y: 30, w: 20, h: 20 };
+  assert.equal(F.roomBelow([tall], tall, grid), 20);
+});

@@ -944,8 +944,21 @@
     const padding = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
     const overhead = table.offsetTop - parseFloat(style.paddingTop) + table.tHead.offsetHeight;
     const stepPx = STEP_MM * mmPx;
-    const regions = Flow.regionsAfter([...model.blocks, ...taken], block, Layout.MAX_PAGES, Layout.gridOf(model.page));
+    const grid = Layout.gridOf(model.page);
     const heights = rows.map((row) => row.offsetHeight);
+    // A table that is too long for its frame first takes the free room under it (down to the next block or the bottom
+    // of the page), at most what its rows need, before the rest goes on the following pages.
+    const needed = padding + overhead + heights.reduce((sum, height) => sum + height, 0);
+    if (needed > node.clientHeight + 1) {
+      const room = Flow.roomBelow([...model.blocks, ...taken], block, grid);
+      const steps = Math.min(room, Math.max(block.h, Math.ceil(needed / stepPx)));
+      if (steps > block.h) {
+        const rect = { x: block.x, y: block.y, w: block.w, h: steps };
+        place(node, rect);
+        taken.push({ id: `${block.id}:own`, page: block.page, ...rect });
+      }
+    }
+    const regions = Flow.regionsAfter([...model.blocks, ...taken], block, Layout.MAX_PAGES, grid);
     const rooms = regions.map((region) => region.h * stepPx - padding - overhead);
     const split = Flow.splitRows(heights, node.clientHeight - padding - overhead, rooms);
     rows.slice(split.chunks[0].end).forEach((row) => row.remove());
