@@ -111,7 +111,15 @@ input[type="number"]:focus-visible, input[type="text"]:focus-visible { outline: 
 .dt td { border-bottom: 1px solid #e4e7eb; }
 .dt .num { text-align: right; white-space: nowrap; }
 .dt tr.total td { border-top: 2px solid #1f2933; border-bottom: none; font-weight: 700; }
-.dt tr.subtotal td { border-top: 1px solid #1f2933; font-weight: 700; }
+/* The nested lines of a table with two items: the line of the group in bold, its lines indented. The triangle and the
+   button that fold the groups are drawn only on the screen and only on hover or focus (never printed). */
+.dt tr.groupRow td { border-top: 1px solid #1f2933; font-weight: 700; }
+.dt tr.childRow td:first-child { padding-left: 1.8em; }
+.foldToggle { width: 1.3em; margin: 0 0.2em 0 0; padding: 0; border: none; background: transparent; color: inherit; font: inherit; line-height: 1; cursor: pointer; opacity: 0; }
+.dt tr.groupRow:hover .foldToggle, .foldToggle:focus-visible { opacity: 1; }
+.foldToggle:focus-visible, .foldAll:focus-visible { outline: 3px solid #f2b705; outline-offset: 1px; }
+.foldAll { position: absolute; left: 2px; top: 2px; z-index: 5; width: 1.6em; height: 1.6em; padding: 0; border: 1px solid #52606d; border-radius: 4px; background: #ffffff; color: #1f2933; font: inherit; line-height: 1; cursor: pointer; opacity: 0; }
+.block:hover .foldAll, .foldAll:focus-visible { opacity: 1; }
 .tableHint { color: #3e4c59; font-style: italic; }
 
 .version { font-size: 12px; font-weight: 400; color: #3e4c59; }

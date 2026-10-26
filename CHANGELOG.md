@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.19.0
+
+- Grouped tables with two items are now nested and can be folded. Each value of the first item is written on a bold line (with the total of its lines on the same line when "Subtotal on the line of each value of the first item" is ticked), and below it the detail lines, which only write the value of the second item, indented. The two columns of items become one column, titled with the name of the first item. This replaces the subtotal lines under the groups of version 0.18.0, and the setting "Text of the subtotal" is gone.
+- A small triangle in front of each group line folds or unfolds its detail lines. A button above the table folds all the groups (a minus sign) or unfolds them all (a plus sign) when they are all folded. The triangle and the button only appear on hover or with the keyboard, and they are never drawn when printing or in the PDF, where every group is unfolded. Folding is temporary: it is not saved, and every group is unfolded when the page opens.
+- Tests: the nested lines and their subtotals add up to the groups and to the grand total, and in the page the choice of the second item, the triangle, the button above, the hidden buttons.
+
 ## 0.18.1
 
 - Settings panel: the explanation of a setting no longer opens when the pointer crosses its label. Each setting that has an explanation now shows a small "?" at the left of its label, and the explanation opens only when the pointer is on the "?" (or when it has the keyboard focus). A click on the "?" does not toggle a tick box.

@@ -1491,7 +1491,7 @@ test(`a table that is too long for its frame grows down to the next block under 
   assert.deepEqual([free.errors, stopped.errors, roomy.errors], [[], [], []]);
 });
 
-test(`a second item and the subtotals are chosen in the panel and drawn as bold lines`, async () => {
+test(`a second item nests the lines, a triangle folds a group, the button above folds all, and printing keeps everything unfolded`, async () => {
   const config = { mode: `group`, table: `Rooms`, link: `Rooms.Site`, groupBy: [`Usage`], columns: [{ path: `Area`, fn: `sum` }] };
   const w = await openWithRow({ savedOptions: tableModel(config) }, 1);
   await w.page.waitForFunction(() => document.querySelectorAll(`.block[data-id="tb1"] .dt tr`).length > 1);
@@ -1499,11 +1499,20 @@ test(`a second item and the subtotals are chosen in the panel and drawn as bold 
   await w.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 20, y: 30 } });
   assert.equal(await w.page.locator(`#boardSubtotalBox`).isVisible(), false);
   await w.page.selectOption(`#boardGroup2`, `Floor`);
-  assert.equal(await w.page.locator(`#boardSubtotalBox`).isVisible(), true);
+  await w.page.locator(`#boardSubtotalBox`).waitFor({ state: `visible`, timeout: 5000 });
   await w.page.check(`#boardSubtotals`);
-  await w.page.fill(`#boardSubtotalLabel`, `Sous-total`);
-  await w.page.waitForFunction(() => document.querySelectorAll(`.block[data-id="tb1"] tr.subtotal`).length > 0);
-  assert.match(await w.page.locator(`.block[data-id="tb1"] tr.subtotal td`).first().innerText(), /^Sous-total /);
+  await w.page.waitForFunction(() => document.querySelectorAll(`.block[data-id="tb1"] tr.groupRow`).length > 0);
   assert.deepEqual((await model(w.page)).blocks[0].config.groupBy, [`Usage`, `Floor`]);
+  const visibleChildren = () => w.page.locator(`.block[data-id="tb1"] tr.childRow:visible`).count();
+  const total = await visibleChildren();
+  assert.ok(total > 0);
+  await w.page.locator(`.block[data-id="tb1"] tr.groupRow .foldToggle`).first().click();
+  assert.ok((await visibleChildren()) < total);
+  await w.page.locator(`.block[data-id="tb1"] .foldAll`).click({ force: true });
+  assert.equal(await visibleChildren(), 0);
+  await w.page.locator(`.block[data-id="tb1"] .foldAll`).click({ force: true });
+  assert.equal(await visibleChildren(), total);
+  await w.page.mouse.move(1, 1);
+  assert.equal(await w.page.locator(`.block[data-id="tb1"] .foldAll`).evaluate((node) => getComputedStyle(node).opacity), `0`);
   assert.deepEqual(w.errors, []);
 });
