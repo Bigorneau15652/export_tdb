@@ -111,6 +111,7 @@ input[type="number"]:focus-visible, input[type="text"]:focus-visible { outline: 
 .dt td { border-bottom: 1px solid #e4e7eb; }
 .dt .num { text-align: right; white-space: nowrap; }
 .dt tr.total td { border-top: 2px solid #1f2933; border-bottom: none; font-weight: 700; }
+.dt tr.subtotal td { border-top: 1px solid #1f2933; font-weight: 700; }
 .tableHint { color: #3e4c59; font-style: italic; }
 
 .version { font-size: 12px; font-weight: 400; color: #3e4c59; }

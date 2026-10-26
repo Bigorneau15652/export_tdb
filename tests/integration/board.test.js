@@ -590,7 +590,7 @@ test(`a table is built from the settings panel`, async () => {
   assert.deepEqual(rows[rows.length - 1], [`Total`, `75,75`]);
   assert.match(await w.page.locator(`#boardTableInfo`).innerText(), /4/);
   assert.equal(await w.page.locator(`#boardMode`).count(), 0);
-  assert.equal(await w.page.locator(`#boardGroup2`).count(), 0);
+  assert.equal(await w.page.locator(`#boardGroup2Row`).isVisible(), false);
   await w.page.selectOption(`#boardGroup1`, `Usage`);
   await w.page.waitForFunction(() => /Classroom/.test(document.querySelector(`.block[data-type="table"]`).textContent));
   assert.equal((await model(w.page)).blocks[0].config.mode, `group`);
@@ -1485,4 +1485,21 @@ test(`a table that is too long for its frame grows down to the next block under 
   const kept = await box(roomy.page, `.block[data-id="tb1"]`);
   assert.ok(kept.height > grown.height, `a short table keeps the size chosen`);
   assert.deepEqual([free.errors, stopped.errors, roomy.errors], [[], [], []]);
+});
+
+test(`a second item and the subtotals are chosen in the panel and drawn as bold lines`, async () => {
+  const config = { mode: `group`, table: `Rooms`, link: `Rooms.Site`, groupBy: [`Usage`], columns: [{ path: `Area`, fn: `sum` }] };
+  const w = await openWithRow({ savedOptions: tableModel(config) }, 1);
+  await w.page.waitForFunction(() => document.querySelectorAll(`.block[data-id="tb1"] .dt tr`).length > 1);
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 20, y: 30 } });
+  assert.equal(await w.page.locator(`#boardSubtotalBox`).isVisible(), false);
+  await w.page.selectOption(`#boardGroup2`, `Floor`);
+  assert.equal(await w.page.locator(`#boardSubtotalBox`).isVisible(), true);
+  await w.page.check(`#boardSubtotals`);
+  await w.page.fill(`#boardSubtotalLabel`, `Sous-total`);
+  await w.page.waitForFunction(() => document.querySelectorAll(`.block[data-id="tb1"] tr.subtotal`).length > 0);
+  assert.match(await w.page.locator(`.block[data-id="tb1"] tr.subtotal td`).first().innerText(), /^Sous-total /);
+  assert.deepEqual((await model(w.page)).blocks[0].config.groupBy, [`Usage`, `Floor`]);
+  assert.deepEqual(w.errors, []);
 });

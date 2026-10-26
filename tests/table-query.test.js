@@ -413,3 +413,32 @@ test(`a composed label with an unknown column still draws the table and names th
   const tables = Q.tablesFor(schema, `Sites`, config({ table: `Rooms`, link: `Rooms.Site`, labelTemplate: `{Building.Name}`, columns: [{ path: `Area` }] }));
   assert.ok(tables.includes(`Buildings`));
 });
+
+test(`a grouped table with two items can have a subtotal line after the groups of each value of the first item`, () => {
+  const base = { mode: `group`, table: `Rooms`, link: `Rooms.Site`, total: true, groupBy: [`Usage`, `Floor`], columns: [{ path: `Area`, fn: `sum` }, { fn: `count` }] };
+  const plain = run(`Sites`, 1, base);
+  assert.equal(plain.kinds.every((kind) => kind === `row`), true);
+  const result = run(`Sites`, 1, { ...base, subtotals: true, subtotalLabel: `Subtotal` });
+  const subs = result.rows.filter((_, at) => result.kinds[at] === `sub`);
+  assert.equal(subs.length, new Set(plain.rows.map((row) => row[0])).size);
+  assert.match(subs[0][0], /^Subtotal /);
+  assert.equal(subs[0][1], ``);
+  const number = (text) => Number(text.replace(/\s/g, ``).replace(`,`, `.`));
+  const sum = (kind) => result.rows.filter((_, at) => result.kinds[at] === kind).reduce((total, row) => total + number(row[2]), 0);
+  assert.ok(Math.abs(sum(`sub`) - number(result.total[2])) < 0.011);
+  assert.ok(Math.abs(sum(`row`) - number(result.total[2])) < 0.011);
+  result.rows.forEach((row, at) => {
+    if (result.kinds[at] !== `sub`) return;
+    const group = row[0].replace(/^Subtotal /, ``);
+    const lines = result.rows.filter((other, index) => result.kinds[index] === `row` && other[0] === group);
+    assert.ok(Math.abs(lines.reduce((total, other) => total + number(other[2]), 0) - number(row[2])) < 0.011);
+    assert.equal(at > 0 && result.rows[at - 1][0] === group, true);
+  });
+  assert.equal(run(`Sites`, 1, { ...base, subtotals: true, groupBy: [`Usage`] }).kinds.every((kind) => kind === `row`), true);
+});
+
+test(`the second item is cleaned: never alone, never the same column as the first`, () => {
+  assert.deepEqual(config({ groupBy: [``, `Floor`] }).groupBy, [``, ``]);
+  assert.deepEqual(config({ groupBy: [`Usage`, `Usage`] }).groupBy, [`Usage`, ``]);
+  assert.deepEqual(config({ groupBy: [`Usage`, `Floor`] }).groupBy, [`Usage`, `Floor`]);
+});

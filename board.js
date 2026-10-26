@@ -69,6 +69,7 @@
     tableBox: $(`boardTableSettings`), kind: $(`boardKind`), tableSel: $(`boardTable`), linkRow: $(`boardLinkRow`), link: $(`boardLink`), rowsHelp: $(`boardRowsHelp`),
     explain: $(`boardExplain`), explainBody: $(`boardExplainBody`), explainHead: $(`boardExplainHead`), explainClose: $(`boardExplainClose`), more: $(`boardMore`), totalRight: $(`boardTotalRight`), totalRightRow: $(`boardTotalRightRow`), totalRightFn: $(`boardTotalRightFn`), totalRightLess: $(`boardTotalRightLess`), totalRightMore: $(`boardTotalRightMore`), moreLinks: $(`boardMoreLinks`),
     groupRow: $(`boardGroupRow`), group1: $(`boardGroup1`), merge: $(`boardMerge`),
+    group2Row: $(`boardGroup2Row`), group2: $(`boardGroup2`), subtotalBox: $(`boardSubtotalBox`), subtotals: $(`boardSubtotals`), subtotalLabelRow: $(`boardSubtotalLabelRow`), subtotalLabel: $(`boardSubtotalLabel`),
     columnRows: $(`boardColumnRows`), addColumn: $(`boardAddColumn`), sortBy: $(`boardSortBy`), sortColumn: $(`boardSortColumn`),
     sortDir: $(`boardSortDir`), labelTemplate: $(`boardLabelTemplate`), labelField: $(`boardLabelField`), total: $(`boardTotal`), totalLabel: $(`boardTotalLabel`), totalLabelRow: $(`boardTotalLabelRow`), tableInfo: $(`boardTableInfo`),
     filterToggle: $(`boardFilterToggle`), filterBody: $(`boardFilterBody`), sortToggle: $(`boardSortToggle`), sortBody: $(`boardSortBody`), sortOrderBox: $(`boardSortOrderBox`), sortOrder: $(`boardSortOrder`)
@@ -369,7 +370,7 @@
 
   // The texts that the tables use: names of the functions, the word total and the label of an empty key.
   function tableWords() {
-    return { sum: tr(`fnSum`), avg: tr(`fnAvg`), min: tr(`fnMin`), max: tr(`fnMax`), count: tr(`fnCount`), distinct: tr(`fnDistinct`), total: tr(`labTotal`), empty: tr(`tableEmptyKey`), yes: tr(`wordYes`), no: tr(`wordNo`) };
+    return { sum: tr(`fnSum`), avg: tr(`fnAvg`), min: tr(`fnMin`), max: tr(`fnMax`), count: tr(`fnCount`), distinct: tr(`fnDistinct`), total: tr(`labTotal`), subtotal: tr(`wordSubtotal`), empty: tr(`tableEmptyKey`), yes: tr(`wordYes`), no: tr(`wordNo`) };
   }
 
   // The result of a table block for the selected row, or a reason why there is none yet.
@@ -407,7 +408,7 @@
         if (result.headers[index] && result.headers[index].numeric) cell.className = `num`;
       });
     };
-    result.rows.forEach((texts) => addRow(texts, ``));
+    result.rows.forEach((texts, at) => addRow(texts, result.kinds && result.kinds[at] === `sub` ? `subtotal` : ``));
     if (result.total) addRow(result.total, `total`);
     return table;
   }
@@ -1695,6 +1696,12 @@
     }
     el.groupRow.hidden = config.mode === `list`;
     setOptions(el.group1, columnItems, config.groupBy[0] || ``);
+    el.group2Row.hidden = config.mode !== `group`;
+    setOptions(el.group2, [[``, tr(`boardItem2None`)], ...choices.filter((choice) => choice.path !== config.groupBy[0]).map((choice) => [choice.path, choice.label])], config.groupBy[1] || ``);
+    el.subtotalBox.hidden = !config.groupBy[1];
+    el.subtotals.checked = config.subtotals;
+    el.subtotalLabelRow.hidden = !config.subtotals;
+    setValue(el.subtotalLabel, config.subtotalLabel);
     el.crossBox.hidden = !config.groupBy[0];
     el.crossMore.hidden = config.mode !== `cross`;
     el.addColumn.hidden = config.mode === `cross` && config.columns.length > 0;
@@ -2186,8 +2193,14 @@
     const block = selectedBlock();
     if (!block) return;
     const group = Boolean(el.group1.value);
-    changeConfig({ groupBy: [el.group1.value], colItem: group ? block.config.colItem : ``, sort: { ...block.config.sort, by: group ? `key` : `none` }, columns: fitColumns(block, group) });
+    changeConfig({ groupBy: [el.group1.value, group ? (block.config.groupBy[1] || ``) : ``], colItem: group ? block.config.colItem : ``, sort: { ...block.config.sort, by: group ? `key` : `none` }, columns: fitColumns(block, group) });
   });
+  el.group2.addEventListener(`change`, () => {
+    const block = selectedBlock();
+    if (block) changeConfig({ groupBy: [block.config.groupBy[0] || ``, el.group2.value] });
+  });
+  el.subtotals.addEventListener(`change`, () => changeConfig({ subtotals: el.subtotals.checked }));
+  el.subtotalLabel.addEventListener(`input`, () => changeConfig({ subtotalLabel: el.subtotalLabel.value }));
   el.colItem.addEventListener(`change`, () => {
     const block = selectedBlock();
     if (!block) return;

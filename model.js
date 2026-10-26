@@ -101,6 +101,8 @@
     const sort = raw.sort && typeof raw.sort === `object` ? raw.sort : {};
     const list = (value, max) => (Array.isArray(value) ? value.slice(0, max) : []);
     const groupBy = list(raw.groupBy, MAX_GROUPS).map((path) => matching(path, PATH_PATTERN));
+    // The second item only makes sense after the first one, and never twice the same column.
+    if (groupBy.length > 1 && (!groupBy[0] || groupBy[1] === groupBy[0])) groupBy[1] = ``;
     return {
       mode: groupBy.some(Boolean) ? (matching(raw.colItem, PATH_PATTERN) ? `cross` : `group`) : `list`,
       colItem: matching(raw.colItem, PATH_PATTERN),
@@ -120,6 +122,8 @@
       filters: list(raw.filters, MAX_FILTERS).map(cleanFilter).filter(Boolean),
       sort: { by: oneOf(sort.by, SORT_BYS), column: matching(sort.column, PATH_PATTERN), dir: sort.dir === `desc` ? `desc` : `asc`, order: cleanOrder(sort.order) },
       total: raw.total === true,
+      subtotals: raw.subtotals === true,
+      subtotalLabel: typeof raw.subtotalLabel === `string` ? raw.subtotalLabel.slice(0, MAX_LABEL) : ``,
       totalLabel: typeof raw.totalLabel === `string` ? raw.totalLabel.slice(0, MAX_LABEL) : ``,
       labelTemplate: typeof raw.labelTemplate === `string` ? raw.labelTemplate.slice(0, MAX_TEMPLATE) : ``,
       totalRight: raw.totalRight === true,
