@@ -69,7 +69,7 @@
     tableBox: $(`boardTableSettings`), kind: $(`boardKind`), tableSel: $(`boardTable`), linkRow: $(`boardLinkRow`), link: $(`boardLink`), rowsHelp: $(`boardRowsHelp`),
     explain: $(`boardExplain`), explainBody: $(`boardExplainBody`), explainHead: $(`boardExplainHead`), explainClose: $(`boardExplainClose`), more: $(`boardMore`), totalRight: $(`boardTotalRight`), totalRightRow: $(`boardTotalRightRow`), totalRightFn: $(`boardTotalRightFn`), totalRightLess: $(`boardTotalRightLess`), totalRightMore: $(`boardTotalRightMore`), moreLinks: $(`boardMoreLinks`),
     groupRow: $(`boardGroupRow`), group1: $(`boardGroup1`), merge: $(`boardMerge`),
-    group2Row: $(`boardGroup2Row`), group2: $(`boardGroup2`), subtotalBox: $(`boardSubtotalBox`), subtotals: $(`boardSubtotals`), subtotalLabelRow: $(`boardSubtotalLabelRow`), subtotalLabel: $(`boardSubtotalLabel`),
+    group2Row: $(`boardGroup2Row`), group2: $(`boardGroup2`), subtotalBox: $(`boardSubtotalBox`), subtotals: $(`boardSubtotals`),
     columnRows: $(`boardColumnRows`), addColumn: $(`boardAddColumn`), sortBy: $(`boardSortBy`), sortColumn: $(`boardSortColumn`),
     sortDir: $(`boardSortDir`), labelTemplate: $(`boardLabelTemplate`), labelField: $(`boardLabelField`), total: $(`boardTotal`), totalLabel: $(`boardTotalLabel`), totalLabelRow: $(`boardTotalLabelRow`), tableInfo: $(`boardTableInfo`),
     filterToggle: $(`boardFilterToggle`), filterBody: $(`boardFilterBody`), sortToggle: $(`boardSortToggle`), sortBody: $(`boardSortBody`), sortOrderBox: $(`boardSortOrderBox`), sortOrder: $(`boardSortOrder`)
@@ -370,7 +370,7 @@
 
   // The texts that the tables use: names of the functions, the word total and the label of an empty key.
   function tableWords() {
-    return { sum: tr(`fnSum`), avg: tr(`fnAvg`), min: tr(`fnMin`), max: tr(`fnMax`), count: tr(`fnCount`), distinct: tr(`fnDistinct`), total: tr(`labTotal`), subtotal: tr(`wordSubtotal`), empty: tr(`tableEmptyKey`), yes: tr(`wordYes`), no: tr(`wordNo`) };
+    return { sum: tr(`fnSum`), avg: tr(`fnAvg`), min: tr(`fnMin`), max: tr(`fnMax`), count: tr(`fnCount`), distinct: tr(`fnDistinct`), total: tr(`labTotal`), empty: tr(`tableEmptyKey`), yes: tr(`wordYes`), no: tr(`wordNo`) };
   }
 
   // The result of a table block for the selected row, or a reason why there is none yet.
@@ -387,8 +387,53 @@
     return tr(REASON_KEYS[result.reason] || `boardTableChoose`);
   }
 
+  // The groups that the user folded in the tables with nested lines, as `block|value of the first item`. It is a
+  // temporary state of the page: it is never saved, and printing always draws every group unfolded.
+  const folded = new Set();
+
+  // The key of a group of a table block in the set of the folded groups.
+  function foldKey(block, text) {
+    return `${block.id}|${text}`;
+  }
+
+  // The small triangle in front of a group line: it folds or unfolds the lines of that group.
+  function buildFoldToggle(key, isFolded) {
+    const button = document.createElement(`button`);
+    button.type = `button`;
+    button.className = `foldToggle`;
+    button.textContent = isFolded ? `\u25B8` : `\u25BE`;
+    button.setAttribute(`aria-expanded`, String(!isFolded));
+    button.setAttribute(`aria-label`, tr(`boardFoldGroup`));
+    button.title = tr(`boardFoldGroup`);
+    button.addEventListener(`click`, (event) => {
+      event.stopPropagation();
+      if (folded.has(key)) folded.delete(key);
+      else folded.add(key);
+      render({ keepFocus: true });
+    });
+    return button;
+  }
+
+  // The button above a table with groups that folds all the groups, or unfolds them all when they are all folded.
+  function buildFoldAll(block, result) {
+    const keys = result.rows.filter((_, at) => result.kinds && result.kinds[at] === `group`).map((texts) => foldKey(block, texts[0]));
+    const allFolded = keys.length > 0 && keys.every((key) => folded.has(key));
+    const button = document.createElement(`button`);
+    button.type = `button`;
+    button.className = `foldAll`;
+    button.textContent = allFolded ? `+` : `\u2212`;
+    button.setAttribute(`aria-label`, tr(allFolded ? `boardUnfoldAll` : `boardFoldAll`));
+    button.title = tr(allFolded ? `boardUnfoldAll` : `boardFoldAll`);
+    button.addEventListener(`click`, (event) => {
+      event.stopPropagation();
+      keys.forEach((key) => (allFolded ? folded.delete(key) : folded.add(key)));
+      render({ keepFocus: true });
+    });
+    return button;
+  }
+
   // Draws the table of a result: a heading line, the rows and the total line.
-  function drawTable(result) {
+  function drawTable(result, block) {
     const table = document.createElement(`table`);
     table.className = `dt`;
     const head = table.createTHead().insertRow();
@@ -407,8 +452,23 @@
         cell.textContent = text;
         if (result.headers[index] && result.headers[index].numeric) cell.className = `num`;
       });
+      return row;
     };
-    result.rows.forEach((texts, at) => addRow(texts, result.kinds && result.kinds[at] === `sub` ? `subtotal` : ``));
+    const kinds = result.kinds || [];
+    let current = null;
+    result.rows.forEach((texts, at) => {
+      const kind = kinds[at];
+      const nestedLine = Boolean(result.groups) && result.groups[at] >= 0;
+      const row = addRow(texts, !nestedLine ? `` : kind === `group` ? `groupRow` : `childRow`);
+      if (!nestedLine) return;
+      if (kind === `group`) {
+        const key = foldKey(block, texts[0]);
+        current = { key, folded: !printing && folded.has(key) };
+        if (!printing) row.cells[0].prepend(buildFoldToggle(key, current.folded));
+      } else if (current && current.folded) {
+        row.hidden = true;
+      }
+    });
     if (result.total) addRow(result.total, `total`);
     return table;
   }
@@ -793,8 +853,9 @@
     }
     const result = tableResult(block);
     if (result.ok) {
+      if (!printing && result.groups && result.groups.some((group) => group >= 0)) node.appendChild(buildFoldAll(block, result));
       (result.slices || [result]).forEach((slice, at) => {
-        const part = drawTable(slice);
+        const part = drawTable(slice, block);
         if (at) part.classList.add(`sliceNext`);
         node.appendChild(part);
       });
@@ -1700,8 +1761,6 @@
     setOptions(el.group2, [[``, tr(`boardItem2None`)], ...choices.filter((choice) => choice.path !== config.groupBy[0]).map((choice) => [choice.path, choice.label])], config.groupBy[1] || ``);
     el.subtotalBox.hidden = !config.groupBy[1];
     el.subtotals.checked = config.subtotals;
-    el.subtotalLabelRow.hidden = !config.subtotals;
-    setValue(el.subtotalLabel, config.subtotalLabel);
     el.crossBox.hidden = !config.groupBy[0];
     el.crossMore.hidden = config.mode !== `cross`;
     el.addColumn.hidden = config.mode === `cross` && config.columns.length > 0;
@@ -2200,7 +2259,6 @@
     if (block) changeConfig({ groupBy: [block.config.groupBy[0] || ``, el.group2.value] });
   });
   el.subtotals.addEventListener(`change`, () => changeConfig({ subtotals: el.subtotals.checked }));
-  el.subtotalLabel.addEventListener(`input`, () => changeConfig({ subtotalLabel: el.subtotalLabel.value }));
   el.colItem.addEventListener(`change`, () => {
     const block = selectedBlock();
     if (!block) return;

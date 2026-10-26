@@ -128,8 +128,9 @@ test(`a grouping gives one line per group with a total, sorted by label or by va
 
 test(`a grouping by two columns has two key columns`, () => {
   const result = run(`Sites`, 1, { mode: `group`, table: `Rooms`, link: `Rooms.Site`, total: true, groupBy: [`Building`, `Usage`], columns: [{ path: `Area`, fn: `sum` }] });
-  assert.equal(result.headers.length, 3);
-  assert.deepEqual(result.total, [`Total`, ``, `75,75`]);
+  assert.equal(result.headers.length, 2, `the two items share one column`);
+  assert.deepEqual(result.total, [`Total`, `75,75`]);
+  assert.deepEqual(result.rows.filter((_, at) => result.kinds[at] === `group`).map((row) => row[0]), [`Building A`, `Building B`]);
 });
 
 test(`filters keep the right rows, and an unreadable filter is reported`, () => {
@@ -414,27 +415,29 @@ test(`a composed label with an unknown column still draws the table and names th
   assert.ok(tables.includes(`Buildings`));
 });
 
-test(`a grouped table with two items can have a subtotal line after the groups of each value of the first item`, () => {
+test(`a grouped table with two items nests its lines: a line for each value of the first item, with its subtotal when asked`, () => {
   const base = { mode: `group`, table: `Rooms`, link: `Rooms.Site`, total: true, groupBy: [`Usage`, `Floor`], columns: [{ path: `Area`, fn: `sum` }, { fn: `count` }] };
-  const plain = run(`Sites`, 1, base);
-  assert.equal(plain.kinds.every((kind) => kind === `row`), true);
-  const result = run(`Sites`, 1, { ...base, subtotals: true, subtotalLabel: `Subtotal` });
-  const subs = result.rows.filter((_, at) => result.kinds[at] === `sub`);
-  assert.equal(subs.length, new Set(plain.rows.map((row) => row[0])).size);
-  assert.match(subs[0][0], /^Subtotal /);
-  assert.equal(subs[0][1], ``);
   const number = (text) => Number(text.replace(/\s/g, ``).replace(`,`, `.`));
-  const sum = (kind) => result.rows.filter((_, at) => result.kinds[at] === kind).reduce((total, row) => total + number(row[2]), 0);
-  assert.ok(Math.abs(sum(`sub`) - number(result.total[2])) < 0.011);
-  assert.ok(Math.abs(sum(`row`) - number(result.total[2])) < 0.011);
+  const plain = run(`Sites`, 1, base);
+  assert.equal(plain.headers.length, 3);
+  assert.equal(plain.headers[0].text, `Usage`);
+  assert.ok(plain.kinds.includes(`group`) && plain.kinds.includes(`row`));
+  const groupLines = plain.rows.filter((_, at) => plain.kinds[at] === `group`);
+  assert.ok(groupLines.every((row) => row[1] === `` && row[2] === ``), `without the subtotal option the line of the group has no figures`);
+  assert.equal(plain.total.length, 3);
+  const result = run(`Sites`, 1, { ...base, subtotals: true });
+  const lines = (kind) => result.rows.filter((_, at) => result.kinds[at] === kind);
+  assert.ok(Math.abs(lines(`group`).reduce((total, row) => total + number(row[1]), 0) - number(result.total[1])) < 0.011);
+  assert.ok(Math.abs(lines(`row`).reduce((total, row) => total + number(row[1]), 0) - number(result.total[1])) < 0.011);
   result.rows.forEach((row, at) => {
-    if (result.kinds[at] !== `sub`) return;
-    const group = row[0].replace(/^Subtotal /, ``);
-    const lines = result.rows.filter((other, index) => result.kinds[index] === `row` && other[0] === group);
-    assert.ok(Math.abs(lines.reduce((total, other) => total + number(other[2]), 0) - number(row[2])) < 0.011);
-    assert.equal(at > 0 && result.rows[at - 1][0] === group, true);
+    if (result.kinds[at] !== `group`) return;
+    const children = [];
+    for (let next = at + 1; next < result.rows.length && result.kinds[next] === `row`; next += 1) children.push(result.rows[next]);
+    assert.ok(children.length >= 1);
+    assert.ok(Math.abs(children.reduce((total, other) => total + number(other[1]), 0) - number(row[1])) < 0.011);
+    assert.equal(result.groups[at], result.groups[at + 1]);
   });
-  assert.equal(run(`Sites`, 1, { ...base, subtotals: true, groupBy: [`Usage`] }).kinds.every((kind) => kind === `row`), true);
+  assert.equal(run(`Sites`, 1, { ...base, groupBy: [`Usage`] }).kinds.every((kind) => kind === `row`), true);
 });
 
 test(`the second item is cleaned: never alone, never the same column as the first`, () => {
