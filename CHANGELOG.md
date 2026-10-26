@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.19.2
+
+- Grouped tables: the heading of a column that is a sum is now the name of the column alone ("Surface" instead of "Sum (Surface)"). The other calculations keep their word before the name ("Average (Surface)", "Minimum (Surface)"), and a count without a column is still "Count". A label typed for the column is still used first.
+- The button that folds all the groups moves into the heading of the first column, at its right end, so that it no longer covers the first letters of the heading. It still appears only on hover and is never printed.
+- Tests: the headings of a sum, of another calculation, of a typed label and of a count.
+
 ## 0.19.1
 
 - Tables with two items: choosing the second item for the first time now ticks "Subtotal on the line of each value of the first item" by itself, so that the total of each group is seen at once. Before, the box had to be ticked by hand and the line of the group showed no figures until then. The box can still be unticked, and a table already saved keeps its choice.

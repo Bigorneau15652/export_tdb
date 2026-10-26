@@ -450,6 +450,14 @@
     return { headers: slices[0].headers, rows: slices[0].rows, total: slices[0].total, slices, chart, truncated: cross.rowKeys.length > shownKeys.length, labelProblems: label.unknown || [] };
   }
 
+  // The heading of a measure of a grouped table: the name of the column alone for a sum (the usual calculation), then
+  // `Average (Column)` and so on; a count without a column is just the word Count.
+  function headerName(measure, dataset, config, words) {
+    if (!measure.path) return words[measure.fn];
+    const name = pathLabel(dataset, config.table, measure.path);
+    return measure.fn === `sum` ? name : `${words[measure.fn]} (${name})`;
+  }
+
   // The result of a grouping: one line per group with the keys and the measures.
   function groupResult(dataset, config, rows, words) {
     const measures = config.columns.filter((column) => column.path || column.fn === `count`).map((column) => ({ fn: column.fn || `sum`, path: column.path || undefined, label: column.label, decimals: decimalsOf(column, config) }));
@@ -460,7 +468,7 @@
     if (result.error) return { error: result.error };
     const headers = [
       ...groupBy.map((group) => ({ text: pathLabel(dataset, config.table, group.path), numeric: false })),
-      ...measures.map((measure) => ({ text: measure.label || `${words[measure.fn]}${measure.path ? ` (${pathLabel(dataset, config.table, measure.path)})` : ``}`, numeric: true }))
+      ...measures.map((measure) => ({ text: measure.label || headerName(measure, dataset, config, words), numeric: true }))
     ];
     // The name of a series of a chart: the name of the column alone for a sum, then `Column (average)` and so on.
     const seriesName = (measure, at) => {

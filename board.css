@@ -118,7 +118,8 @@ input[type="number"]:focus-visible, input[type="text"]:focus-visible { outline: 
 .foldToggle { width: 1.3em; margin: 0 0.2em 0 0; padding: 0; border: none; background: transparent; color: inherit; font: inherit; line-height: 1; cursor: pointer; opacity: 0; }
 .dt tr.groupRow:hover .foldToggle, .foldToggle:focus-visible { opacity: 1; }
 .foldToggle:focus-visible, .foldAll:focus-visible { outline: 3px solid #f2b705; outline-offset: 1px; }
-.foldAll { position: absolute; left: 2px; top: 2px; z-index: 5; width: 1.6em; height: 1.6em; padding: 0; border: 1px solid #52606d; border-radius: 4px; background: #ffffff; color: #1f2933; font: inherit; line-height: 1; cursor: pointer; opacity: 0; }
+.dt thead th:first-child { position: relative; }
+.foldAll { position: absolute; right: 0.2em; top: 50%; transform: translateY(-50%); z-index: 5; width: 1.6em; height: 1.6em; padding: 0; border: 1px solid #52606d; border-radius: 4px; background: #ffffff; color: #1f2933; font: inherit; line-height: 1; cursor: pointer; opacity: 0; }
 .block:hover .foldAll, .foldAll:focus-visible { opacity: 1; }
 .tableHint { color: #3e4c59; font-style: italic; }
 
