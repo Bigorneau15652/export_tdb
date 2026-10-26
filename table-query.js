@@ -236,22 +236,24 @@
   }
 
   // The composed label of the rows of a block: the model written by the user (`{Number} {Name}`) with each field
-  // replaced by the text of that column of the row. Returns { read } (a function from a row to a text), nothing when
-  // the block has no model, or { error } when a column of the model cannot be read.
+  // replaced by the text of that column of the row. Returns { read, unknown } : `read` is a function from a row to a
+  // text and `unknown` lists the columns of the model that the table does not have (they give an empty text, so that
+  // the table is still drawn); nothing is returned when the block has no model.
   function labelReader(dataset, config, words) {
     const template = String(config.labelTemplate || ``).trim();
     if (!template) return {};
     const resolved = new Map();
+    const unknown = [];
     for (const path of fields.extractFields(template)) {
       const one = dataset.resolvePath(config.table, path);
-      if (one.error) return { error: `${path}: ${one.error}` };
-      resolved.set(path, one);
+      if (one.error) unknown.push(path);
+      else resolved.set(path, one);
     }
     const read = (row) => fields.fillTemplate(template, (path) => {
       const one = resolved.get(path);
       return one ? fields.formatValue(one.column, dataset.valueAt(one, row), dataset, words) : ``;
     }).replace(/\s+/g, ` `).trim();
-    return { read };
+    return { read, unknown };
   }
 
   // The rows of the block: all the rows, the starting row alone, or the rows linked to the starting row.
@@ -300,7 +302,6 @@
       });
     }
     const label = labelReader(dataset, config, words);
-    if (label.error) return { error: label.error };
     const shown = order.slice(0, MAX_ROWS);
     const body = shown.map((row) => resolved.map((one, index) => fields.formatValue(one.column, dataset.valueAt(one, row), dataset, words, decimalsOf(columns[index], config))));
     const headers = columns.map((column, index) => ({ text: column.label || pathLabel(dataset, config.table, column.path), numeric: resolved[index].column.base === `Numeric` || resolved[index].column.base === `Int` }));
@@ -328,7 +329,7 @@
       shown.forEach((row, at) => body[at].unshift(label.read(row)));
       if (total) total.unshift(totalWord(config, words));
     }
-    const out = { headers, rows: body, total, truncated: order.length > shown.length };
+    const out = { headers, rows: body, total, truncated: order.length > shown.length, labelProblems: label.unknown || [] };
     if (config.chart === `scatter` && resolved.length >= 2) out.scatter = scatterPoints(dataset, config, columns, resolved, order, words);
     return out;
   }
@@ -423,7 +424,6 @@
     const decimals = decimalsOf(column, config);
     const rowPath = config.groupBy.find(Boolean);
     const label = labelReader(dataset, config, words);
-    if (label.error) return { error: label.error };
     const rowOrder = crossOrder(dataset, config.table, rows, rowPath, config.sort.by, config.sort.dir, config.sort.order, words, label.read);
     const colOrder = crossOrder(dataset, config.table, rows, config.colItem, config.colSort, `asc`, [], words);
     const cross = aggregate.crossTable(dataset, config.table, rows, { rowPath, colPath: config.colItem, measure, rowMerge: config.merge, colMerge: config.merge, rowLabelOf: label.read, emptyLabel: words.empty, rowOrder, colOrder });
@@ -447,14 +447,13 @@
       return { headers, rows: body, total };
     });
     const chart = { categories: shownKeys, series: cross.colKeys.map((name, col) => ({ name, values: shownKeys.map((_, row) => cross.cells[row][col]) })) };
-    return { headers: slices[0].headers, rows: slices[0].rows, total: slices[0].total, slices, chart, truncated: cross.rowKeys.length > shownKeys.length };
+    return { headers: slices[0].headers, rows: slices[0].rows, total: slices[0].total, slices, chart, truncated: cross.rowKeys.length > shownKeys.length, labelProblems: label.unknown || [] };
   }
 
   // The result of a grouping: one line per group with the keys and the measures.
   function groupResult(dataset, config, rows, words) {
     const measures = config.columns.filter((column) => column.path || column.fn === `count`).map((column) => ({ fn: column.fn || `sum`, path: column.path || undefined, label: column.label, decimals: decimalsOf(column, config) }));
     const label = labelReader(dataset, config, words);
-    if (label.error) return { error: label.error };
     const groupBy = config.groupBy.filter(Boolean).map((path, at) => ({ path, merge: config.merge, ...(at === 0 && label.read ? { labelOf: label.read } : {}) }));
     const sort = groupSort(dataset, config);
     const result = aggregate.groupRows(dataset, config.table, rows, { groupBy, measures, sort, emptyLabel: words.empty });
@@ -483,7 +482,7 @@
       categories: shown.map((row) => row.keys[0]),
       series: measures.map((measure, at) => ({ name: seriesName(measure, at), values: shown.map((row) => row.values[at]) }))
     };
-    return { headers, rows: body, total, chart, truncated: result.rows.length > shown.length };
+    return { headers, rows: body, total, chart, truncated: result.rows.length > shown.length, labelProblems: label.unknown || [] };
   }
 
   // Computes a table block for the selected row `record` of the table `linked`. `config` is the cleaned

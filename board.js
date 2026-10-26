@@ -1731,6 +1731,7 @@
       messages.push(tr(`boardTableCounts`, { kept: result.kept, total: result.scanned }));
       result.warnings.forEach((reason) => messages.push(tr(`boardTableFilterIgnored`, { reason })));
       if (result.truncated) messages.push(tr(`boardTableTruncated`, { max: Query.MAX_ROWS }));
+      if (result.labelProblems && result.labelProblems.length) messages.push(tr(`boardLabelProblems`, { fields: result.labelProblems.join(`, `) }));
     } else if (result.reason !== `choose`) {
       messages.push(reasonText(result));
     }
@@ -1741,7 +1742,7 @@
     else if (overflow) messages.push(tr(`boardTableOverflow`));
     if (info && info.pages > 0) messages.push(tr(`boardTablePages`, { n: info.pages + 1 }));
     el.tableInfo.textContent = messages.join(` `);
-    el.tableInfo.className = overflow || (result.ok && (result.warnings.length || result.truncated)) || (!result.ok && result.reason !== `choose`) ? `warning` : `hint`;
+    el.tableInfo.className = overflow || (result.ok && (result.warnings.length || result.truncated || (result.labelProblems && result.labelProblems.length))) || (!result.ok && result.reason !== `choose`) ? `warning` : `hint`;
   }
 
   // Fills the settings panel with the selected block.

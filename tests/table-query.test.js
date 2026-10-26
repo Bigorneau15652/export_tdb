@@ -403,10 +403,13 @@ test(`a composed label keeps the groups of the column, so two rows with the same
   assert.deepEqual(group.rows.map((row) => row[0]), [`Same`, `Same`]);
 });
 
-test(`a composed label with an unknown column is reported, and the tables it crosses are loaded`, () => {
-  const wrong = run(`Sites`, 1, { table: `Rooms`, link: `Rooms.Site`, labelTemplate: `{Nope}`, columns: [{ path: `Area` }] });
-  assert.equal(wrong.ok, false);
-  assert.match(wrong.detail, /Nope/);
+test(`a composed label with an unknown column still draws the table and names the missing column, and the tables it crosses are loaded`, () => {
+  const wrong = run(`Sites`, 1, { table: `Rooms`, link: `Rooms.Site`, labelTemplate: `{Number} {Nope}`, columns: [{ path: `Area` }] });
+  assert.equal(wrong.ok, true);
+  assert.deepEqual(wrong.labelProblems, [`Nope`]);
+  assert.equal(wrong.rows[0][0], `A-001`);
+  const fine = run(`Sites`, 1, { table: `Rooms`, link: `Rooms.Site`, labelTemplate: `{Number}`, columns: [{ path: `Area` }] });
+  assert.deepEqual(fine.labelProblems, []);
   const tables = Q.tablesFor(schema, `Sites`, config({ table: `Rooms`, link: `Rooms.Site`, labelTemplate: `{Building.Name}`, columns: [{ path: `Area` }] }));
   assert.ok(tables.includes(`Buildings`));
 });
