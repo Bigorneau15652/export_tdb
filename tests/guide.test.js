@@ -35,7 +35,7 @@ test(`every text of every course exists in French and in English`, () => {
 test(`every menu named between double brackets is a real menu of the panel, and the names of the menus are never written by hand`, () => {
   const real = new Set([...panel.matchAll(/data-i18n="(\w+)"/g)].map((match) => match[1]));
   // The names that the panel builds by script (the title of the columns of a cross table, the add buttons).
-  for (const key of [`boardCellCalc`, `boardColumnLabel`, `boardRecordAdd`, `boardValuesButton`, `boardIndicatorValue`, `boardIndicatorNote`, `boardIndicatorBase`, `boardIndicatorRules`, `boardIndicatorAddRule`]) real.add(key);
+  for (const key of [`boardCellCalc`, `boardColumnLabel`, `boardRecordAdd`, `boardValuesButton`, `boardIndicatorValue`, `boardIndicatorNote`, `boardIndicatorBase`, `boardIndicatorRules`, `boardIndicatorAddRule`, `boardLabelTemplate`]) real.add(key);
   for (const type of Guide.TYPES) {
     const { texts, menus } = Guide.keysOf(type);
     for (const menu of menus) assert.ok(real.has(menu), `${type}: ${menu} is not a menu of the panel`);

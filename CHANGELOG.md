@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.20.1
+
+- Settings panel: the line "Composed label (optional)" is gone. The composed label of an item is now unfolded by a small triangle that stands in front of the "?" on the line of "Item", and the same for "Second item". The model and the insertion list appear under the select of their item, with an example written in the empty field. A label is open when the block already has a model, closed otherwise, and the triangle keeps its state while the settings are filled again (before, it could close by itself).
+- The rest of the menus is as before.
+- Tests: the triangle in front of the question mark, the label under the select of its item, no separate line.
+
 ## 0.20.0
 
 - Composed label for the second item: a table with two items has a "Composed label" under "Second item", like the one under "Item", with the same insertion list. It writes the label of the detail lines of each group.
