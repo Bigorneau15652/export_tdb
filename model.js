@@ -48,7 +48,6 @@
   const NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]{0,39}$/;
   const MAX_UNIT = 12;
   const MAX_EXPRESSION = 500;
-  const RECORD_COLUMNS = [1, 2, 3, 4, 5, 6];
   const MAX_FILTERS = 3;
   const MAX_GROUPS = 2;
   const MAX_LABEL = 60;
@@ -128,8 +127,8 @@
     };
   }
 
-  // The settings of a record block cleaned: the list of information (a column path and a label), the number
-  // of columns of the grid and the size of the text.
+  // The settings of a record block cleaned: the list of information (a column path and a label) and the size
+  // of the text. The cells always share one line: their number is limited by the width of the block (see record.js).
   function cleanRecord(raw) {
     const items = Array.isArray(raw.items) ? raw.items : [];
     return {
@@ -137,7 +136,6 @@
         path: matching(item.path, PATH_PATTERN),
         label: typeof item.label === `string` ? item.label.slice(0, MAX_LABEL) : ``
       })),
-      columns: RECORD_COLUMNS.includes(raw.columns) ? raw.columns : 2,
       size: TEXT_SIZES.includes(raw.size) ? raw.size : `normal`
     };
   }
@@ -420,7 +418,7 @@
     return reflow({ ...model, page: cleanPage({ ...model.page, ...changes }) });
   }
 
-  const api = { FORMAT_VERSION, MAX_BLOCKS, MAX_TITLE, MAX_FIXED_TEXT, MAX_COLUMNS, MAX_FILTERS, MAX_GROUPS, TABLE_MODES, SLICES, FUNCTIONS, OPERATORS, SORT_BYS, TYPES, MAX_RECORD_ITEMS, RECORD_COLUMNS, MAX_VALUES, CHART_TYPES, CHART_PALETTES, CHART_LEGENDS, CHART_LABELS, INDICATOR_COLORS, MAX_RULES, MAX_NOTE, MAX_IMAGE_RANK, MAX_FOOTER, VALUE_KINDS, NAME_PATTERN, cleanValues, setValues, TEXT_SOURCES, TEXT_SIZES, TEXT_ALIGNS, FILLS, DEFAULT_SIZES, emptyModel, cleanConfig, validateModel, reflow, findBlock, addBlock, compactPages, updateBlock, moveBlock, resizeBlock, deleteBlock, setPage };
+  const api = { FORMAT_VERSION, MAX_BLOCKS, MAX_TITLE, MAX_FIXED_TEXT, MAX_COLUMNS, MAX_FILTERS, MAX_GROUPS, TABLE_MODES, SLICES, FUNCTIONS, OPERATORS, SORT_BYS, TYPES, MAX_RECORD_ITEMS, MAX_VALUES, CHART_TYPES, CHART_PALETTES, CHART_LEGENDS, CHART_LABELS, INDICATOR_COLORS, MAX_RULES, MAX_NOTE, MAX_IMAGE_RANK, MAX_FOOTER, VALUE_KINDS, NAME_PATTERN, cleanValues, setValues, TEXT_SOURCES, TEXT_SIZES, TEXT_ALIGNS, FILLS, DEFAULT_SIZES, emptyModel, cleanConfig, validateModel, reflow, findBlock, addBlock, compactPages, updateBlock, moveBlock, resizeBlock, deleteBlock, setPage };
   if (typeof module !== `undefined` && module.exports) module.exports = api;
   else root.exportTdbModel = api;
 })(typeof window !== `undefined` ? window : globalThis);

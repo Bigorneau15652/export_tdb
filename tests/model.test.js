@@ -396,10 +396,9 @@ test(`the palette is a setting of the page, and a dashboard saved before takes t
   assert.equal(M.setPage(M.emptyModel(), { palette: `acid` }).page.palette, `acid`);
 });
 
-test(`a record block accepts up to six cells per line and the label of the total is cut to its length`, () => {
-  assert.deepEqual(M.RECORD_COLUMNS, [1, 2, 3, 4, 5, 6]);
-  assert.equal(M.cleanConfig(`record`, { columns: 5 }).columns, 5);
-  assert.equal(M.cleanConfig(`record`, { columns: 7 }).columns, 2);
+test(`a record block no longer keeps a number of columns, and the label of the total is cut to its length`, () => {
+  assert.equal(M.RECORD_COLUMNS, undefined);
+  assert.equal(`columns` in M.cleanConfig(`record`, { columns: 5 }), false);
   assert.equal(M.cleanConfig(`table`, { totalLabel: `x`.repeat(200) }).totalLabel.length, 60);
   assert.equal(M.cleanConfig(`table`, { totalLabel: 5 }).totalLabel, ``);
 });

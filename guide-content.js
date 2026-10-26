@@ -57,12 +57,12 @@
       title: `guide_record_title`,
       intro: `guide_record_intro`,
       steps: [`guide_record_step1`, `guide_record_step2`, `guide_record_step3`, `guide_record_step4`],
-      menus: [[`boardRecordItems`, `tipRecordItems`], [`boardRecordColumns`, `tipRecordColumns`], [`boardSize`, `tipBoardSize`]],
+      menus: [[`boardRecordItems`, `tipRecordItems`], [`boardSize`, `tipBoardSize`]],
       extras: [],
       examples: [
         {
           title: `guide_record_ex1_title`, settings: [`guide_record_ex1_a`, `guide_record_ex1_b`],
-          sample: { kind: `record`, columns: 2, cells: [[`@guideWordName`, `@guideBuildingA`], [`@guideWordYear`, `1965`], [`@guideWordAddress`, `@guideAddress`], [`@guideWordArea`, `167,5`]] }
+          sample: { kind: `record`, columns: 4, cells: [[`@guideWordName`, `@guideBuildingA`], [`@guideWordYear`, `1965`], [`@guideWordAddress`, `@guideAddress`], [`@guideWordArea`, `167,5`]] }
         }
       ],
       notes: [`guide_record_note1`, `guide_record_note2`]
