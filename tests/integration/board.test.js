@@ -1446,6 +1446,8 @@ test(`the composed label and the text of the total line are typed in the panel a
   await w.page.waitForFunction(() => document.querySelectorAll(`.block[data-id="tb1"] .dt tr`).length > 1);
   await edit(w);
   await w.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 20, y: 30 } });
+  assert.equal(await w.page.locator(`#boardLabelTemplate`).isVisible(), false, `the composed label is folded away at first`);
+  await w.page.click(`#boardLabelRow > summary`);
   await w.page.fill(`#boardLabelTemplate`, `{Number} - {Building.Name}`);
   await w.page.waitForFunction(() => document.querySelector(`.block[data-id="tb1"] .dt tbody tr td`).textContent === `A-001 - Building A`);
   await w.page.selectOption(`#boardLabelField`, `Usage`);
@@ -1462,6 +1464,7 @@ test(`a composed label that names a missing column still draws the table and say
   await w.page.waitForFunction(() => document.querySelectorAll(`.block[data-id="tb1"] .dt tr`).length > 1);
   await edit(w);
   await w.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 20, y: 30 } });
+  await w.page.click(`#boardLabelRow > summary`);
   await w.page.fill(`#boardLabelTemplate`, `{Number} {Nope}`);
   await w.page.waitForFunction(() => document.querySelector(`.block[data-id="tb1"] .dt tbody tr td`).textContent === `A-001`);
   assert.match(await w.page.locator(`#boardTableInfo`).innerText(), /Nope/);
@@ -1515,5 +1518,22 @@ test(`a second item nests the lines, a triangle folds a group, the button above 
   assert.equal(await visibleChildren(), total);
   await w.page.mouse.move(1, 1);
   assert.equal(await w.page.locator(`.block[data-id="tb1"] .foldAll`).evaluate((node) => getComputedStyle(node).opacity), `0`);
+  assert.deepEqual(w.errors, []);
+});
+
+test(`the second item has a composed label of its own, folded under a triangle like the first one`, async () => {
+  const config = { mode: `group`, table: `Rooms`, link: `Rooms.Site`, groupBy: [`Building`, `Usage`], labelTemplate: `{Building.Name}`, columns: [{ path: `Area`, fn: `sum` }] };
+  const w = await openWithRow({ savedOptions: tableModel(config) }, 1);
+  await w.page.waitForFunction(() => document.querySelectorAll(`.block[data-id="tb1"] tr.childRow`).length > 0);
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 20, y: 30 } });
+  assert.equal(await w.page.locator(`#boardLabelTemplate`).isVisible(), true, `the first one is open because it holds a model`);
+  assert.equal(await w.page.locator(`#boardLabelTemplate2`).isVisible(), false);
+  await w.page.click(`#boardLabelRow2 > summary`);
+  await w.page.fill(`#boardLabelTemplate2`, `{Number}`);
+  await w.page.selectOption(`#boardLabelField2`, `Usage`);
+  assert.equal(await w.page.locator(`#boardLabelTemplate2`).inputValue(), `{Number}{Usage}`);
+  await w.page.waitForFunction(() => /^[AB]-\d+/.test(document.querySelector(`.block[data-id="tb1"] tr.childRow td`).textContent));
+  assert.equal((await model(w.page)).blocks[0].config.labelTemplate2, `{Number}{Usage}`);
   assert.deepEqual(w.errors, []);
 });

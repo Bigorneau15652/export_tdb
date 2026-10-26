@@ -71,7 +71,7 @@
     groupRow: $(`boardGroupRow`), group1: $(`boardGroup1`), merge: $(`boardMerge`),
     group2Row: $(`boardGroup2Row`), group2: $(`boardGroup2`), subtotalBox: $(`boardSubtotalBox`), subtotals: $(`boardSubtotals`),
     columnRows: $(`boardColumnRows`), addColumn: $(`boardAddColumn`), sortBy: $(`boardSortBy`), sortColumn: $(`boardSortColumn`),
-    sortDir: $(`boardSortDir`), labelTemplate: $(`boardLabelTemplate`), labelField: $(`boardLabelField`), total: $(`boardTotal`), totalLabel: $(`boardTotalLabel`), totalLabelRow: $(`boardTotalLabelRow`), tableInfo: $(`boardTableInfo`),
+    sortDir: $(`boardSortDir`), labelRow: $(`boardLabelRow`), labelTemplate: $(`boardLabelTemplate`), labelField: $(`boardLabelField`), labelRow2: $(`boardLabelRow2`), labelTemplate2: $(`boardLabelTemplate2`), labelField2: $(`boardLabelField2`), total: $(`boardTotal`), totalLabel: $(`boardTotalLabel`), totalLabelRow: $(`boardTotalLabelRow`), tableInfo: $(`boardTableInfo`),
     filterToggle: $(`boardFilterToggle`), filterBody: $(`boardFilterBody`), sortToggle: $(`boardSortToggle`), sortBody: $(`boardSortBody`), sortOrderBox: $(`boardSortOrderBox`), sortOrder: $(`boardSortOrder`)
   };
   const filterBoxes = [$(`boardFilter1`), $(`boardFilter2`), $(`boardFilter3`)];
@@ -1732,8 +1732,18 @@
     const start = starts.find((item) => item.key === config.start) || starts[0];
     const choices = config.table && schema.tables.has(config.table) ? Fields.sortChoices(Fields.fieldChoices(schema, config.table)) : [];
     const columnItems = [[``, tr(`boardItemNone`)], ...choices.map((choice) => [choice.path, choice.label])];
+    const fieldItems = [[``, tr(`boardFieldPlaceholder`)], ...choices.map((choice) => [choice.path, choice.label])];
     setValue(el.labelTemplate, config.labelTemplate);
-    setOptions(el.labelField, [[``, tr(`boardFieldPlaceholder`)], ...choices.map((choice) => [choice.path, choice.label])], ``);
+    setOptions(el.labelField, fieldItems, ``);
+    setValue(el.labelTemplate2, config.labelTemplate2);
+    setOptions(el.labelField2, fieldItems, ``);
+    el.labelRow2.hidden = !config.groupBy[1];
+    // The composed labels are folded away unless the block already has one, so that the panel stays light.
+    if (el.labelRow.dataset.block !== block.id) {
+      el.labelRow.dataset.block = block.id;
+      el.labelRow.open = Boolean(config.labelTemplate);
+      el.labelRow2.open = Boolean(config.labelTemplate2);
+    }
     setOptions(el.kind, [[`dynamic`, tr(`kindDynamic`)], [`fixed`, tr(`kindFixed`)]], fixed ? `fixed` : `dynamic`);
     const tables = fixed
       ? Query.listAllTables(schema).map((entry) => [entry.table, entry.summary ? `${entry.table} ${tr(`labQualitySummary`)}` : entry.table])
@@ -2310,15 +2320,20 @@
   el.sortColumn.addEventListener(`change`, changeSort);
   el.sortDir.addEventListener(`change`, changeSort);
   el.total.addEventListener(`change`, () => changeConfig({ total: el.total.checked }));
-  el.labelTemplate.addEventListener(`input`, () => changeConfig({ labelTemplate: el.labelTemplate.value }));
-  el.labelField.addEventListener(`change`, () => {
-    const path = el.labelField.value;
-    if (!path) return;
-    el.labelTemplate.setRangeText(`{${path}}`, el.labelTemplate.selectionStart, el.labelTemplate.selectionEnd, `end`);
-    el.labelField.value = ``;
-    el.labelTemplate.focus();
-    el.labelTemplate.dispatchEvent(new Event(`input`));
-  });
+  // The composed label of an item: the model is typed in `input` and a column chosen in `select` is inserted at the cursor.
+  const bindLabel = (input, select, key) => {
+    input.addEventListener(`input`, () => changeConfig({ [key]: input.value }));
+    select.addEventListener(`change`, () => {
+      const path = select.value;
+      if (!path) return;
+      input.setRangeText(`{${path}}`, input.selectionStart, input.selectionEnd, `end`);
+      select.value = ``;
+      input.focus();
+      input.dispatchEvent(new Event(`input`));
+    });
+  };
+  bindLabel(el.labelTemplate, el.labelField, `labelTemplate`);
+  bindLabel(el.labelTemplate2, el.labelField2, `labelTemplate2`);
   el.totalLabel.addEventListener(`input`, () => changeConfig({ totalLabel: el.totalLabel.value }));
   el.totalRight.addEventListener(`change`, () => changeConfig({ totalRight: el.totalRight.checked }));
   el.totalRightFn.addEventListener(`change`, () => changeConfig({ totalRightFn: el.totalRightFn.value }));

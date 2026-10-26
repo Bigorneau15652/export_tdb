@@ -125,6 +125,7 @@
       subtotals: raw.subtotals === true,
       totalLabel: typeof raw.totalLabel === `string` ? raw.totalLabel.slice(0, MAX_LABEL) : ``,
       labelTemplate: typeof raw.labelTemplate === `string` ? raw.labelTemplate.slice(0, MAX_TEMPLATE) : ``,
+      labelTemplate2: typeof raw.labelTemplate2 === `string` ? raw.labelTemplate2.slice(0, MAX_TEMPLATE) : ``,
       totalRight: raw.totalRight === true,
       totalRightFn: FUNCTIONS.includes(raw.totalRightFn) ? raw.totalRightFn : `sum`,
       ...(Number.isInteger(raw.totalRightDecimals) && raw.totalRightDecimals >= -1 && raw.totalRightDecimals <= 4 ? { totalRightDecimals: raw.totalRightDecimals } : {}),
