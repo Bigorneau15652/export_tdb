@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.20.0
+
+- Composed label for the second item: a table with two items has a "Composed label" under "Second item", like the one under "Item", with the same insertion list. It writes the label of the detail lines of each group.
+- Both composed labels are folded under a triangle, to keep the panel light. A label is open when the block already has a model, closed otherwise. The model of the second item is saved with the block.
+- Tests: the label of the detail lines, the missing column named only when the second item exists, the tables crossed by the model, and in the page the folded state, the typing and the insertion list of the second label.
+
 ## 0.19.2
 
 - Grouped tables: the heading of a column that is a sum is now the name of the column alone ("Surface" instead of "Sum (Surface)"). The other calculations keep their word before the name ("Average (Surface)", "Minimum (Surface)"), and a count without a column is still "Count". A label typed for the column is still used first.

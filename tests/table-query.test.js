@@ -450,3 +450,17 @@ test(`the heading of a sum is the name of the column alone, the other calculatio
   const result = run(`Sites`, 1, { mode: `group`, table: `Rooms`, link: `Rooms.Site`, groupBy: [`Usage`], columns: [{ path: `Area`, fn: `sum` }, { path: `Area`, fn: `avg` }, { path: `Area`, fn: `sum`, label: `Own` }, { fn: `count` }] });
   assert.deepEqual(result.headers.map((header) => header.text), [`Usage`, `Area`, `Average (Area)`, `Own`, `Count`]);
 });
+
+test(`the second item of a nested table can have a composed label of its own`, () => {
+  const base = { mode: `group`, table: `Rooms`, link: `Rooms.Site`, groupBy: [`Building`, `Usage`], labelTemplate: `{Building.Name} {Building.Year}`, labelTemplate2: `{Number} / {Usage}`, columns: [{ path: `Area`, fn: `sum` }] };
+  const result = run(`Sites`, 1, base);
+  const groups = result.rows.filter((_, at) => result.kinds[at] === `group`).map((row) => row[0]);
+  assert.deepEqual(groups, [`Building A 1965`, `Building B 1990`]);
+  const children = result.rows.filter((_, at) => result.kinds[at] === `row`).map((row) => row[0]);
+  assert.ok(children.every((text) => /^[AB]-\d+ \//.test(text)), children.join(`|`));
+  const wrong = run(`Sites`, 1, { ...base, labelTemplate2: `{Nope}` });
+  assert.deepEqual(wrong.labelProblems, [`Nope`]);
+  const alone = run(`Sites`, 1, { ...base, groupBy: [`Building`], labelTemplate2: `{Nope}` });
+  assert.deepEqual(alone.labelProblems, []);
+  assert.ok(Q.tablesFor(schema, `Sites`, config({ ...base, labelTemplate2: `{Building.Name}` })).includes(`Buildings`));
+});

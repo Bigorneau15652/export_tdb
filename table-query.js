@@ -175,7 +175,7 @@
       ...config.filters.map((filter) => filter.path),
       config.sort.column
     ].filter(Boolean);
-    paths.push(...fields.extractFields(config.labelTemplate));
+    paths.push(...fields.extractFields(config.labelTemplate), ...fields.extractFields(config.labelTemplate2));
     fields.tablesForPaths(schema, config.table, paths).forEach((name) => found.add(name));
     return [...found].filter((name) => schema.tables.has(name));
   }
@@ -239,8 +239,8 @@
   // replaced by the text of that column of the row. Returns { read, unknown } : `read` is a function from a row to a
   // text and `unknown` lists the columns of the model that the table does not have (they give an empty text, so that
   // the table is still drawn); nothing is returned when the block has no model.
-  function labelReader(dataset, config, words) {
-    const template = String(config.labelTemplate || ``).trim();
+  function labelReader(dataset, config, words, text) {
+    const template = String(text === undefined ? config.labelTemplate : text || ``).trim();
     if (!template) return {};
     const resolved = new Map();
     const unknown = [];
@@ -462,7 +462,9 @@
   function groupResult(dataset, config, rows, words) {
     const measures = config.columns.filter((column) => column.path || column.fn === `count`).map((column) => ({ fn: column.fn || `sum`, path: column.path || undefined, label: column.label, decimals: decimalsOf(column, config) }));
     const label = labelReader(dataset, config, words);
-    const groupBy = config.groupBy.filter(Boolean).map((path, at) => ({ path, merge: config.merge, ...(at === 0 && label.read ? { labelOf: label.read } : {}) }));
+    const label2 = labelReader(dataset, config, words, config.labelTemplate2);
+    const readers = [label.read, label2.read];
+    const groupBy = config.groupBy.filter(Boolean).map((path, at) => ({ path, merge: config.merge, ...(readers[at] ? { labelOf: readers[at] } : {}) }));
     const sort = groupSort(dataset, config);
     const result = aggregate.groupRows(dataset, config.table, rows, { groupBy, measures, sort, emptyLabel: words.empty });
     if (result.error) return { error: result.error };
@@ -517,7 +519,7 @@
       categories: shown.map((row) => row.keys[0]),
       series: measures.map((measure, at) => ({ name: seriesName(measure, at), values: shown.map((row) => row.values[at]) }))
     };
-    return { headers, rows: body, kinds: lines.map((line) => line.kind), groups: lines.map((line) => line.group), total, chart, truncated: result.rows.length > shown.length, labelProblems: label.unknown || [] };
+    return { headers, rows: body, kinds: lines.map((line) => line.kind), groups: lines.map((line) => line.group), total, chart, truncated: result.rows.length > shown.length, labelProblems: [...(label.unknown || []), ...(groupBy.length > 1 ? label2.unknown || [] : [])] };
   }
 
   // Computes a table block for the selected row `record` of the table `linked`. `config` is the cleaned
