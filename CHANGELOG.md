@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.16.1
+
+- Sheet block: the setting "Columns of the grid" is gone. The cells always share one line, in equal parts, and their number follows the information that is added. All the existing sheets follow this rule (the saved number of columns is ignored).
+- The number of cells is limited by the width of the block and by the size of the text: about 6 on an A4 page in portrait, more in landscape or on A3, and more again when the block is widened. When the limit is reached, the button "Add an information" is disabled and a message says the maximum for this width and asks to enlarge the block.
+- The course of the Sheet block and its example follow this new behaviour.
+- Tests: the limit of cells for each width and size of text, the old setting gone from the panel and from the saved settings, and in the page the one line and the disabled button with its message.
+
 ## 0.16.0
 
 - Tables: a new setting, "Text of the total line", appears under "Total line (below)". It replaces the word Total in the first cell of the total line (for example "Building total in m2"). Left empty, the word Total is written as before. It works for lists, grouped tables and cross tables.

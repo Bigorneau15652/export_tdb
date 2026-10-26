@@ -40,6 +40,8 @@
   const WARNING_KEYS = { version: `boardWarnVersion`, invalid: `boardWarnInvalid`, blocks: `boardWarnBlocks` };
   // Height of the characters of a text block in millimetres, by size.
   const TEXT_MM = { small: 3, normal: 3.5, large: 5 };
+  // The width, in millimetres, that the margins inside a record block take away from its width.
+  const RECORD_PADDING_MM = 3;
   const TABLE_MM = 3;
   const CELL_DELAY_MS = 900;
   const CHART_TYPE_KEYS = { bar: `chartBar`, stack: `chartStack`, barh: `chartBarh`, barhStack: `chartBarhStack`, line: `chartLine`, area: `chartArea`, pie: `chartPie`, donut: `chartDonut`, treemap: `chartTreemap`, scatter: `chartScatter` };
@@ -61,7 +63,7 @@
     footerButton: $(`boardFooterButton`), menu: $(`boardMenu`), debug: $(`boardDebug`), debugBox: $(`boardDebugBox`), debugText: $(`boardDebugText`), debugClose: $(`boardDebugClose`),
     zoom: $(`boardZoom`), saveState: $(`boardSaveState`), scroll: $(`boardScroll`), canvas: $(`boardCanvas`),
     side: $(`boardPanel`), titleRow: $(`boardTitleRow`), title: $(`boardTitle`), remove: $(`boardDelete`), close: $(`boardClose`), refresh: $(`boardRefresh`),
-    textBox: $(`boardTextSettings`), chartBox: $(`boardChartSettings`), chartType: $(`boardChartType`), paletteButton: $(`boardPaletteButton`), chartLegend: $(`boardChartLegend`), chartLabels: $(`boardChartLabels`), chartInfo: $(`boardChartInfo`), crossBox: $(`boardCrossBox`), crossMore: $(`boardCrossMore`), colItem: $(`boardColItem`), slice: $(`boardSlice`), colSort: $(`boardColSort`), indicatorBox: $(`boardIndicatorSettings`), indicatorBody: $(`boardIndicatorBody`), valuesBox: $(`boardValuesSettings`), valuesList: $(`boardValuesList`), valuesAdd: $(`boardValuesAdd`), valuesButton: $(`boardValuesButton`), heading: $(`boardPanelHeading`), typeSelect: $(`boardType`), guide: $(`boardGuide`), imageBox: $(`boardImageSettings`), imageColumn: $(`boardImageColumn`), imageRank: $(`boardImageRank`), imageCaption: $(`boardImageCaption`), imageInfo: $(`boardImageInfo`), recordBox: $(`boardRecordSettings`), recordRows: $(`boardRecordRows`), recordAdd: $(`boardRecordAdd`), recordColumns: $(`boardRecordColumns`), recordSize: $(`boardRecordSize`), recordInfo: $(`boardRecordInfo`), source: $(`boardSource`), columnRow: $(`boardColumnRow`), column: $(`boardColumn`),
+    textBox: $(`boardTextSettings`), chartBox: $(`boardChartSettings`), chartType: $(`boardChartType`), paletteButton: $(`boardPaletteButton`), chartLegend: $(`boardChartLegend`), chartLabels: $(`boardChartLabels`), chartInfo: $(`boardChartInfo`), crossBox: $(`boardCrossBox`), crossMore: $(`boardCrossMore`), colItem: $(`boardColItem`), slice: $(`boardSlice`), colSort: $(`boardColSort`), indicatorBox: $(`boardIndicatorSettings`), indicatorBody: $(`boardIndicatorBody`), valuesBox: $(`boardValuesSettings`), valuesList: $(`boardValuesList`), valuesAdd: $(`boardValuesAdd`), valuesButton: $(`boardValuesButton`), heading: $(`boardPanelHeading`), typeSelect: $(`boardType`), guide: $(`boardGuide`), imageBox: $(`boardImageSettings`), imageColumn: $(`boardImageColumn`), imageRank: $(`boardImageRank`), imageCaption: $(`boardImageCaption`), imageInfo: $(`boardImageInfo`), recordBox: $(`boardRecordSettings`), recordRows: $(`boardRecordRows`), recordAdd: $(`boardRecordAdd`), recordSize: $(`boardRecordSize`), recordInfo: $(`boardRecordInfo`), source: $(`boardSource`), columnRow: $(`boardColumnRow`), column: $(`boardColumn`),
     text: $(`boardText`), field: $(`boardField`), size: $(`boardSize`), align: $(`boardAlign`), fill: $(`boardFill`),
     textInfo: $(`boardTextInfo`), cellState: $(`boardCellState`),
     tableBox: $(`boardTableSettings`), kind: $(`boardKind`), tableSel: $(`boardTable`), linkRow: $(`boardLinkRow`), link: $(`boardLink`), rowsHelp: $(`boardRowsHelp`),
@@ -531,7 +533,7 @@
     }
     const grid = document.createElement(`div`);
     grid.className = `recordGrid`;
-    grid.style.gridTemplateColumns = `repeat(${config.columns}, minmax(0, 1fr))`;
+    grid.style.gridTemplateColumns = `repeat(${shown.cells.length}, minmax(0, 1fr))`;
     for (const cell of shown.cells) {
       const item = document.createElement(`div`);
       item.className = `recordCell`;
@@ -693,7 +695,8 @@
     const config = block.config;
     const state = context();
     const choices = state.schema && state.linked && state.schema.tables.has(state.linked) ? Fields.sortChoices(Fields.fieldChoices(state.schema, state.linked)) : [];
-    el.recordAdd.disabled = !state.schema || config.items.length >= Model.MAX_RECORD_ITEMS;
+    const limit = Math.min(Model.MAX_RECORD_ITEMS, Record.maxCells(block.w * STEP_MM - RECORD_PADDING_MM, config.size));
+    el.recordAdd.disabled = !state.schema || config.items.length >= limit;
     const key = `${block.id}|${config.items.length}|${state.linked}|${choices.length}`;
     if (key !== recordRowsFor) {
       recordRowsFor = key;
@@ -706,7 +709,6 @@
       setOptions(row.querySelector(`.colPath`), [[``, tr(`boardColumnNone`)], ...choices.map((choice) => [choice.path, choice.label])], item.path);
       setValue(row.querySelector(`.colLabel`), item.label);
     });
-    setOptions(el.recordColumns, Model.RECORD_COLUMNS.map((count) => [count, String(count)]), config.columns);
     setOptions(el.recordSize, Model.TEXT_SIZES.map((name) => [name, tr(SIZE_KEYS[name])]), config.size);
     const shown = state.schema && state.record ? Record.recordCells(state.schema, currentDataset(), state.linked, state.record, config, { yes: tr(`wordYes`), no: tr(`wordNo`) }) : null;
     const messages = [];
@@ -714,6 +716,7 @@
     else if (shown && shown.problems.length) messages.push(tr(`boardRecordProblems`, { fields: shown.problems.join(`, `) }));
     const node = el.canvas.querySelector(`.block[data-id="${block.id}"]`);
     if (node && node.classList.contains(`overflowing`)) messages.push(tr(`boardRecordOverflow`));
+    if (config.items.length >= limit) messages.push(tr(`boardRecordFull`, { max: limit }));
     el.recordInfo.textContent = messages.join(` `);
     el.recordInfo.className = messages.length ? `warning` : `hint`;
   }
@@ -2192,7 +2195,6 @@
     const block = selectedBlock();
     if (block && block.config.items.length < Model.MAX_RECORD_ITEMS) changeConfig({ items: [...block.config.items, { path: ``, label: `` }] });
   });
-  el.recordColumns.addEventListener(`change`, () => changeConfig({ columns: Number(el.recordColumns.value) }));
   el.imageColumn.addEventListener(`change`, () => changeConfig({ path: el.imageColumn.value }));
   el.imageRank.addEventListener(`input`, () => {
     const rank = Number(el.imageRank.value);

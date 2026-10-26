@@ -29,12 +29,21 @@
     return { cells, problems };
   }
 
+  // The narrowest width, in millimetres, that a cell can have and still be read, for each size of text.
+  const MIN_CELL_MM = { small: 26, normal: 30, large: 43 };
+
+  // The most cells that fit on the one line of a block that is `widthMm` wide: at least one.
+  function maxCells(widthMm, size) {
+    const least = MIN_CELL_MM[size] || MIN_CELL_MM.normal;
+    return Math.max(1, Math.floor((Number.isFinite(widthMm) ? widthMm : 0) / least));
+  }
+
   // The paths of the information of a record block, for loading the tables that they cross.
   function recordPaths(config) {
     return config.items.map((item) => item.path).filter(Boolean);
   }
 
-  const api = { recordCells, recordPaths };
+  const api = { MIN_CELL_MM, maxCells, recordCells, recordPaths };
   if (isNode) module.exports = api;
   else root.exportTdbRecord = api;
 })(typeof window !== `undefined` ? window : globalThis);

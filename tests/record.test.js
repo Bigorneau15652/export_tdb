@@ -15,9 +15,8 @@ const config = (changes) => M.cleanConfig(`record`, changes);
 
 test(`the settings of a record block are cleaned`, () => {
   const clean = config({ items: [{ path: `Number`, label: `N°` }, { path: `bad path`, label: 5 }, null, { path: `Site.Name` }], columns: 3, size: `large`, extra: 1 });
-  assert.deepEqual(clean, { items: [{ path: `Number`, label: `N°` }, { path: ``, label: `` }, { path: `Site.Name`, label: `` }], columns: 3, size: `large` });
-  assert.deepEqual(config({}), { items: [], columns: 2, size: `normal` });
-  assert.equal(config({ columns: 9 }).columns, 2);
+  assert.deepEqual(clean, { items: [{ path: `Number`, label: `N°` }, { path: ``, label: `` }, { path: `Site.Name`, label: `` }], size: `large` });
+  assert.deepEqual(config({}), { items: [], size: `normal` });
   assert.equal(config({ items: Array.from({ length: 80 }, () => ({ path: `A` })) }).items.length, M.MAX_RECORD_ITEMS);
   assert.ok(M.TYPES.includes(`record`));
   assert.ok(M.DEFAULT_SIZES.record.w > 0);
@@ -41,4 +40,14 @@ test(`an unknown column gives an empty cell and is reported`, () => {
 
 test(`the paths of a record block are the paths of its information`, () => {
   assert.deepEqual(R.recordPaths(config({ items: [{ path: `A` }, { path: `` }, { path: `B.C` }] })), [`A`, `B.C`]);
+});
+
+test(`the number of cells that fit on the line depends on the width of the block and on the size of the text`, () => {
+  assert.equal(R.maxCells(190, `normal`), 6);
+  assert.equal(R.maxCells(277, `normal`), 9);
+  assert.ok(R.maxCells(400, `normal`) > R.maxCells(277, `normal`));
+  assert.ok(R.maxCells(190, `small`) > R.maxCells(190, `large`));
+  assert.equal(R.maxCells(5, `normal`), 1);
+  assert.equal(R.maxCells(NaN, `normal`), 1);
+  assert.equal(R.maxCells(100, `unknown`), R.maxCells(100, `normal`));
 });

@@ -898,12 +898,25 @@ test(`a record block shows the information of the selected row as small labels a
   await w.page.selectOption(`#boardRecordRows .colrow:nth-child(4) .colPath`, `Number`);
   await w.page.fill(`#boardRecordRows .colrow:nth-child(4) .colLabel`, `Autre`);
   await w.page.click(`#boardRecordRows .colrow:nth-child(1) .colBottom button:nth-of-type(2)`);
-  await w.page.selectOption(`#boardRecordColumns`, `2`);
+  assert.equal(await w.page.locator(`#boardRecordColumns`).count(), 0);
   const block = (await model(w.page)).blocks[0];
-  assert.equal(block.config.columns, 2);
   assert.equal(block.config.items.length, 4);
   assert.equal(block.config.items[0].path, `Site.Name`);
   assert.equal(block.config.items[3].label, `Autre`);
+  assert.deepEqual(w.errors, []);
+});
+
+test(`the cells of a record block share one line and the add button stops, with a message, when the width of the block is used up`, async () => {
+  const config = { items: [{ path: `Number` }, { path: `Area` }], size: `normal` };
+  const saved = { model: { version: 1, page: { format: `screen`, orientation: `landscape`, margin: 10 }, pages: 1, blocks: [{ id: `rb2`, type: `record`, title: ``, page: 0, x: 0, y: 0, w: 14, h: 8, config }] } };
+  const w = await openWithRow({ linked: `Rooms`, savedOptions: saved }, 1);
+  await w.page.waitForFunction(() => document.querySelectorAll(`.recordCell`).length === 2);
+  const tops = await w.page.$$eval(`.recordCell`, (list) => list.map((cell) => Math.round(cell.getBoundingClientRect().top)));
+  assert.equal(tops[0], tops[1]);
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="rb2"]`, { position: { x: 20, y: 10 } });
+  assert.equal(await w.page.locator(`#boardRecordAdd`).isDisabled(), true);
+  assert.match(await w.page.locator(`#boardRecordInfo`).innerText(), /\(2\)/);
   assert.deepEqual(w.errors, []);
 });
 
