@@ -20,6 +20,12 @@
     return found;
   }
 
+  // A text where each field written between braces is replaced by what `read(path)` gives (a text). Used for the
+  // composed labels of the tables.
+  function fillTemplate(template, read) {
+    return String(template || ``).replace(FIELD, (_, path) => (path.split(`.`).length <= MAX_PATH_PARTS ? String(read(path)) : ``));
+  }
+
   // The columns of a table that can be put in a text: its own columns and, for each reference column,
   // the columns of the table it points to, written `Reference.Column`. Returns [{ path, label, base }].
   function fieldChoices(schema, tableId) {
@@ -192,7 +198,7 @@
     return { nodes: walk(nodes), problems };
   }
 
-  const api = { extractFields, fieldChoices, imageChoices, sortChoices, tablesForPaths, formatValue, resolveField, resolveFieldFull, expandFields };
+  const api = { extractFields, fillTemplate, fieldChoices, imageChoices, sortChoices, tablesForPaths, formatValue, resolveField, resolveFieldFull, expandFields };
   if (isNode) module.exports = api;
   else root.exportTdbFields = api;
 })(typeof window !== `undefined` ? window : globalThis);

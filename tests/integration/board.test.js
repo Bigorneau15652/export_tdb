@@ -1433,3 +1433,19 @@ test(`the cap opens the course of the block in a window of its own, a second cli
   await Promise.all([popup.waitForEvent(`close`), popup.click(`.guideClose`)]);
   assert.deepEqual(w.errors, []);
 });
+
+test(`the composed label and the text of the total line are typed in the panel and drawn at once`, async () => {
+  const config = { mode: `list`, table: `Rooms`, link: `Rooms.Site`, total: true, columns: [{ path: `Area`, fn: `sum` }] };
+  const w = await openWithRow({ savedOptions: tableModel(config) }, 1);
+  await w.page.waitForFunction(() => document.querySelectorAll(`.block[data-id="tb1"] .dt tr`).length > 1);
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 20, y: 30 } });
+  await w.page.fill(`#boardLabelTemplate`, `{Number} - {Building.Name}`);
+  await w.page.waitForFunction(() => document.querySelector(`.block[data-id="tb1"] .dt tbody tr td`).textContent === `A-001 - Building A`);
+  await w.page.selectOption(`#boardLabelField`, `Usage`);
+  assert.equal(await w.page.locator(`#boardLabelTemplate`).inputValue(), `{Number} - {Building.Name}{Usage}`);
+  await w.page.fill(`#boardTotalLabel`, `Total du site`);
+  await w.page.waitForFunction(() => document.querySelector(`.block[data-id="tb1"] tr.total td`).textContent === `Total du site`);
+  assert.equal((await model(w.page)).blocks[0].config.labelTemplate, `{Number} - {Building.Name}{Usage}`);
+  assert.deepEqual(w.errors, []);
+});

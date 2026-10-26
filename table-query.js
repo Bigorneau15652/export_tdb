@@ -175,6 +175,7 @@
       ...config.filters.map((filter) => filter.path),
       config.sort.column
     ].filter(Boolean);
+    paths.push(...fields.extractFields(config.labelTemplate));
     fields.tablesForPaths(schema, config.table, paths).forEach((name) => found.add(name));
     return [...found].filter((name) => schema.tables.has(name));
   }
@@ -234,6 +235,25 @@
     return Number.isInteger(config.totalRightDecimals) && config.totalRightDecimals >= -1 ? config.totalRightDecimals : config.decimals;
   }
 
+  // The composed label of the rows of a block: the model written by the user (`{Number} {Name}`) with each field
+  // replaced by the text of that column of the row. Returns { read } (a function from a row to a text), nothing when
+  // the block has no model, or { error } when a column of the model cannot be read.
+  function labelReader(dataset, config, words) {
+    const template = String(config.labelTemplate || ``).trim();
+    if (!template) return {};
+    const resolved = new Map();
+    for (const path of fields.extractFields(template)) {
+      const one = dataset.resolvePath(config.table, path);
+      if (one.error) return { error: `${path}: ${one.error}` };
+      resolved.set(path, one);
+    }
+    const read = (row) => fields.fillTemplate(template, (path) => {
+      const one = resolved.get(path);
+      return one ? fields.formatValue(one.column, dataset.valueAt(one, row), dataset, words) : ``;
+    }).replace(/\s+/g, ` `).trim();
+    return { read };
+  }
+
   // The rows of the block: all the rows, the starting row alone, or the rows linked to the starting row.
   function selectRows(schema, dataset, linked, record, config) {
     const start = listStarts(schema, linked).find((item) => item.key === config.start);
@@ -279,6 +299,8 @@
         return sign * aggregate.compareLabels(String(x), String(y));
       });
     }
+    const label = labelReader(dataset, config, words);
+    if (label.error) return { error: label.error };
     const shown = order.slice(0, MAX_ROWS);
     const body = shown.map((row) => resolved.map((one, index) => fields.formatValue(one.column, dataset.valueAt(one, row), dataset, words, decimalsOf(columns[index], config))));
     const headers = columns.map((column, index) => ({ text: column.label || pathLabel(dataset, config.table, column.path), numeric: resolved[index].column.base === `Numeric` || resolved[index].column.base === `Int` }));
@@ -286,7 +308,7 @@
     const totalValues = [];
     if (config.total && columns.some((column) => column.fn)) {
       total = columns.map((column, index) => {
-        if (!column.fn) return index === 0 ? totalWord(config, words) : ``;
+        if (!column.fn) return index === 0 && !label.read ? totalWord(config, words) : ``;
         const numbers = rows.map((row) => (column.fn === `distinct` ? dataset.textAt(resolved[index], row) : values.toNumber(dataset.valueAt(resolved[index], row))));
         const value = column.fn === `distinct` ? new Set(numbers.filter((text) => text !== ``)).size : aggregate.summarize(numbers, column.fn);
         totalValues[index] = value;
@@ -300,6 +322,11 @@
       headers.push({ text: words.total, numeric: true });
       shown.forEach((row, at) => body[at].push(numberText(combine(used.map((index) => read(row, index)), fn), fn, rightDecimals(config))));
       if (total) total.push(numberText(combine(used.map((index) => totalValues[index]), fn), fn, rightDecimals(config)));
+    }
+    if (label.read) {
+      headers.unshift({ text: ``, numeric: false });
+      shown.forEach((row, at) => body[at].unshift(label.read(row)));
+      if (total) total.unshift(totalWord(config, words));
     }
     const out = { headers, rows: body, total, truncated: order.length > shown.length };
     if (config.chart === `scatter` && resolved.length >= 2) out.scatter = scatterPoints(dataset, config, columns, resolved, order, words);
@@ -368,7 +395,7 @@
   // The imposed order of the labels of an item of a cross table, or nothing when the usual order (by label, ascending)
   // is wanted: the labels in the order of the table that the item points to (`ref`), in the list that the user gave
   // (`manual`), or by label descending.
-  function crossOrder(dataset, tableId, rows, path, by, dir, manual, words) {
+  function crossOrder(dataset, tableId, rows, path, by, dir, manual, words, labelOf) {
     if (by === `manual`) return manual;
     const resolved = dataset.resolvePath(tableId, path);
     if (resolved.error) return undefined;
@@ -376,7 +403,7 @@
     if (!rankOf && dir !== `desc`) return undefined;
     const ranks = new Map();
     for (const row of rows) {
-      const label = dataset.textAt(resolved, row) || words.empty;
+      const label = (labelOf ? labelOf(row) : ``) || dataset.textAt(resolved, row) || words.empty;
       const rank = rankOf ? rankOf(row) : null;
       const value = rank === null ? Infinity : rank;
       ranks.set(label, ranks.has(label) ? Math.min(ranks.get(label), value) : value);
@@ -395,9 +422,11 @@
     const measure = { fn: column.fn || `sum`, path: column.path || undefined };
     const decimals = decimalsOf(column, config);
     const rowPath = config.groupBy.find(Boolean);
-    const rowOrder = crossOrder(dataset, config.table, rows, rowPath, config.sort.by, config.sort.dir, config.sort.order, words);
+    const label = labelReader(dataset, config, words);
+    if (label.error) return { error: label.error };
+    const rowOrder = crossOrder(dataset, config.table, rows, rowPath, config.sort.by, config.sort.dir, config.sort.order, words, label.read);
     const colOrder = crossOrder(dataset, config.table, rows, config.colItem, config.colSort, `asc`, [], words);
-    const cross = aggregate.crossTable(dataset, config.table, rows, { rowPath, colPath: config.colItem, measure, rowMerge: config.merge, colMerge: config.merge, emptyLabel: words.empty, rowOrder, colOrder });
+    const cross = aggregate.crossTable(dataset, config.table, rows, { rowPath, colPath: config.colItem, measure, rowMerge: config.merge, colMerge: config.merge, rowLabelOf: label.read, emptyLabel: words.empty, rowOrder, colOrder });
     if (cross.error) return { error: cross.error };
     const shownKeys = cross.rowKeys.slice(0, MAX_ROWS);
     const fn = config.totalRightFn;
@@ -424,7 +453,9 @@
   // The result of a grouping: one line per group with the keys and the measures.
   function groupResult(dataset, config, rows, words) {
     const measures = config.columns.filter((column) => column.path || column.fn === `count`).map((column) => ({ fn: column.fn || `sum`, path: column.path || undefined, label: column.label, decimals: decimalsOf(column, config) }));
-    const groupBy = config.groupBy.filter(Boolean).map((path) => ({ path, merge: config.merge }));
+    const label = labelReader(dataset, config, words);
+    if (label.error) return { error: label.error };
+    const groupBy = config.groupBy.filter(Boolean).map((path, at) => ({ path, merge: config.merge, ...(at === 0 && label.read ? { labelOf: label.read } : {}) }));
     const sort = groupSort(dataset, config);
     const result = aggregate.groupRows(dataset, config.table, rows, { groupBy, measures, sort, emptyLabel: words.empty });
     if (result.error) return { error: result.error };
