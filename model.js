@@ -48,7 +48,7 @@
   const NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]{0,39}$/;
   const MAX_UNIT = 12;
   const MAX_EXPRESSION = 500;
-  const RECORD_COLUMNS = [1, 2, 3, 4];
+  const RECORD_COLUMNS = [1, 2, 3, 4, 5, 6];
   const MAX_FILTERS = 3;
   const MAX_GROUPS = 2;
   const MAX_LABEL = 60;
@@ -120,6 +120,7 @@
       filters: list(raw.filters, MAX_FILTERS).map(cleanFilter).filter(Boolean),
       sort: { by: oneOf(sort.by, SORT_BYS), column: matching(sort.column, PATH_PATTERN), dir: sort.dir === `desc` ? `desc` : `asc`, order: cleanOrder(sort.order) },
       total: raw.total === true,
+      totalLabel: typeof raw.totalLabel === `string` ? raw.totalLabel.slice(0, MAX_LABEL) : ``,
       totalRight: raw.totalRight === true,
       totalRightFn: FUNCTIONS.includes(raw.totalRightFn) ? raw.totalRightFn : `sum`,
       ...(Number.isInteger(raw.totalRightDecimals) && raw.totalRightDecimals >= -1 && raw.totalRightDecimals <= 4 ? { totalRightDecimals: raw.totalRightDecimals } : {}),

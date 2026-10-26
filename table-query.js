@@ -224,6 +224,11 @@
     return list.reduce((x, y) => x + y, 0);
   }
 
+  // The text written in the first cell of the total line: the label chosen for the block or, without one, the word Total.
+  function totalWord(config, words) {
+    return config.totalLabel || words.total;
+  }
+
   // The decimals of the total on the right: its own choice or, when it has none, those of the table.
   function rightDecimals(config) {
     return Number.isInteger(config.totalRightDecimals) && config.totalRightDecimals >= -1 ? config.totalRightDecimals : config.decimals;
@@ -281,7 +286,7 @@
     const totalValues = [];
     if (config.total && columns.some((column) => column.fn)) {
       total = columns.map((column, index) => {
-        if (!column.fn) return index === 0 ? words.total : ``;
+        if (!column.fn) return index === 0 ? totalWord(config, words) : ``;
         const numbers = rows.map((row) => (column.fn === `distinct` ? dataset.textAt(resolved[index], row) : values.toNumber(dataset.valueAt(resolved[index], row))));
         const value = column.fn === `distinct` ? new Set(numbers.filter((text) => text !== ``)).size : aggregate.summarize(numbers, column.fn);
         totalValues[index] = value;
@@ -407,7 +412,7 @@
       });
       let total = null;
       if (config.total) {
-        total = [words.total, ...slice.colTotals.map((value) => numberText(value, measure.fn, decimals))];
+        total = [totalWord(config, words), ...slice.colTotals.map((value) => numberText(value, measure.fn, decimals))];
         if (right) total.push(numberText(combine(slice.colTotals, fn), fn, rightDecimals(config)));
       }
       return { headers, rows: body, total };
@@ -436,7 +441,7 @@
     };
     const shown = result.rows.slice(0, MAX_ROWS);
     const body = shown.map((row) => [...row.keys, ...row.values.map((value, index) => numberText(value, measures[index].fn, measures[index].decimals))]);
-    const total = config.total ? [words.total, ...groupBy.slice(1).map(() => ``), ...result.totals.map((value, index) => numberText(value, measures[index].fn, measures[index].decimals))] : null;
+    const total = config.total ? [totalWord(config, words), ...groupBy.slice(1).map(() => ``), ...result.totals.map((value, index) => numberText(value, measures[index].fn, measures[index].decimals))] : null;
     if (config.totalRight && rightTotalPossible(config)) {
       const fn = config.totalRightFn;
       headers.push({ text: words.total, numeric: true });

@@ -33,7 +33,7 @@
       steps: [`guide_table_step1`, `guide_table_step2`, `guide_table_step3`, `guide_table_step4`, `guide_table_step5`, `guide_table_step6`],
       menus: [
         [`boardKind`, `tipBoardKind`], [`boardTableLabel`, `tipBoardTable`], [`boardRows`, `tipBoardRows`], [`boardItem`, `tipBoardItem`], [`boardMerge`, `tipMerge`],
-        [`boardColItem`, `tipBoardColItem`], [`boardSlice`, `tipBoardSlice`], [`boardColumns`, `tipBoardColumns`], [`boardTotalBelow`, `tipBoardTotal`],
+        [`boardColItem`, `tipBoardColItem`], [`boardSlice`, `tipBoardSlice`], [`boardColumns`, `tipBoardColumns`], [`boardTotalBelow`, `tipBoardTotal`], [`boardTotalLabel`, `tipBoardTotalLabel`],
         [`boardTotalRight`, `tipBoardTotalRight`], [`labFilters`, `tipFilter`], [`labSort`, `tipSort`]
       ],
       extras: [],

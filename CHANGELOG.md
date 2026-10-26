@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.16.0
+
+- Tables: a new setting, "Text of the total line", appears under "Total line (below)". It replaces the word Total in the first cell of the total line (for example "Building total in m2"). Left empty, the word Total is written as before. It works for lists, grouped tables and cross tables.
+- Sheet block: the number of cells per line goes from 1 to 6 (it stopped at 4), which is what an identity band with five pieces of information needs.
+- This version starts the acceptance test on the reference sheets. Missing features found by reading them are done one version at a time: composed labels (0.17.0), then subtotals of grouped tables (0.18.0).
+- Tests: the total label for the three kinds of table, its cleaning, and the new limit of cells per line.
+
 ## 0.15.0
 
 - Course windows, second part: the Chart, Image and Indicator blocks now have their course, so the student cap is shown for the six types of blocks. Each course follows the same plan as the others: what the block is for, step by step, the settings one by one, examples with a small drawn result, good to know.
