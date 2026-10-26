@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.17.2
+
+- Tables: a table that is too long for its frame now uses the free room under it on its own page before the rest goes on the following pages. The frame grows down to the top of the next block under it in the same columns, or to the bottom of the page when there is none, and only as much as the rows need. Before, the first page stayed at the size the block was created with while the following pages took the room they needed.
+- A table that is short keeps the size chosen for its block, and no other block is covered or moved.
+- The saved size of the block does not change: the growth is drawn, not saved. The preview and the PDF show the same pages.
+- Tests: the room under a block (next block in the same columns, other columns, other page, bottom of the page) and, in the page, the growth to the next block and to the bottom of the page, and the size kept by a short table. The tests of the continuation on the next page now put a block under the table so that the table cannot grow.
+
 ## 0.17.1
 
 - Composed label: a column of the model that the table does not have no longer stops the table. The table is drawn with an empty text in place of that column, and the message under the settings names the missing columns and says to pick them in the insertion list. Before, the whole block showed "Calculation impossible" in English.

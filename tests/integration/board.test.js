@@ -533,6 +533,8 @@ test(`the orientation button switches and shows the current orientation, the num
 });
 
 // A saved model with one table block of the given settings.
+// A text block right under a small table: it stops the table from growing, so that the rest goes on the next page.
+const BLOCKER = { id: `bk1`, type: `text`, title: ``, page: 0, x: 0, y: 4, w: 30, h: 4 };
 const tableModel = (config, extra = {}) => ({
   model: { version: 1, page: { format: `screen`, orientation: `landscape`, margin: 10 }, pages: 1, blocks: [{ id: `tb1`, type: `table`, title: `Surfaces`, page: 0, x: 0, y: 0, w: 50, h: 20, config, ...extra }] }
 });
@@ -832,7 +834,7 @@ test(`the lines of a grouped table can follow the referenced table or a manual l
 
 test(`a long table continues on the next page with its heading, which is drawn even when the model has no such page`, async () => {
   const config = { mode: `list`, table: `Rooms`, link: `Rooms.Site`, columns: [{ path: `Number` }] };
-  const build = (pages) => ({ model: { version: 1, page: { format: `screen`, orientation: `landscape`, margin: 10 }, pages, blocks: [{ id: `tb1`, type: `table`, title: `Surfaces`, page: 0, x: 0, y: 0, w: 30, h: 4, config }] } });
+  const build = (pages) => ({ model: { version: 1, page: { format: `screen`, orientation: `landscape`, margin: 10 }, pages, blocks: [{ id: `tb1`, type: `table`, title: `Surfaces`, page: 0, x: 0, y: 0, w: 30, h: 4, config }, BLOCKER] } });
   const w = await openWithRow({ savedOptions: build(2) }, 1);
   await w.page.waitForFunction(() => document.querySelectorAll(`.page[data-page="1"] .continuation .dt tbody tr`).length > 0);
   const total = await w.page.$$eval(`.block.tableBlock .dt tbody tr`, (rows) => rows.length);
@@ -855,7 +857,7 @@ test(`a long table continues on the next page with its heading, which is drawn e
 
 test(`a double click on the rest of a long table opens the settings of that table`, async () => {
   const config = { mode: `list`, table: `Rooms`, link: `Rooms.Site`, columns: [{ path: `Number` }] };
-  const saved = { model: { version: 1, page: { format: `screen`, orientation: `landscape`, margin: 10 }, pages: 1, blocks: [{ id: `tb1`, type: `table`, title: `Surfaces`, page: 0, x: 0, y: 0, w: 30, h: 4, config }] } };
+  const saved = { model: { version: 1, page: { format: `screen`, orientation: `landscape`, margin: 10 }, pages: 1, blocks: [{ id: `tb1`, type: `table`, title: `Surfaces`, page: 0, x: 0, y: 0, w: 30, h: 4, config }, BLOCKER] } };
   const w = await openWithRow({ savedOptions: saved }, 1);
   await edit(w);
   await w.page.waitForFunction(() => document.querySelectorAll(`.page[data-page="1"] .continuation .dt tbody tr`).length > 0);
@@ -865,13 +867,13 @@ test(`a double click on the rest of a long table opens the settings of that tabl
   assert.equal(await w.page.inputValue(`#boardTitle`), `Surfaces`);
   assert.equal(await w.page.locator(`#boardTableSettings`).isVisible(), true);
   assert.equal(await w.page.locator(`.block[data-id="tb1"].selected`).count(), 1);
-  assert.equal((await model(w.page)).blocks.length, 1);
+  assert.equal((await model(w.page)).blocks.length, 2);
   assert.deepEqual(w.errors, []);
 });
 
 test(`every table continues on the next pages by itself and the settings have no tick box for it`, async () => {
   const config = { mode: `list`, table: `Rooms`, link: `Rooms.Site`, columns: [{ path: `Number` }] };
-  const saved = { model: { version: 1, page: { format: `screen`, orientation: `landscape`, margin: 10 }, pages: 1, blocks: [{ id: `tb1`, type: `table`, title: `Surfaces`, page: 0, x: 0, y: 0, w: 30, h: 4, config }] } };
+  const saved = { model: { version: 1, page: { format: `screen`, orientation: `landscape`, margin: 10 }, pages: 1, blocks: [{ id: `tb1`, type: `table`, title: `Surfaces`, page: 0, x: 0, y: 0, w: 30, h: 4, config }, BLOCKER] } };
   const w = await openWithRow({ savedOptions: saved }, 1);
   await w.page.waitForFunction(() => document.querySelectorAll(`.page[data-page="1"] .continuation .dt tbody tr`).length > 0);
   assert.equal(await w.page.locator(`#boardFlow`).count(), 0);
@@ -1460,4 +1462,27 @@ test(`a composed label that names a missing column still draws the table and say
   await w.page.waitForFunction(() => document.querySelector(`.block[data-id="tb1"] .dt tbody tr td`).textContent === `A-001`);
   assert.match(await w.page.locator(`#boardTableInfo`).innerText(), /Nope/);
   assert.deepEqual(w.errors, []);
+});
+
+test(`a table that is too long for its frame grows down to the next block under it or to the bottom of the page, and a short table keeps its size`, async () => {
+  const config = { mode: `list`, table: `Rooms`, link: `Rooms.Site`, columns: [{ path: `Number` }, { path: `Area` }] };
+  const build = (blocks) => ({ model: { version: 1, page: { format: `screen`, orientation: `landscape`, margin: 10 }, pages: 1, blocks } });
+  const table = { id: `tb1`, type: `table`, title: ``, page: 0, x: 0, y: 0, w: 30, h: 4, config };
+  const free = await openWithRow({ savedOptions: build([table]) }, 1);
+  await free.page.waitForFunction(() => document.querySelectorAll(`.block[data-id="tb1"] .dt tbody tr`).length === 4);
+  assert.equal(await free.page.locator(`.continuation`).count(), 0);
+  const grown = await box(free.page, `.block[data-id="tb1"]`);
+  const pageBox = await box(free.page, `.page[data-page="0"]`);
+  assert.ok(grown.height > pageBox.height / 10, `the frame grew with its rows`);
+  assert.ok(grown.height < pageBox.height / 2, `and only as much as its rows need`);
+  const stopped = await openWithRow({ savedOptions: build([table, { ...BLOCKER, y: 6 }]) }, 1);
+  await stopped.page.waitForFunction(() => document.querySelectorAll(`.block[data-id="tb1"] .dt tbody tr`).length > 0);
+  const limit = await box(stopped.page, `.block[data-id="bk1"]`);
+  const frame = await box(stopped.page, `.block[data-id="tb1"]`);
+  assert.ok(frame.y + frame.height <= limit.y + 1, `the table stops above the next block`);
+  const roomy = await openWithRow({ savedOptions: build([{ ...table, h: 20 }]) }, 1);
+  await roomy.page.waitForFunction(() => document.querySelectorAll(`.block[data-id="tb1"] .dt tbody tr`).length === 4);
+  const kept = await box(roomy.page, `.block[data-id="tb1"]`);
+  assert.ok(kept.height > grown.height, `a short table keeps the size chosen`);
+  assert.deepEqual([free.errors, stopped.errors, roomy.errors], [[], [], []]);
 });

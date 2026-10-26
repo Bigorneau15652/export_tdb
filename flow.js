@@ -25,6 +25,19 @@
     return bands.filter((band) => band.h >= MIN_BAND);
   }
 
+  // The height, in grid steps, that a block can take on its own page when it grows downwards: from its top to the top
+  // of the next block under it in the same columns, or to the bottom of the page when there is none. It is never less
+  // than the height of the block itself.
+  function roomBelow(blocks, block, grid) {
+    const left = block.x;
+    const right = block.x + block.w;
+    const under = blocks
+      .filter((other) => other.page === block.page && other.id !== block.id && other.x < right && left < other.x + other.w && other.y >= block.y + block.h)
+      .map((other) => other.y);
+    const limit = under.length ? Math.min(...under) : grid.rows;
+    return Math.max(block.h, limit - block.y);
+  }
+
   // The places that the rest of a table can use: the free bands of the pages after the page of the block,
   // in reading order. Returns [{ page, y, h }].
   function regionsAfter(blocks, block, pageCount, grid) {
@@ -57,7 +70,7 @@
     return { chunks, leftover: heights.length - at };
   }
 
-  const api = { MIN_BAND, freeBands, regionsAfter, splitRows };
+  const api = { MIN_BAND, freeBands, roomBelow, regionsAfter, splitRows };
   if (typeof module !== `undefined` && module.exports) module.exports = api;
   else root.exportTdbFlow = api;
 })(typeof window !== `undefined` ? window : globalThis);
