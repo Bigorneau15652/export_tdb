@@ -1540,3 +1540,47 @@ test(`the second item has a composed label of its own, folded under a triangle l
   assert.equal((await model(w.page)).blocks[0].config.labelTemplate2, `{Number}{Usage}`);
   assert.deepEqual(w.errors, []);
 });
+
+test(`the left, top and corner handles resize a block from its other sides`, async () => {
+  const w = await openBoard({ savedOptions: SAVED });
+  await edit(w);
+  const step = await w.page.evaluate(() => document.querySelector(`.page`).getBoundingClientRect().width / 210 * 5);
+  const drag = async (selector, dx, dy) => {
+    await w.page.click(`.block[data-id="bbb2"]`, { position: { x: 20, y: 30 } });
+    const handle = await box(w.page, selector);
+    const x = handle.x + handle.width / 2;
+    const y = handle.y + handle.height / 2;
+    await w.page.mouse.move(x, y);
+    await w.page.mouse.down();
+    await w.page.mouse.move(x + dx * step, y + dy * step, { steps: 5 });
+    await w.page.mouse.up();
+    return (await model(w.page)).blocks.find((b) => b.id === `bbb2`);
+  };
+  const left = await drag(`.block[data-id="bbb2"] .handle.w`, 3, 0);
+  assert.deepEqual([left.x, left.w, left.y, left.h], [3, 27, 10, 12], `the left edge moves in, the right edge stays`);
+  const top = await drag(`.block[data-id="bbb2"] .handle.n`, 0, -2);
+  assert.deepEqual([top.y, top.h, top.x, top.w], [8, 14, 3, 27]);
+  const corner = await drag(`.block[data-id="bbb2"] .handle.nw`, -2, 1);
+  assert.deepEqual([corner.x, corner.w, corner.y, corner.h], [1, 29, 9, 13]);
+  const blocked = await drag(`.block[data-id="bbb2"] .handle.n`, 0, -6);
+  assert.ok(blocked.y >= 8, `the block above stops the top edge (y ${blocked.y})`);
+  assert.deepEqual(w.errors, []);
+});
+
+test(`the tool bar and the settings panel stay in view while only the pages scroll`, async () => {
+  const w = await openBoard({ savedOptions: SAVED });
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="bbb2"]`, { position: { x: 20, y: 30 } });
+  assert.equal(await w.page.locator(`#boardPanel`).isVisible(), true);
+  const bar = await box(w.page, `#boardBar`);
+  const panel = await box(w.page, `#boardPanel`);
+  await w.page.evaluate(() => { document.getElementById(`boardScroll`).scrollTop = 600; });
+  assert.ok((await w.page.evaluate(() => document.getElementById(`boardScroll`).scrollTop)) > 0, `the pages scroll`);
+  assert.equal(await w.page.evaluate(() => window.scrollY), 0, `the window itself does not scroll`);
+  const barAfter = await box(w.page, `#boardBar`);
+  const panelAfter = await box(w.page, `#boardPanel`);
+  assert.equal(Math.round(barAfter.y), Math.round(bar.y));
+  assert.equal(Math.round(panelAfter.y), Math.round(panel.y));
+  assert.ok(panelAfter.y + panelAfter.height <= 801, `the panel fits in the window`);
+  assert.deepEqual(w.errors, []);
+});

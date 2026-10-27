@@ -926,7 +926,7 @@
       cross.textContent = `\u00d7`;
       cross.setAttribute(`aria-label`, tr(`boardDeleteBlock`));
       node.appendChild(cross);
-      for (const handle of [`e`, `s`, `se`]) {
+      for (const handle of [`n`, `e`, `s`, `w`, `nw`, `sw`, `se`]) {
         const grip = document.createElement(`div`);
         grip.className = `handle ${handle}`;
         grip.dataset.handle = handle;
@@ -1965,7 +1965,17 @@
       const dy = Math.round((event.clientY - drag.startY) / (STEP_MM * mmPx));
       let w = block.w + (drag.handle.includes(`e`) ? dx : 0);
       let h = block.h + (drag.handle.includes(`s`) ? dy : 0);
-      const keep = event.shiftKey;
+      const keep = event.shiftKey && [`e`, `s`, `se`].includes(drag.handle);
+      if (!keep) {
+        // Any handle: the edges that it holds follow the pointer, the block may move when its left or top edge is pulled.
+        const edges = {
+          left: drag.handle.includes(`w`) ? dx : 0, right: drag.handle.includes(`e`) ? dx : 0,
+          top: drag.handle.includes(`n`) ? dy : 0, bottom: drag.handle.includes(`s`) ? dy : 0
+        };
+        drag.last = { edges };
+        showGhost(drag.node.parentNode, Layout.resolveBox(model.blocks, block, edges, grid));
+        return;
+      }
       if (keep) {
         const ratio = block.w / block.h;
         if (drag.handle === `e`) h = Math.round(w / ratio);
@@ -1988,6 +1998,7 @@
     if (!finished || !finished.started) return;
     if (!finished.last) render({ focus: true });
     else if (finished.kind === `move`) commit(Model.moveBlock(model, finished.id, finished.last.wanted, el.canvas.querySelectorAll(`.page`).length - 1), { focus: true });
+    else if (finished.last.edges) commit(Model.resizeBox(model, finished.id, finished.last.edges), { focus: true });
     else commit(Model.resizeBlock(model, finished.id, finished.last.wanted, finished.last.keep), { focus: true });
   }
 
