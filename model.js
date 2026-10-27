@@ -123,7 +123,6 @@
       sort: { by: oneOf(sort.by, SORT_BYS), column: matching(sort.column, PATH_PATTERN), dir: sort.dir === `desc` ? `desc` : `asc`, order: cleanOrder(sort.order) },
       total: raw.total === true,
       subtotals: raw.subtotals === true,
-      dashZero: raw.dashZero === true,
       totalLabel: typeof raw.totalLabel === `string` ? raw.totalLabel.slice(0, MAX_LABEL) : ``,
       labelTemplate: typeof raw.labelTemplate === `string` ? raw.labelTemplate.slice(0, MAX_TEMPLATE) : ``,
       labelTemplate2: typeof raw.labelTemplate2 === `string` ? raw.labelTemplate2.slice(0, MAX_TEMPLATE) : ``,
