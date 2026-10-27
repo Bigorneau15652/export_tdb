@@ -5,7 +5,7 @@
 // blocks that never overlap and never leave their page. Pure logic, tested with Node.
 (function (root) {
   const layout = typeof module !== `undefined` && module.exports ? require(`./layout.js`) : root.exportTdbLayout;
-  const { MAX_PAGES, MARGINS, DEFAULT_MARGIN, FORMATS, ORIENTATIONS, gridOf, isFree, clampSize, findFreeSpot, resolveMove, resolveResize } = layout;
+  const { MAX_PAGES, MARGINS, DEFAULT_MARGIN, FORMATS, ORIENTATIONS, gridOf, isFree, clampSize, findFreeSpot, resolveMove, resolveResize, resolveBox } = layout;
 
   // Version of the saved format. A change of format needs a migration here.
   const FORMAT_VERSION = 1;
@@ -414,6 +414,14 @@
     return { ...model, blocks: model.blocks.map((item) => (item.id === id ? { ...item, ...size } : item)) };
   }
 
+  // Pulls the edges of a block (see Layout.resolveBox): it gets the valid rectangle closest to the wanted one.
+  function resizeBox(model, id, edges) {
+    const block = findBlock(model, id);
+    if (!block) return model;
+    const rect = resolveBox(model.blocks, block, edges, gridOf(model.page));
+    return { ...model, blocks: model.blocks.map((item) => (item.id === id ? { ...item, ...rect } : item)) };
+  }
+
   // Removes a block. A page that becomes empty is removed later by `compactPages`.
   function deleteBlock(model, id) {
     return { ...model, blocks: model.blocks.filter((block) => block.id !== id) };
@@ -424,7 +432,7 @@
     return reflow({ ...model, page: cleanPage({ ...model.page, ...changes }) });
   }
 
-  const api = { FORMAT_VERSION, MAX_BLOCKS, MAX_TITLE, MAX_FIXED_TEXT, MAX_COLUMNS, MAX_FILTERS, MAX_GROUPS, TABLE_MODES, SLICES, FUNCTIONS, OPERATORS, SORT_BYS, TYPES, MAX_RECORD_ITEMS, MAX_VALUES, CHART_TYPES, CHART_PALETTES, CHART_LEGENDS, CHART_LABELS, INDICATOR_COLORS, MAX_RULES, MAX_NOTE, MAX_IMAGE_RANK, MAX_FOOTER, VALUE_KINDS, NAME_PATTERN, cleanValues, setValues, TEXT_SOURCES, TEXT_SIZES, TEXT_ALIGNS, FILLS, DEFAULT_SIZES, emptyModel, cleanConfig, validateModel, reflow, findBlock, addBlock, compactPages, updateBlock, moveBlock, resizeBlock, deleteBlock, setPage };
+  const api = { FORMAT_VERSION, MAX_BLOCKS, MAX_TITLE, MAX_FIXED_TEXT, MAX_COLUMNS, MAX_FILTERS, MAX_GROUPS, TABLE_MODES, SLICES, FUNCTIONS, OPERATORS, SORT_BYS, TYPES, MAX_RECORD_ITEMS, MAX_VALUES, CHART_TYPES, CHART_PALETTES, CHART_LEGENDS, CHART_LABELS, INDICATOR_COLORS, MAX_RULES, MAX_NOTE, MAX_IMAGE_RANK, MAX_FOOTER, VALUE_KINDS, NAME_PATTERN, cleanValues, setValues, TEXT_SOURCES, TEXT_SIZES, TEXT_ALIGNS, FILLS, DEFAULT_SIZES, emptyModel, cleanConfig, validateModel, reflow, findBlock, addBlock, compactPages, updateBlock, moveBlock, resizeBlock, resizeBox, deleteBlock, setPage };
   if (typeof module !== `undefined` && module.exports) module.exports = api;
   else root.exportTdbModel = api;
 })(typeof window !== `undefined` ? window : globalThis);

@@ -129,7 +129,27 @@
     return best;
   }
 
-  const api = { STEP_MM, MIN_SIZE, MAX_PAGES, MARGINS, DEFAULT_MARGIN, FORMATS, ORIENTATIONS, pageSizeMm, gridOf, overlaps, fits, isFree, clampSize, findFreeSpot, resolveMove, resolveResize };
+  // The valid rectangle closest to the one wanted when the edges of a block are pulled: `edges` gives how many steps the
+  // left, top, right and bottom edges move (a positive left or top moves the edge inwards, a positive right or bottom
+  // outwards, as the pointer goes to the right or down). The block keeps at least the minimum size, stays in the page and
+  // meets no other block: the movement is reduced until the rectangle is valid (the block itself always is).
+  // Returns { x, y, w, h }.
+  function resolveBox(blocks, block, edges, grid) {
+    const at = (t) => {
+      const left = Math.round((edges.left || 0) * t);
+      const top = Math.round((edges.top || 0) * t);
+      const right = Math.round((edges.right || 0) * t);
+      const bottom = Math.round((edges.bottom || 0) * t);
+      return { page: block.page, x: block.x + left, y: block.y + top, w: block.w - left + right, h: block.h - top + bottom };
+    };
+    for (let step = 20; step >= 0; step -= 1) {
+      const rect = at(step / 20);
+      if (isFree(blocks, rect, grid, block.id)) return { x: rect.x, y: rect.y, w: rect.w, h: rect.h };
+    }
+    return { x: block.x, y: block.y, w: block.w, h: block.h };
+  }
+
+  const api = { STEP_MM, MIN_SIZE, MAX_PAGES, MARGINS, DEFAULT_MARGIN, FORMATS, ORIENTATIONS, pageSizeMm, gridOf, overlaps, fits, isFree, clampSize, findFreeSpot, resolveMove, resolveResize, resolveBox };
   if (typeof module !== `undefined` && module.exports) module.exports = api;
   else root.exportTdbLayout = api;
 })(typeof window !== `undefined` ? window : globalThis);

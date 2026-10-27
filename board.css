@@ -11,8 +11,12 @@
 input[type="number"] { display: block; width: 100%; padding: 6px; border: 2px solid #52606d; border-radius: 6px; background: #ffffff; color: #1f2933; font: inherit; }
 input[type="number"]:focus-visible, input[type="text"]:focus-visible { outline: 3px solid #f2b705; outline-offset: 2px; }
 
-#boardLayout { display: block; }
-#boardScroll { overflow: auto; padding: 8px; background: #cbd2d9; border-radius: 6px; }
+/* The window is split in three: the title and the tool bar stay at the top, the pages scroll alone in the middle and the
+   settings panel scrolls alone at the right, so that none of them leaves the screen when the pages are scrolled. */
+#app { display: flex; flex-direction: column; height: 100vh; padding-bottom: 0; overflow: hidden; }
+#panelBoard { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; }
+#boardLayout { display: block; flex: 1 1 auto; min-height: 0; }
+#boardScroll { height: 100%; overflow: auto; padding: 8px 8px 48px; background: #cbd2d9; border-radius: 6px; }
 #boardCanvas { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; }
 .pageLabel { margin-bottom: 4px; color: #1f2933; font-size: 12px; font-weight: 600; }
 .page { position: relative; background: #ffffff; border: 1px solid #52606d; box-shadow: 0 1px 4px rgba(31, 41, 51, 0.35); }
@@ -34,18 +38,24 @@ input[type="number"]:focus-visible, input[type="text"]:focus-visible { outline: 
 .block.dragging { opacity: 0.45; }
 .ghost { position: absolute; z-index: 3; border: 2px dashed #1c5d8c; background: rgba(28, 93, 140, 0.18); pointer-events: none; }
 .cross, .handle { display: none; }
+.block .cross { z-index: 3; }
+.block .handle { z-index: 2; }
 #boardCanvas.editing .block:hover .cross, #boardCanvas.editing .block.selected .cross { display: block; position: absolute; top: 2px; right: 2px; width: 22px; height: 22px; padding: 0; border: 1px solid #8a1c1c; border-radius: 4px; background: #ffffff; color: #8a1c1c; font-size: 16px; font-weight: 700; line-height: 1; cursor: pointer; }
 #boardCanvas.editing .block .cross:hover { background: #8a1c1c; color: #ffffff; }
 .block.selected .handle { display: block; position: absolute; background: #1c5d8c; }
 .handle.e { top: 30px; right: 0; width: 7px; bottom: 12px; cursor: ew-resize; }
+.handle.w { top: 12px; left: 0; width: 7px; bottom: 12px; cursor: ew-resize; }
+.handle.n { top: 0; left: 12px; height: 7px; right: 30px; cursor: ns-resize; }
+.handle.nw { top: 0; left: 0; width: 14px; height: 14px; cursor: nwse-resize; }
+.handle.sw { bottom: 0; left: 0; width: 14px; height: 14px; cursor: nesw-resize; }
 .handle.s { left: 0; bottom: 0; height: 7px; right: 12px; cursor: ns-resize; }
 .handle.se { right: 0; bottom: 0; width: 14px; height: 14px; cursor: nwse-resize; }
 
 #boardPanel { margin-top: 12px; padding: 8px 12px; border: 2px solid #52606d; border-radius: 6px; background: #ffffff; color: #1f2933; }
 #boardPanel h2 { margin-top: 4px; }
 @media (min-width: 760px) {
-  #boardLayout.withPanel { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 12px; align-items: start; }
-  #boardPanel { margin-top: 0; }
+  #boardLayout.withPanel { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 12px; align-items: stretch; }
+  #boardPanel { height: 100%; margin-top: 0; overflow-y: auto; }
   #boardPanel[hidden] { display: none; }
 }
 @media (max-width: 759px) {
@@ -299,7 +309,6 @@ body.printBody { margin: 0; background: #e4e7eb; color: #1f2933; font-family: sa
 .debugBox textarea { display: block; width: 100%; margin: 4px 0; font-family: monospace; font-size: 12px; }
 #boardZoomBar { position: fixed; right: 12px; bottom: 8px; z-index: 15; padding: 2px 8px; border: 1px solid #9aa5b1; border-radius: 12px; background: rgba(255, 255, 255, 0.92); }
 #boardZoomBar input[type="range"] { display: block; width: 110px; height: 14px; margin: 0; accent-color: #1c5d8c; cursor: pointer; }
-#boardLayout { padding-bottom: 40px; }
 .iconButton.glyph { font: inherit; font-size: 20px; font-weight: 700; line-height: 1; }
 
 /* Settings panel (version 0.12): the type of block on top, tighter spaces, the explanation of a label on hover. */

@@ -111,3 +111,19 @@ test(`random moves and resizes never overlap blocks or leave the page`, () => {
     }
   }
 });
+
+test(`pulling the edges of a block moves them, never out of the page, under the minimum size or onto another block`, () => {
+  const a = block(`a`, 4, 2, 4, 3);
+  assert.deepEqual(L.resolveBox([a], a, { left: -2 }, GRID), { x: 2, y: 2, w: 6, h: 3 });
+  assert.deepEqual(L.resolveBox([a], a, { top: -1, bottom: 1 }, GRID), { x: 4, y: 1, w: 4, h: 5 });
+  assert.deepEqual(L.resolveBox([a], a, { left: 1, right: 2 }, GRID), { x: 5, y: 2, w: 5, h: 3 });
+  assert.deepEqual(L.resolveBox([a], a, { left: -9 }, GRID), { x: 0, y: 2, w: 8, h: 3 });
+  const tiny = L.resolveBox([a], a, { left: 9 }, GRID);
+  assert.ok(tiny.w >= L.MIN_SIZE && tiny.x + tiny.w === 8);
+  const beside = block(`b`, 0, 0, 3, 6);
+  assert.deepEqual(L.resolveBox([a, beside], a, { left: -4 }, GRID), { x: 3, y: 2, w: 5, h: 3 });
+  const above = block(`c`, 4, 0, 4, 1);
+  assert.deepEqual(L.resolveBox([a, above], a, { top: -2 }, GRID), { x: 4, y: 1, w: 4, h: 4 });
+  const otherPage = block(`d`, 0, 0, 10, 6, 1);
+  assert.deepEqual(L.resolveBox([a, otherPage], a, { left: -4 }, GRID), { x: 0, y: 2, w: 8, h: 3 });
+});

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.21.0
+
+- Blocks can be resized from every side: new handles on the left, the top, the top left corner and the bottom left corner join the ones on the right, the bottom and the bottom right corner. Pulling the left or the top edge moves the block. The block stays in the page, keeps the minimum size and never covers another block: the movement stops where the next block is. Shift keeps the proportions only with the handles of the right, the bottom and the bottom right corner, as before. The top right corner has no handle, because the cross that deletes the block is there.
+- The window is split in three parts that no longer move together: the title and the tool bar stay at the top, the pages scroll alone in the middle, and the settings panel stays at the right and scrolls alone. The tool bar is still in view in the lower pages, and the settings panel no longer jumps to the top when a block is opened at the bottom of the page.
+- Tests: the edges that are pulled (towards the page, towards the minimum size, towards another block, on another page), the handles of the left, top and corner in the page, and the tool bar and the panel that do not move when the pages scroll.
+
 ## 0.20.2
 
 - README rewritten in English and in French for the current widget: what it does, the six blocks, installation, first steps, security, tests and licence. It names no table, column or figure of any real document. The explorer and the query lab, gone since version 0.11.0, are no longer described.
