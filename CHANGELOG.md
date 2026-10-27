@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.21.3
+
+Corrections found by the finalisation audit of version 0.21.2.
+
+- Faster start: the exploration of the document read, at the first row, the linked table and up to twelve tables that descend from it, only to write the diagnostic report, and the dashboard then loaded again the tables its blocks need. The exploration now reads the structure of the document only. The tables are measured when the diagnostic button is used, and the dashboard loads each table it needs once, all at the same time instead of one after the other.
+- Help text of the edit button corrected: blocks can be resized from every edge and the three corners, and the Shift key keeps the proportions with the handles of the right, the bottom and the bottom right corner. The comment of the code was corrected too.
+- Two labels of the settings panel (the calculation of the total on the right and the sort column) were written in French only: they are now translated.
+- French texts: the comma before "et" is gone from the help texts, the course texts, the README and the specification.
+- Every function of the code now has its comment block (four were missing).
+- Tests: the cache of the tables (all tables loaded once and together, a failing table that does not stop the others, the limit of 18 tables), the number of loads at start in the page, a test that every file and every function has a comment, and a test of the French texts (no comma before "et", no long dash, no emoji).
+
 ## 0.21.2
 
 - Tables: the zeros of the lines are now always written as a dash, in lists, grouped tables, cross tables and the total on the right of each line. The setting "Dash in place of zeros" of version 0.21.1 is gone: there is nothing to tick. A value that is shown as zero after rounding in a number column also gets the dash, and a text column is never changed, even when it holds the text 0. The total lines keep their figure, zero included.

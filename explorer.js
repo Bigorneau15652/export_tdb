@@ -7,9 +7,9 @@
   const { describeColumn, describeValue } = window.exportTdbShape;
   const { buildReport } = window.exportTdbReport;
 
-  const VERSION = `0.21.2`;
-  // At most this many descendant tables are loaded to measure them and to look at their values.
-  const MAX_TABLES = 12;
+  const VERSION = `0.21.3`;
+  // At most this many descendant tables are loaded by the diagnostic to measure them and to look at their values.
+  const MAX_MEASURED_TABLES = 12;
   const IMAGE_WAIT_MS = 10000;
 
   const $ = (id) => document.getElementById(id);
@@ -26,6 +26,7 @@
 
   // ---------------------------------------------------------------- Display
 
+  // Shows a short status text under the title (nothing when the text is empty).
   function setStatus(text) {
     el.status.textContent = text || ``;
   }
@@ -82,14 +83,13 @@
     }
   }
 
-  // The whole exploration: metadata, schema, descendants, values of the linked table and of its
-  // descendants, with the times of loading.
+  // The exploration: the metadata of the document, the schema and the tables that descend from the linked table. No
+  // table is loaded here: the dashboard loads the tables its blocks need (data-cache.js), and the diagnostic measures
+  // the others only when it is asked for (see measureTables).
   async function explore() {
     if (state.running) return;
     state.running = true;
     showError(``);
-    state.shapes = [];
-    state.timings = [];
     try {
       state.linked = await readLinkedTable();
       recordTest(`selected table detected`, true, ``);
@@ -99,13 +99,6 @@
       state.metadataOk = true;
       recordTest(`metadata tables read`, true, `${state.schema.order.length} tables`);
       state.descendants = findDescendants(state.schema, state.linked);
-      const toLoad = [state.linked, ...state.descendants.map((entry) => entry.table)].slice(0, MAX_TABLES + 1);
-      for (const id of toLoad) {
-        const table = state.schema.tables.get(id);
-        if (!table) continue;
-        setStatus(t(`running`, { table: id }));
-        await loadAndDescribe(table);
-      }
       setStatus(t(`done`));
       window.dispatchEvent(new CustomEvent(`exporttdb:explored`));
     } catch (error) {
@@ -116,6 +109,21 @@
     } finally {
       state.running = false;
     }
+  }
+
+  // The diagnostic only: loads the linked table and its descendants one after the other to measure them and to describe
+  // the shape of their values. The dashboard does not need this, so it is done when the report is asked for.
+  async function measureTables() {
+    state.shapes = [];
+    state.timings = [];
+    const toLoad = [state.linked, ...state.descendants.map((entry) => entry.table)].slice(0, MAX_MEASURED_TABLES + 1);
+    for (const id of toLoad) {
+      const table = state.schema.tables.get(id);
+      if (!table) continue;
+      setStatus(t(`running`, { table: id }));
+      await loadAndDescribe(table);
+    }
+    setStatus(t(`done`));
   }
 
   // --------------------------------------------------------------- Tests
@@ -161,11 +169,20 @@
     }
   }
 
-  // The diagnostic report, after a new reading of the document and a test of the attachments (nothing is written in
-  // the document). `dashboard` describes the dashboard, see buildReport. Resolves to the text of the report.
+  // The diagnostic report, after a new reading of the document, the measure of its tables and a test of the
+  // attachments (nothing is written in the document). `dashboard` describes the dashboard, see buildReport. Resolves
+  // to the text of the report.
   async function diagnose(dashboard) {
     state.tests.delete(`attachment token`);
     await explore();
+    if (state.metadataOk && state.schema) {
+      try {
+        await measureTables();
+        recordTest(`tables measured`, true, `${state.timings.length} tables`);
+      } catch (error) {
+        recordTest(`tables measured`, false, String(error && error.message ? error.message : error));
+      }
+    }
     await testAttachment();
     return reportText(dashboard);
   }

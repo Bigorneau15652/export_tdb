@@ -458,6 +458,31 @@ test(`fields still work when Grist sends no column with the selected row`, async
   assert.deepEqual(w.errors, []);
 });
 
+// A saved model with a text block and a table block of the buildings of the selected site.
+const LOAD_MODEL = {
+  model: {
+    version: 1,
+    page: { format: `screen`, orientation: `landscape`, margin: 10 },
+    pages: 1,
+    blocks: [
+      { id: `tx1`, type: `text`, title: ``, page: 0, x: 0, y: 0, w: 20, h: 8, config: { source: `fixed`, text: `{Name}` } },
+      { id: `tb1`, type: `table`, title: ``, page: 0, x: 0, y: 10, w: 30, h: 12, config: { table: `Buildings`, link: `Buildings.Site`, columns: [{ path: `Year`, fn: `max` }] } }
+    ]
+  }
+};
+
+test(`the start loads each table once, and only the tables that the blocks need`, async () => {
+  const w = await openWithRow({ savedOptions: LOAD_MODEL }, 1);
+  await w.page.waitForFunction(() => document.querySelector(`.block[data-id="tb1"] table.dt`) !== null);
+  const fetched = await w.page.evaluate(() => window.__fetched);
+  const times = (name) => fetched.filter((item) => item === name).length;
+  assert.equal(times(`Sites`), 1);
+  assert.equal(times(`Buildings`), 1);
+  assert.equal(times(`Rooms`), 0);
+  assert.equal(times(`Floors`), 0);
+  assert.deepEqual(w.errors, []);
+});
+
 test(`the debug button copies the report with what Grist gave and a description of the dashboard`, async () => {
   const w = await openWithRow({ savedOptions: SAVED }, 1);
   await w.context.grantPermissions([`clipboard-read`, `clipboard-write`]);
@@ -469,6 +494,8 @@ test(`the debug button copies the report with what Grist gave and a description 
   assert.match(report, /7\. Values that Grist gave with the selected row/);
   assert.match(report, /Name \[Text\] text\(/);
   assert.match(report, /attachment token/);
+  assert.match(report, /5\. Loading times\nSites: \d+ rows/);
+  assert.match(report, /tables measured: OK/);
   assert.match(report, /8\. Dashboard/);
   assert.match(report, /Blocks: 2 \(text p1, table p1\)/);
   assert.ok(!/__export_tdb_test__|write with/.test(report));
