@@ -573,7 +573,7 @@
     return { ok: true, number: grouped.totals[0], kept: filtered.rows.length };
   }
 
-  const api = { MAX_ROWS, runValue, chainKey, listStarts, listTables, listLinks, listAllTables, listChoices, listDynamicTables, numericPaths, tablesForChoices, explainChoices, tablesFor, rightTotalPossible, runTable };
+  const api = { MAX_ROWS, runValue, listStarts, listTables, listLinks, listAllTables, listChoices, listDynamicTables, numericPaths, tablesForChoices, explainChoices, tablesFor, rightTotalPossible, runTable };
   if (isNode) module.exports = api;
   else root.exportTdbTableQuery = api;
 })(typeof window !== `undefined` ? window : globalThis);

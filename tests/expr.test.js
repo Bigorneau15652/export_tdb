@@ -124,3 +124,9 @@ test(`random expressions give the same result as a direct calculation`, () => {
     else assert.ok(Math.abs(got - expected) < 1e-9 * Math.max(1, Math.abs(expected)), `${text}: ${got} instead of ${expected}`);
   }
 });
+
+test(`a number too big to be written as a finite number is refused`, () => {
+  assert.deepEqual(parseExpression(`9`.repeat(400)), { error: `a number is too big` });
+  assert.deepEqual(parseExpression(`1 + ${`9`.repeat(400)}`), { error: `a number is too big` });
+  assert.ok(!parseExpression(`123456789012345678`).error);
+});

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.23.0
+
+Clean-up found by the finalisation audit of version 0.21.2. Nothing changes on the screen.
+
+- Two functions of the grouping engine that no menu could reach are gone: grouping the dates by year or by month and keeping the best groups. Their tests are gone too.
+- Twelve texts of the translations that nothing asked for are gone, in French and in English.
+- Constants and functions that were exported without being used by another file are no longer exported.
+- A single small file, `dom-helpers.js`, now fills the lists of choices and the text fields of the settings panels: it replaces five copies of the same code.
+- The diagnostic no longer has a mode that shows the values (it was never used: the report only shows the shapes of the values).
+- A number too big to be written as a finite number (hundreds of digits) is refused in an expression instead of giving an infinite value.
+- Comments: titles of sub-sections and comments of blocks, in English, in the longest parts of board.js (the drawing of the blocks, the settings panel, the table settings and the controls).
+- Tests: the number too big, and the engine without the removed functions.
+
 ## 0.22.0
 
 - Moving a block now pushes the others: the block goes exactly where it is dropped and the blocks that it covers are pushed away from it, in the direction opposite to its move (it goes up: they go down; it goes down: they go up; it goes to the right: they go to the left; it goes to the left: they go to the right), by just the room needed. The blocks that they cover in turn are pushed the same way. A block pushed out of the bottom of a page goes to the top of the next page (a page is added when needed), and one pushed out of the top goes to the bottom of the previous page. While the block is dragged, the blocks that will move are outlined. When the blocks cannot all be pushed (no room at the side of the page, nothing above the first page), the block goes to the closest free place as before. The arrow keys push the same way. Resizing is unchanged: the block still stops against its neighbour.

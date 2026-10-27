@@ -110,7 +110,7 @@
     return { number, text: numberText(number, item), error: `` };
   }
 
-  const api = { DASH, numberText, calcConfig, tablesForValues, evaluateValues };
+  const api = { DASH, numberText, tablesForValues, evaluateValues };
   if (isNode) module.exports = api;
   else root.exportTdbNamed = api;
 })(typeof window !== `undefined` ? window : globalThis);

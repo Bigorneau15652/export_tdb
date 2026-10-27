@@ -105,7 +105,7 @@
     return { status: `link`, candidates: converted.candidates, drive: converted.drive };
   }
 
-  const api = { pictureAt, countImages, toImageUrl, parseHttpsUrl, MAX_IMAGES };
+  const api = { pictureAt, countImages, MAX_IMAGES };
   if (typeof module !== `undefined` && module.exports) module.exports = api;
   else root.exportTdbImage = api;
 })(typeof window !== `undefined` ? window : globalThis);

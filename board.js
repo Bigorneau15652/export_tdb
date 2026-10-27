@@ -6,6 +6,7 @@
 // layout.js and model.js; this file only draws and listens.
 (function () {
   const { t } = window.exportTdbI18n;
+  const { fillSelect, setOptions, setText } = window.exportTdbDom;
   const Layout = window.exportTdbLayout;
   const Flow = window.exportTdbFlow;
   const Model = window.exportTdbModel;
@@ -111,29 +112,6 @@
 
   // The text shown for the title of a block: its title or a grey placeholder.
   const blockTitle = (block) => block.title || tr(`boardNoTitle`);
-
-  // Fills a select element with [value, label] pairs (a third item names a group of options) and selects `value`.
-  function fillSelect(select, items, value) {
-    select.textContent = ``;
-    const groups = new Map();
-    for (const [optionValue, label, group] of items) {
-      const option = document.createElement(`option`);
-      option.value = String(optionValue);
-      option.textContent = label;
-      if (group) {
-        if (!groups.has(group)) {
-          const element = document.createElement(`optgroup`);
-          element.label = group;
-          groups.set(group, element);
-          select.appendChild(element);
-        }
-        groups.get(group).appendChild(option);
-      } else {
-        select.appendChild(option);
-      }
-    }
-    select.value = String(value);
-  }
 
   // ------------------------------------------------------------------ Text blocks
 
@@ -351,6 +329,9 @@
 
   // ------------------------------------------------------------------ Drawing
 
+  // ------------------------------------------------------------------ Page scale
+  // The size of a millimetre on the screen follows the width of the area and the zoom.
+
   // Computes the scale so that the page fills the width of the area, times the zoom.
   function computeScale() {
     if (printing) {
@@ -397,6 +378,9 @@
   function foldKey(block, text) {
     return `${block.id}|${text}`;
   }
+
+  // ------------------------------------------------------------------ Table blocks (drawing)
+  // The table itself is drawn from the result of the table engine; the groups can be folded on the screen only.
 
   // The small triangle in front of a group line: it folds or unfolds the lines of that group.
   function buildFoldToggle(key, isFolded) {
@@ -482,6 +466,8 @@
   let chartInstances = [];
   let chartPending = [];
 
+  // ------------------------------------------------------------------ Chart blocks (drawing)
+
   // Fills the element of a chart block: its title and the place where the chart is drawn once the page is built, or
   // a hint in the editing mode when there is nothing to draw yet.
   function buildChartBody(node, block) {
@@ -526,6 +512,8 @@
     }
     chartPending = [];
   }
+
+  // ------------------------------------------------------------------ Indicator blocks (drawing)
 
   // Fills the element of an indicator block: its label (the title of the block), its value in bold with a symbol
   // that tells the state, and a short note. The colour follows the thresholds; the text stays dark.
@@ -573,6 +561,9 @@
     }
   }
 
+  // ------------------------------------------------------------------ Sheet blocks (drawing)
+  // A sheet (record block) shows the information of the selected row as small labelled cells on one line.
+
   // Fills the element of a record block: its title and its grid of information, each one a small label above
   // its value, or a hint in the editing mode when nothing is chosen yet.
   function buildRecordBody(node, block) {
@@ -613,6 +604,8 @@
     }
     node.appendChild(grid);
   }
+
+  // ------------------------------------------------------------------ Settings of the chart block
 
   // Fills the settings of a chart block: the type, the palette, the legend and the labels. The data are the
   // settings of a table (the same panel, filled by fillTableSettings).
@@ -660,6 +653,8 @@
     if (picture.status === `onedrive`) return { state: `problem`, message: tr(`imageOnedrive`) };
     return { state: `picture`, picture };
   }
+
+  // ------------------------------------------------------------------ Image blocks
 
   // The caption of an image block: the value of its caption column for the selected row, or an empty text.
   function captionText(block) {
@@ -744,7 +739,7 @@
     setOptions(el.imageColumn, [[``, tr(`boardColumnNone`)], ...choices.map((choice) => [choice.path, choice.label])], config.path);
     const captionChoices = state.schema && state.linked && state.schema.tables.has(state.linked) ? Fields.sortChoices(Fields.fieldChoices(state.schema, state.linked)) : [];
     setOptions(el.imageCaption, [[``, tr(`imageNoCaption`)], ...captionChoices.map((choice) => [choice.path, choice.label])], config.caption);
-    setValue(el.imageRank, String(config.rank));
+    setText(el.imageRank, String(config.rank));
     const status = imageStatus(block);
     const messages = [];
     if (!state.schema) messages.push(tr(`boardTableNotReady`));
@@ -753,6 +748,8 @@
     el.imageInfo.textContent = messages.join(` `);
     el.imageInfo.className = messages.length ? `warning` : `hint`;
   }
+
+  // ------------------------------------------------------------------ Settings of the sheet block
 
   // Fills the settings of a record block: one line per information (the column, its label and the buttons
   // that move or remove it), the number of columns of the grid and the size of the text.
@@ -772,7 +769,7 @@
       const row = el.recordRows.children[index];
       if (!row) return;
       setOptions(row.querySelector(`.colPath`), [[``, tr(`boardColumnNone`)], ...choices.map((choice) => [choice.path, choice.label])], item.path);
-      setValue(row.querySelector(`.colLabel`), item.label);
+      setText(row.querySelector(`.colLabel`), item.label);
     });
     setOptions(el.recordSize, Model.TEXT_SIZES.map((name) => [name, tr(SIZE_KEYS[name])]), config.size);
     const shown = state.schema && state.record ? Record.recordCells(state.schema, currentDataset(), state.linked, state.record, config, { yes: tr(`wordYes`), no: tr(`wordNo`) }) : null;
@@ -844,6 +841,9 @@
     row.append(top, bottom);
     return row;
   }
+
+  // ------------------------------------------------------------------ Table and text blocks, one block, flow of long tables
+  // buildBlock draws one block of any type; applyFlow lets a long table continue on the following pages.
 
   // Fills the element of a table block: its title and its table, or a hint in the editing mode.
   function buildTableBody(node, block) {
@@ -1068,6 +1068,9 @@
     flowInfo.set(block.id, { leftover: split.leftover, pages, used: [...used] });
   }
 
+  // ------------------------------------------------------------------ Drawing of the whole dashboard
+  // render draws every page again; it is called after each change.
+
   // Draws every page with its blocks. With `focus` the selected block gets the keyboard focus again.
   function render(options = {}) {
     const hadFocus = Boolean(options.keepFocus) && el.canvas.contains(document.activeElement);
@@ -1159,7 +1162,7 @@
     for (const item of el.menu.querySelectorAll(`[data-palette]`)) item.classList.toggle(`current`, item.dataset.palette === model.page.palette);
     for (const item of el.menu.querySelectorAll(`[data-format]`)) item.classList.toggle(`current`, item.dataset.format === model.page.format);
     for (const item of el.menu.querySelectorAll(`[data-margin]`)) item.classList.toggle(`current`, Number(item.dataset.margin) === model.page.margin);
-    setValue(el.footerText, model.page.footer);
+    setText(el.footerText, model.page.footer);
     el.zoom.value = String(zoomIndex);
   }
 
@@ -1392,11 +1395,6 @@
 
   // ------------------------------------------------------------------ Settings panel
 
-  // Sets the value of a field of the panel, unless the user is typing in it.
-  function setValue(input, value) {
-    if (input.value !== value && document.activeElement !== input) input.value = value;
-  }
-
   // The schema for which the lists of columns of the panel were built.
   let listsNames = ``;
   let listsFor = null;
@@ -1442,23 +1440,13 @@
     }
     el.text.disabled = !usable;
     el.text.maxLength = cell ? 20000 : Model.MAX_FIXED_TEXT;
-    setValue(el.text, usable ? (cell ? sourceText(block) : config.text) : ``);
+    setText(el.text, usable ? (cell ? sourceText(block) : config.text) : ``);
     const content = textContent(block);
     if (content.problems.length) messages.push(tr(`boardTextProblems`, { fields: content.problems.map((path) => `{${path}}`).join(`, `) }));
     const node = el.canvas.querySelector(`.block[data-id="${block.id}"]`);
     if (node && node.classList.contains(`overflowing`)) messages.push(tr(`boardTextOverflow`));
     el.textInfo.textContent = messages.join(` `);
     el.textInfo.className = messages.length ? `warning` : `hint`;
-  }
-
-  // Sets the options of a select element only when the list changed, then its value.
-  function setOptions(select, items, value) {
-    const signature = JSON.stringify(items);
-    if (select.dataset.signature !== signature) {
-      fillSelect(select, items, value);
-      select.dataset.signature = signature;
-    }
-    if (select.value !== String(value)) select.value = String(value);
   }
 
   // The path of columns that leads from the selected row to the starting item of a choice: `Etage > Batiment`.
@@ -1611,6 +1599,9 @@
     return row;
   }
 
+  // ------------------------------------------------------------------ Settings of the table block
+  // The lines of the columns, the sort, the filters, the explanation window and the panel of the table block.
+
   // Shows the column lines of the table block, rebuilding them only when their number, the table or the
   // kind of table changes.
   function renderColumnRows(block, choices) {
@@ -1636,7 +1627,7 @@
       const isNumber = column.path && numeric.has(column.path);
       const functions = group ? all : [[``, tr(`fnNoneShort`)], ...all.filter(([name]) => isNumber || !NUMERIC_FUNCTIONS.includes(name))];
       setOptions(row.querySelector(`.colFn`), functions, fn);
-      setValue(row.querySelector(`.colLabel`), column.label);
+      setText(row.querySelector(`.colLabel`), column.label);
     });
   }
 
@@ -1721,6 +1712,7 @@
   function fillTableSettings(block) {
     const config = block.config;
     const state = context();
+    // Nothing can be chosen until the structure of the document is known.
     const controls = [el.kind, el.tableSel, el.link, el.group1, el.merge, el.addColumn, el.sortBy, el.sortColumn, el.sortDir, el.total, el.totalRight, el.totalRightFn, el.totalRightLess, el.totalRightMore, el.filterToggle, el.sortToggle, el.moreLinks];
     controls.forEach((control) => { control.disabled = !state.schema; });
     if (!state.schema) {
@@ -1728,6 +1720,7 @@
       el.tableInfo.className = `warning`;
       return;
     }
+    // What the choices are built from: the kind (dynamic or fixed), the starting item and the columns of the chosen table.
     const schema = state.schema;
     const fixed = config.link === `all`;
     const starts = Query.listStarts(schema, state.linked);
@@ -1735,9 +1728,10 @@
     const choices = config.table && schema.tables.has(config.table) ? Fields.sortChoices(Fields.fieldChoices(schema, config.table)) : [];
     const columnItems = [[``, tr(`boardItemNone`)], ...choices.map((choice) => [choice.path, choice.label])];
     const fieldItems = [[``, tr(`boardFieldPlaceholder`)], ...choices.map((choice) => [choice.path, choice.label])];
-    setValue(el.labelTemplate, config.labelTemplate);
+    // The composed labels of the two items.
+    setText(el.labelTemplate, config.labelTemplate);
     setOptions(el.labelField, fieldItems, ``);
-    setValue(el.labelTemplate2, config.labelTemplate2);
+    setText(el.labelTemplate2, config.labelTemplate2);
     setOptions(el.labelField2, fieldItems, ``);
     // The composed labels are folded away unless the block already has one, so that the panel stays light.
     if (el.labelRow.dataset.block !== block.id) {
@@ -1746,6 +1740,7 @@
       el.labelRow2.hidden = !config.labelTemplate2;
       syncLabelFolds();
     }
+    // The kind of table, the table and the way its rows are tied to the selected row (with the explanation window).
     setOptions(el.kind, [[`dynamic`, tr(`kindDynamic`)], [`fixed`, tr(`kindFixed`)]], fixed ? `fixed` : `dynamic`);
     const tables = fixed
       ? Query.listAllTables(schema).map((entry) => [entry.table, entry.summary ? `${entry.table} ${tr(`labQualitySummary`)}` : entry.table])
@@ -1768,6 +1763,7 @@
     } else {
       el.explain.hidden = true;
     }
+    // The items (rows), the subtotals and the item in columns of a cross table.
     el.groupRow.hidden = config.mode === `list`;
     setOptions(el.group1, columnItems, config.groupBy[0] || ``);
     el.group2Row.hidden = config.mode !== `group`;
@@ -1785,6 +1781,7 @@
     setOptions(el.colSort, [[`key`, tr(`colSortKey`)], ...(colColumn && colColumn.kind === `ref` ? [[`ref`, tr(`colSortRef`)]] : [])], config.colSort);
     setOptions(el.slice, Model.SLICES.map((count) => [count, count ? tr(`sliceN`, { n: count }) : tr(`sliceAll`)]), config.slice);
     el.merge.checked = config.merge;
+    // The sort: the modes that make sense depend on the kind of table and on the item.
     const result = tableResult(block);
     const firstItem = config.groupBy.find(Boolean);
     const itemColumn = firstItem ? schema.tables.get(config.table).columns.find((column) => column.id === firstItem.split(`.`)[0]) : null;
@@ -1800,13 +1797,14 @@
     el.sortDir.parentElement.hidden = sortBy === `manual`;
     el.sortOrderBox.hidden = !(config.mode !== `list` && sortBy === `manual`);
     if (!el.sortOrderBox.hidden) renderSortOrder(config, result.ok && config.mode !== `list` ? result.rows.map((row) => row[0]) : []);
+    // The folded sections (filters and sort), then the totals below and on the right.
     const filtersOpen = sectionOpen.filters || config.filters.length > 0;
     const sortOpen = sectionOpen.sort || sortActive(config);
     setToggle(el.filterToggle, el.filterBody, filtersOpen);
     setToggle(el.sortToggle, el.sortBody, sortOpen);
     el.total.checked = config.total;
     el.totalLabelRow.hidden = !config.total;
-    setValue(el.totalLabel, config.totalLabel);
+    setText(el.totalLabel, config.totalLabel);
     const rightOn = Query.rightTotalPossible(config);
     el.totalRight.disabled = !rightOn;
     el.totalRight.checked = config.totalRight && rightOn;
@@ -1816,6 +1814,7 @@
       el.more.dataset.block = block.id;
       el.more.open = filtersOpen || sortOpen;
     }
+    // The lines of the columns and of the filters, then the messages under the settings (rows kept, truncation, overflow).
     renderColumnRows(block, choices);
     renderFilters(block, choices, Fields.fieldChoices(schema, start.table));
     const messages = [];
@@ -1836,6 +1835,9 @@
     el.tableInfo.textContent = messages.join(` `);
     el.tableInfo.className = overflow || (result.ok && (result.warnings.length || result.truncated || (result.labelProblems && result.labelProblems.length))) || (!result.ok && result.reason !== `choose`) ? `warning` : `hint`;
   }
+
+  // ------------------------------------------------------------------ The settings panel as a whole
+  // fillPanel shows the part of the panel that belongs to the selected block and fills it.
 
   // Fills the settings panel with the selected block.
   function fillPanel() {
@@ -1859,7 +1861,7 @@
     }
     const block = selectedBlock();
     if (!block) return;
-    setValue(el.title, block.title);
+    setText(el.title, block.title);
     setOptions(el.typeSelect, Model.TYPES.map((type) => [type, tr(TYPE_KEYS[type])]), block.type);
     el.guide.hidden = !window.exportTdbGuide.has(block.type);
     el.titleRow.hidden = block.type === `text`;
@@ -2162,6 +2164,8 @@
     fillSelect(el.fill, Model.FILLS.map((key) => [key, tr(FILL_KEYS[key])]), `none`);
   }
 
+  // Tool bar and keys of the whole dashboard: the buttons, the menus, the zoom, the print button and the shortcuts.
+
   el.edit.addEventListener(`click`, () => setEditing(!editing));
   el.addMenu.addEventListener(`click`, () => openMenu(`types`, el.addMenu));
   el.paletteButton.addEventListener(`click`, () => openMenu(`palette`, el.paletteButton));
@@ -2205,6 +2209,8 @@
   el.debugClose.addEventListener(`click`, () => {
     el.debugBox.hidden = true;
   });
+  // Settings panel, part common to every block: title, type, deleting, closing, the course and the named values.
+
   el.title.addEventListener(`input`, () => {
     if (selectedId) commit(Model.updateBlock(model, selectedId, { title: el.title.value }));
   });
@@ -2239,6 +2245,8 @@
 
   // The settings of the table block that depend on the table are cleared when the table changes.
   const tableReset = (fixed) => ({ start: ``, link: fixed ? `all` : ``, columns: [], groupBy: [], colItem: ``, filters: [], sort: { by: `none`, column: ``, dir: `asc`, order: [] } });
+  // Settings of the table and chart blocks: the kind, the table, the rows, the items, the columns, the totals, the filters and the sort.
+
   el.kind.addEventListener(`change`, () => {
     const block = selectedBlock();
     const state = context();
@@ -2309,6 +2317,8 @@
   });
   el.slice.addEventListener(`change`, () => changeConfig({ slice: Number(el.slice.value) }));
   el.colSort.addEventListener(`change`, () => changeConfig({ colSort: el.colSort.value }));
+  // Settings of the chart, sheet and image blocks.
+
   el.chartType.addEventListener(`change`, () => {
     const block = selectedBlock();
     // A scatter plot is made from a plain list: the item and the item in columns are taken away.
@@ -2335,6 +2345,8 @@
   });
   el.imageCaption.addEventListener(`change`, () => changeConfig({ caption: el.imageCaption.value }));
   el.recordSize.addEventListener(`change`, () => changeConfig({ size: el.recordSize.value }));
+  // Settings of the table block, continued: the merge of labels, the columns, the sort, the totals and the composed labels.
+
   el.merge.addEventListener(`change`, () => changeConfig({ merge: el.merge.checked }));
   el.addColumn.addEventListener(`click`, () => {
     const block = selectedBlock();
@@ -2393,6 +2405,8 @@
     if (open) changeConfig({ sort: { by: block.config.mode === `list` ? `none` : `key`, column: ``, dir: `asc`, order: [] } });
     else render({ keepFocus: true });
   });
+  // Settings of the text block.
+
   el.source.addEventListener(`change`, () => changeConfig({ source: el.source.value }));
   el.column.addEventListener(`change`, () => changeConfig({ column: el.column.value }));
   el.size.addEventListener(`change`, () => changeConfig({ size: el.size.value }));
@@ -2412,6 +2426,8 @@
     el.text.focus();
     el.text.dispatchEvent(new Event(`input`));
   });
+  // Refresh button and events that come from Grist: a new model, a new selected row, the end of the exploration.
+
   el.refresh.addEventListener(`click`, () => {
     Data.clear();
     failedTables.clear();

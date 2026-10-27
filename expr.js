@@ -15,7 +15,9 @@
         i += 1;
       } else if (/[0-9]/.test(ch) || (ch === `.` && /[0-9]/.test(text[i + 1] || ``))) {
         const match = /^[0-9]*[.,]?[0-9]+|^[0-9]+/.exec(text.slice(i));
-        tokens.push({ type: `number`, value: Number(match[0].replace(`,`, `.`)) });
+        const value = Number(match[0].replace(`,`, `.`));
+        if (!Number.isFinite(value)) return { error: `a number is too big` };
+        tokens.push({ type: `number`, value });
         i += match[0].length;
       } else if (ch === `{`) {
         const end = text.indexOf(`}`, i);

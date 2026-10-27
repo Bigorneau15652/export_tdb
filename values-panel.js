@@ -4,39 +4,13 @@
 // changes, so that typing in a field is never interrupted. The values themselves are cleaned by model.js.
 (function () {
   const { t } = window.exportTdbI18n;
+  const { setOptions, setText } = window.exportTdbDom;
   const FilterUi = window.exportTdbFilterUi;
   const FN_ORDER = [`sum`, `avg`, `min`, `max`, `count`, `distinct`];
   const FN_SHORT = { sum: `fnSumShort`, avg: `fnAvgShort`, min: `fnMinShort`, max: `fnMaxShort`, count: `fnCountShort`, distinct: `fnDistinctShort` };
   const NUMERIC_FUNCTIONS = [`sum`, `avg`, `min`, `max`];
   const KIND_KEYS = { calc: `valueKindCalc`, field: `valueKindField`, expr: `valueKindExpr` };
   const FILTERS_PER_VALUE = 2;
-
-  // Fills a select element with [value, label] pairs.
-  function fillSelect(select, items, value) {
-    select.textContent = ``;
-    for (const [optionValue, label] of items) {
-      const option = document.createElement(`option`);
-      option.value = String(optionValue);
-      option.textContent = label;
-      select.appendChild(option);
-    }
-    select.value = String(value);
-  }
-
-  // Sets the items of a select only when they changed, then its value.
-  function setOptions(select, items, value) {
-    const signature = JSON.stringify(items);
-    if (select.dataset.signature !== signature) {
-      fillSelect(select, items, value);
-      select.dataset.signature = signature;
-    }
-    if (select.value !== String(value)) select.value = String(value);
-  }
-
-  // Sets the text of an input, unless the user is typing in it.
-  function setText(input, value) {
-    if (document.activeElement !== input && input.value !== value) input.value = value;
-  }
 
   // Creates the editor. `deps`: list (the element that receives the cards), getValues(), setValues(list),
   // context() ({ schema, linked, record }), results() (the evaluation of the values: { list }), linkLabel(choice)

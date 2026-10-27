@@ -23,7 +23,6 @@
   const MAX_FIXED_TEXT = 5000;
   const COLUMN_PATTERN = /^[A-Za-z_][A-Za-z0-9_]{0,63}$/;
   // Settings of a table block: what is chosen in the panel, checked against these lists and patterns.
-  const TABLE_MODES = [`list`, `group`, `cross`];
   const SLICES = [0, 3, 4, 5, 6, 8, 10, 12];
   const FUNCTIONS = [`sum`, `avg`, `min`, `max`, `count`, `distinct`];
   const OPERATORS = [`eq`, `ne`, `gt`, `ge`, `lt`, `le`, `contains`, `empty`, `notEmpty`, `true`, `false`];
@@ -443,7 +442,7 @@
     return reflow({ ...model, page: cleanPage({ ...model.page, ...changes }) });
   }
 
-  const api = { FORMAT_VERSION, MAX_BLOCKS, MAX_TITLE, MAX_FIXED_TEXT, MAX_COLUMNS, MAX_FILTERS, MAX_GROUPS, TABLE_MODES, SLICES, FUNCTIONS, OPERATORS, SORT_BYS, TYPES, MAX_RECORD_ITEMS, MAX_VALUES, CHART_TYPES, CHART_PALETTES, CHART_LEGENDS, CHART_LABELS, INDICATOR_COLORS, MAX_RULES, MAX_NOTE, MAX_IMAGE_RANK, MAX_FOOTER, VALUE_KINDS, NAME_PATTERN, cleanValues, setValues, TEXT_SOURCES, TEXT_SIZES, TEXT_ALIGNS, FILLS, DEFAULT_SIZES, emptyModel, cleanConfig, validateModel, reflow, findBlock, addBlock, compactPages, updateBlock, moveBlock, resizeBlock, resizeBox, deleteBlock, setPage };
+  const api = { MAX_BLOCKS, MAX_TITLE, MAX_FIXED_TEXT, MAX_COLUMNS, SLICES, FUNCTIONS, OPERATORS, SORT_BYS, TYPES, MAX_RECORD_ITEMS, MAX_VALUES, CHART_TYPES, CHART_PALETTES, CHART_LEGENDS, CHART_LABELS, INDICATOR_COLORS, MAX_RULES, MAX_NOTE, MAX_IMAGE_RANK, MAX_FOOTER, cleanValues, setValues, TEXT_SOURCES, TEXT_SIZES, TEXT_ALIGNS, FILLS, DEFAULT_SIZES, emptyModel, cleanConfig, validateModel, findBlock, addBlock, compactPages, updateBlock, moveBlock, resizeBlock, resizeBox, deleteBlock, setPage };
   if (typeof module !== `undefined` && module.exports) module.exports = api;
   else root.exportTdbModel = api;
 })(typeof window !== `undefined` ? window : globalThis);
