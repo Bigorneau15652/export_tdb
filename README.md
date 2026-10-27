@@ -49,7 +49,7 @@ export_tdb est un widget personnalisé pour [Grist](https://www.getgrist.com) qu
 
 ### Ce qu'il fait
 
-- Des pages aux formats A3, A4, A5, carré ou écran 16/9, en portrait ou en paysage. Les blocs s'ajoutent, se déplacent et se redimensionnent à la souris ou au clavier, et ne se superposent jamais. La mise en page est enregistrée dans les options du widget.
+- Des pages aux formats A3, A4, A5, carré ou écran 16/9, en portrait ou en paysage. Les blocs s'ajoutent, se déplacent et se redimensionnent à la souris ou au clavier sans jamais se superposer. La mise en page est enregistrée dans les options du widget.
 - Six blocs. Texte : du Markdown sûr avec des champs pris dans la ligne sélectionnée (`{Colonne}`, `{Reference.Colonne}`) et des valeurs nommées, ou le texte d'une cellule que l'on peut modifier. Tableau : listes, regroupements sur un ou deux items avec sous-totaux et groupes repliables, tableaux croisés, totaux, filtres, tris et libellés composés. Fiche : des informations de la ligne sélectionnée avec un petit libellé au-dessus de chaque valeur. Graphique : histogrammes, barres, courbes, secteurs, anneaux, compartimentages et nuages de points dessinés en SVG avec Apache ECharts, avec neuf palettes de couleurs. Image : une pièce jointe ou un lien https (liens de partage Nextcloud, Google Drive et kDrive). Indicateur : une valeur nommée en gras avec une couleur selon des seuils.
 - Les tableaux longs continuent sur les pages suivantes avec leurs intitulés répétés.
 - Numéros de page et pied de page, annulation (Ctrl+Z), impression ou PDF avec les mêmes pages que l'aperçu.
@@ -67,12 +67,12 @@ Si votre serveur Grist n'est pas `grist.numerique.gouv.fr`, modifiez deux endroi
 ### Premiers pas
 
 1. Cliquez sur « Modifier », puis sur le bouton plus de la barre d'outils et choisissez un bloc. Double-cliquez sur un bloc pour ouvrir ses réglages.
-2. Choisissez la table, puis ce qui fait une ligne (l'item) et les colonnes avec leur calcul. Les points d'interrogation du panneau expliquent chaque réglage, et le chapeau d'étudiant ouvre le cours du bloc.
+2. Choisissez la table, puis ce qui fait une ligne (l'item) et les colonnes avec leur calcul. Les points d'interrogation du panneau expliquent chaque réglage. Le chapeau d'étudiant ouvre le cours du bloc.
 3. Cliquez sur le bouton d'impression pour imprimer ou enregistrer en PDF.
 
 ### Sécurité
 
-Les scripts viennent de ce site et de l'API des widgets Grist uniquement, et la page n'ouvre aucune connexion réseau (`connect-src 'none'`). Les images des liens et des pièces jointes sont chargées par le navigateur comme des images, et les données de l'utilisateur sont insérées dans la page comme du texte, jamais comme du HTML. Rien n'est envoyé à un tiers.
+Les scripts viennent de ce site et de l'API des widgets Grist uniquement. La page n'ouvre aucune connexion réseau (`connect-src 'none'`). Les images des liens et des pièces jointes sont chargées par le navigateur comme des images. Les données de l'utilisateur sont insérées dans la page comme du texte, jamais comme du HTML. Rien n'est envoyé à un tiers.
 
 ### Développement et tests
 

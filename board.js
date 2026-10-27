@@ -199,8 +199,10 @@
     return Fields.expandFields([{ type: `text`, value: block.config.note }], fieldResolver()).nodes[0].value;
   }
 
-  // The result of the named values for the selected row, kept until the data, the row or the values change.
+  // The last result of namedValues, kept with what it was computed from.
   let namedMemo = null;
+
+  // The result of the named values for the selected row, kept until the data, the row or the values change.
   function namedValues() {
     const state = context();
     if (!state.schema || !state.record) return { byName: new Map(), list: [] };
@@ -887,7 +889,7 @@
     node.appendChild(body);
   }
 
-  // Builds the element of one block, with its cross (which deletes it) and its three resize handles.
+  // Builds the element of one block, with its cross (which deletes it) and its seven resize handles (four edges and three corners).
   function buildBlock(block) {
     const node = document.createElement(`div`);
     node.className = `block`;
@@ -2497,12 +2499,16 @@
 
   // The triangles in front of the "?" of the two items: each one unfolds the composed label of its item.
   const labelFolds = [];
+
+  // Draws each triangle open or closed, as the composed label box of its item.
   function syncLabelFolds() {
     for (const { box, button } of labelFolds) {
       button.textContent = box.hidden ? `\u25B8` : `\u25BE`;
       button.setAttribute(`aria-expanded`, String(!box.hidden));
     }
   }
+
+  // Puts a triangle in front of the label of each item, with the click that opens or closes the composed label box.
   function installLabelFolds() {
     for (const [id, box] of [[`boardGroup1`, el.labelRow], [`boardGroup2`, el.labelRow2]]) {
       const label = document.querySelector(`#boardPanel label[for="${id}"]`);

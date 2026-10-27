@@ -46,6 +46,14 @@ const data = ${JSON.stringify(demo.data)};
 const options = ${JSON.stringify(options)};
 const tables = Object.assign({}, data, metadata);
 window.__writes = [];
+// The names of the tables that the widget asked for, in order (the test tools read the tables without this log).
+window.__fetched = [];
+async function rawFetchTable(name) {
+  if (options.denyAccess) throw new Error(\`Access denied\`);
+  if (!tables[name]) throw new Error(\`No such table \` + name);
+  return JSON.parse(JSON.stringify(tables[name]));
+}
+window.__rawFetchTable = rawFetchTable;
 window.__linkedName = options.linked || \`Sites\`;
 let writeCount = 0;
 function apply(tableId, rowId, fields) {
@@ -74,9 +82,8 @@ window.grist = {
   selectedTable: { getTableId: async () => options.linked || \`Sites\` },
   docApi: {
     fetchTable: async (name) => {
-      if (options.denyAccess) throw new Error(\`Access denied\`);
-      if (!tables[name]) throw new Error(\`No such table \` + name);
-      return JSON.parse(JSON.stringify(tables[name]));
+      window.__fetched.push(name);
+      return rawFetchTable(name);
     },
     applyUserActions: async (actions) => { for (const a of actions) apply(a[1], a[2], a[3]); },
     getAccessToken: async () => ({ baseUrl: \`${GRIST_HOST}/api/docs/D\`, token: \`SECRET-TOKEN\`, ttlMsecs: 60000 })
@@ -106,7 +113,7 @@ async function openExplorer(browser, baseUrl, options = {}) {
   // With `bare` true the record holds only the row number, as when Grist sends no column.
   const selectRow = (id, bare = false) => page.evaluate(([rowId, onlyId]) => {
     const name = window.__linkedName;
-    return window.grist.docApi.fetchTable(name).then((table) => {
+    return window.__rawFetchTable(name).then((table) => {
       const index = table.id.indexOf(rowId);
       const record = { id: rowId };
       if (!onlyId) for (const key of Object.keys(table)) if (key !== `id`) record[key] = table[key][index];
