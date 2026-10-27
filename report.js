@@ -4,7 +4,7 @@
 (function (root) {
   // Report text. `data` is { version, reveal, linked, record, tables, descendants, shapes, tests, events } and, when the
   // dashboard is described, `dashboard`: { format, orientation, margin, pages, numbers, footer, blocks: [{ type, page }],
-  // values, bytes, editing, locked }.
+  // values, bytes, editing, locked, exchanges (lines that tell what was received from Grist and saved) }.
   function buildReport(data) {
     const lines = [];
     const add = (text = ``) => lines.push(text);
@@ -47,6 +47,10 @@
       add(`Named values: ${board.values}`);
       add(`Saved size: ${board.bytes} bytes`);
       add(`Mode: ${board.editing ? `editing` : `reading`}${board.locked ? `, locked (model not readable)` : ``}`);
+      add();
+      add(`9. Exchanges with Grist since the page was opened`);
+      for (const line of board.exchanges || []) add(line);
+      if (!(board.exchanges || []).length) add(`none`);
     }
     return lines.join(`\n`);
   }

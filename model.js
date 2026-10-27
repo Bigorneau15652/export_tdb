@@ -5,7 +5,7 @@
 // blocks that never overlap and never leave their page. Pure logic, tested with Node.
 (function (root) {
   const layout = typeof module !== `undefined` && module.exports ? require(`./layout.js`) : root.exportTdbLayout;
-  const { MAX_PAGES, MARGINS, DEFAULT_MARGIN, FORMATS, ORIENTATIONS, gridOf, isFree, clampSize, findFreeSpot, resolveMove, resolveResize, resolveBox } = layout;
+  const { MAX_PAGES, MARGINS, DEFAULT_MARGIN, FORMATS, ORIENTATIONS, gridOf, isFree, clampSize, findFreeSpot, resolveMove, resolvePush, resolveResize, resolveBox } = layout;
 
   // Version of the saved format. A change of format needs a migration here.
   const FORMAT_VERSION = 1;
@@ -393,14 +393,25 @@
     return { ...model, blocks: model.blocks.map((item) => (item.id === id ? next : item)) };
   }
 
-  // Moves a block towards a wanted place { page, x, y }: it goes to the valid place closest to it. The
-  // wanted page can be a page after the last one, up to `lastPage` (the pages that are drawn, empty ones
-  // included): the pages up to it then exist. When the wanted page has no room for it, the model is
-  // returned unchanged.
+  // Moves a block towards a wanted place { page, x, y }. The block goes exactly there and pushes the blocks that it
+  // covers away from it (see Layout.resolvePush). When they cannot all be pushed, it goes to the valid place closest to
+  // the wanted one instead. The wanted page can be a page after the last one, up to `lastPage` (the pages that are
+  // drawn, empty ones included): the pages up to it then exist, and so do the pages that pushed blocks need. When the
+  // wanted page has no room for the block, the model is returned unchanged.
   function moveBlock(model, id, wanted, lastPage) {
     const block = findBlock(model, id);
     const limit = Math.min(MAX_PAGES - 1, Math.max(model.pages - 1, Number.isInteger(lastPage) ? lastPage : 0));
     if (!block || wanted.page < 0 || wanted.page > limit) return model;
+    const push = resolvePush(model.blocks, block, wanted, gridOf(model.page));
+    if (push) {
+      const shifted = new Map(push.shifted.map((item) => [item.id, item]));
+      const blocks = model.blocks.map((item) => {
+        if (item.id === id) return { ...item, ...push.spot };
+        const to = shifted.get(item.id);
+        return to ? { ...item, page: to.page, x: to.x, y: to.y } : item;
+      });
+      return { ...model, pages: Math.max(model.pages, ...blocks.map((item) => item.page + 1)), blocks };
+    }
     const spot = resolveMove(model.blocks, block, wanted, gridOf(model.page));
     if (!spot) return model;
     return { ...model, pages: Math.max(model.pages, spot.page + 1), blocks: model.blocks.map((item) => (item.id === id ? { ...item, ...spot } : item)) };

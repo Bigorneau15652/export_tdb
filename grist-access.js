@@ -4,6 +4,18 @@
   const callbacks = [];
   let registered = false;
 
+  // What was exchanged with Grist since the page was opened (the options received and the saves made), kept for the
+  // diagnostic report so that a model that seems lost can be explained.
+  const exchanges = [];
+  const MAX_EXCHANGES = 30;
+  const opened = Date.now();
+
+  // Adds a line to the list of exchanges, with the time since the page was opened.
+  function note(kind, detail) {
+    exchanges.push(`${((Date.now() - opened) / 1000).toFixed(1)} s ${kind}: ${detail}`);
+    if (exchanges.length > MAX_EXCHANGES) exchanges.shift();
+  }
+
   // Calls `callback(rawModel)` now and each time Grist gives the options again (rawModel is null when
   // nothing is saved yet).
   function onModel(callback) {
@@ -12,6 +24,7 @@
     registered = true;
     grist.onOptions((options) => {
       const raw = options && typeof options === `object` ? options.model : null;
+      note(`received`, raw === null || raw === undefined ? `no model` : raw && Array.isArray(raw.blocks) ? `${raw.blocks.length} block(s)` : `unreadable model`);
       for (const each of callbacks) each(raw === undefined ? null : raw);
     });
   }
@@ -21,8 +34,10 @@
     try {
       if (typeof grist.setOption === `function`) await grist.setOption(`model`, model);
       else await grist.setOptions({ model });
+      note(`saved`, `${model.blocks.length} block(s)`);
       return true;
     } catch {
+      note(`save refused`, `${model.blocks.length} block(s)`);
       return false;
     }
   }
@@ -65,5 +80,5 @@
     return `${attachmentToken.baseUrl}/attachments/${id}/download?auth=${attachmentToken.token}`;
   }
 
-  window.exportTdbAccess = { onModel, saveModel, fetchTable, writeCell, attachmentAddress };
+  window.exportTdbAccess = { onModel, saveModel, fetchTable, writeCell, attachmentAddress, exchanges: () => exchanges.slice() };
 })();

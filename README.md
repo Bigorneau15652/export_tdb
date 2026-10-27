@@ -8,7 +8,7 @@ export_tdb is a custom widget for [Grist](https://www.getgrist.com) that compose
 
 ### What it does
 
-- Pages in A3, A4, A5, square or 16/9 screen formats, in portrait or landscape. Blocks are added, moved and resized with the pointer or the keyboard and never overlap. The layout is saved in the options of the widget.
+- Pages in A3, A4, A5, square or 16/9 screen formats, in portrait or landscape. Blocks are added, moved and resized with the pointer or the keyboard and never overlap: a block that is moved onto others pushes them away. The layout is saved in the options of the widget.
 - Six blocks. Text: safe Markdown with fields taken from the selected row (`{Column}`, `{Reference.Column}`) and named values, or the text of a cell that you can edit. Table: lists, groupings by one or two items with subtotals and groups that fold, cross tables, totals, filters, sorts and composed labels. Sheet: information of the selected row as small labels above their values. Chart: bar, line, pie, donut, treemap and scatter charts drawn in SVG with Apache ECharts, with nine colour palettes. Image: an attachment or an https link (Nextcloud, Google Drive and kDrive share links). Indicator: a named value in bold with a colour that follows thresholds.
 - Long tables continue on the following pages with their headings repeated.
 - Page numbers and a footer, undo (Ctrl+Z), and printing or PDF with the same pages as the preview.
@@ -49,7 +49,7 @@ export_tdb est un widget personnalisé pour [Grist](https://www.getgrist.com) qu
 
 ### Ce qu'il fait
 
-- Des pages aux formats A3, A4, A5, carré ou écran 16/9, en portrait ou en paysage. Les blocs s'ajoutent, se déplacent et se redimensionnent à la souris ou au clavier sans jamais se superposer. La mise en page est enregistrée dans les options du widget.
+- Des pages aux formats A3, A4, A5, carré ou écran 16/9, en portrait ou en paysage. Les blocs s'ajoutent, se déplacent et se redimensionnent à la souris ou au clavier sans jamais se superposer : un bloc que l'on déplace sur d'autres les repousse. La mise en page est enregistrée dans les options du widget.
 - Six blocs. Texte : du Markdown sûr avec des champs pris dans la ligne sélectionnée (`{Colonne}`, `{Reference.Colonne}`) et des valeurs nommées, ou le texte d'une cellule que l'on peut modifier. Tableau : listes, regroupements sur un ou deux items avec sous-totaux et groupes repliables, tableaux croisés, totaux, filtres, tris et libellés composés. Fiche : des informations de la ligne sélectionnée avec un petit libellé au-dessus de chaque valeur. Graphique : histogrammes, barres, courbes, secteurs, anneaux, compartimentages et nuages de points dessinés en SVG avec Apache ECharts, avec neuf palettes de couleurs. Image : une pièce jointe ou un lien https (liens de partage Nextcloud, Google Drive et kDrive). Indicateur : une valeur nommée en gras avec une couleur selon des seuils.
 - Les tableaux longs continuent sur les pages suivantes avec leurs intitulés répétés.
 - Numéros de page et pied de page, annulation (Ctrl+Z), impression ou PDF avec les mêmes pages que l'aperçu.

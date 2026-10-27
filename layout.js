@@ -98,6 +98,75 @@
     return best;
   }
 
+  // The most pushes a single move may need; a longer chain means that something is wrong, and the move is refused.
+  const MAX_PUSHES = 2000;
+
+  // Where the block `other` goes when the rectangle `pusher` pushes it: just beyond the pusher, in the direction of
+  // the push (`vertical` and `sign`: 1 down or to the right, -1 up or to the left). A block pushed out of the bottom of a page
+  // goes to the top of the next page, a block pushed out of the top goes to the bottom of the previous page. Returns the
+  // new rectangle of `other`, or null when it has no place to go (out of the sides of the page, before the first page, after
+  // the last one).
+  function pushedBy(pusher, other, vertical, sign, grid) {
+    if (vertical) {
+      if (sign > 0) {
+        const y = pusher.y + pusher.h;
+        if (y + other.h <= grid.rows) return { ...other, page: pusher.page, y };
+        return pusher.page + 1 < MAX_PAGES ? { ...other, page: pusher.page + 1, y: 0 } : null;
+      }
+      const y = pusher.y - other.h;
+      if (y >= 0) return { ...other, page: pusher.page, y };
+      return pusher.page > 0 ? { ...other, page: pusher.page - 1, y: grid.rows - other.h } : null;
+    }
+    const x = sign > 0 ? pusher.x + pusher.w : pusher.x - other.w;
+    return x >= 0 && x + other.w <= grid.cols ? { ...other, page: pusher.page, x } : null;
+  }
+
+  // A move that pushes the blocks in the way instead of going round them. The block goes exactly where it is wanted (kept
+  // inside its page); the blocks that it covers are pushed away from it, in the direction opposite to the move of the
+  // block (it moves up: they go down; it moves left: they go right), by just the room needed, and the blocks that they
+  // cover in turn are pushed the same way. The direction is the vertical one unless the block moved more sideways than up
+  // or down. Returns { spot: { page, x, y }, shifted: [{ id, page, x, y }] } (`shifted` is empty when nothing was in the
+  // way), or null when the blocks cannot all be pushed: the caller then looks for the closest free place (see resolveMove).
+  function resolvePush(blocks, block, wanted, grid) {
+    const page = wanted.page;
+    if (!Number.isInteger(page) || page < 0 || page >= MAX_PAGES) return null;
+    const x = Math.min(Math.max(0, Math.round(wanted.x)), Math.max(0, grid.cols - block.w));
+    const y = Math.min(Math.max(0, Math.round(wanted.y)), Math.max(0, grid.rows - block.h));
+    const target = { id: block.id, page, x, y, w: block.w, h: block.h };
+    const dx = x - block.x;
+    const dy = (page - block.page) * grid.rows + (y - block.y);
+    const vertical = Math.abs(dy) >= Math.abs(dx);
+    const sign = (vertical ? dy : dx) < 0 ? 1 : -1;
+    const rects = new Map(blocks.filter((item) => item.id !== block.id).map((item) => [item.id, { id: item.id, page: item.page, x: item.x, y: item.y, w: item.w, h: item.h }]));
+    const queue = [target];
+    let pushes = 0;
+    while (queue.length) {
+      const pusher = queue.shift();
+      const current = rects.get(pusher.id);
+      // A block that was pushed again since it was queued no longer pushes from its old place.
+      if (current && (current.page !== pusher.page || current.x !== pusher.x || current.y !== pusher.y)) continue;
+      for (const other of rects.values()) {
+        if (other.id === pusher.id || !overlaps(pusher, other)) continue;
+        pushes += 1;
+        const next = pushes > MAX_PUSHES ? null : pushedBy(pusher, other, vertical, sign, grid);
+        if (!next) return null;
+        rects.set(other.id, next);
+        queue.push(next);
+      }
+    }
+    const all = [target, ...rects.values()];
+    for (const item of all) {
+      if (!fits(item, grid)) return null;
+      for (const other of all) if (other.id !== item.id && overlaps(item, other)) return null;
+    }
+    const shifted = blocks
+      .filter((item) => item.id !== block.id)
+      .map((item) => ({ before: item, after: rects.get(item.id) }))
+      .filter(({ before, after }) => before.page !== after.page || before.x !== after.x || before.y !== after.y)
+      .map(({ after }) => ({ id: after.id, page: after.page, x: after.x, y: after.y }));
+    return { spot: { page, x, y }, shifted };
+  }
+
   // The valid size closest to the wanted one for a block whose top left corner stays where it is.
   // With `keepRatio` the proportions of the block are kept. Returns { w, h } (the size of the block
   // itself is always valid, so there is always an answer).
@@ -149,7 +218,7 @@
     return { x: block.x, y: block.y, w: block.w, h: block.h };
   }
 
-  const api = { STEP_MM, MIN_SIZE, MAX_PAGES, MARGINS, DEFAULT_MARGIN, FORMATS, ORIENTATIONS, pageSizeMm, gridOf, overlaps, fits, isFree, clampSize, findFreeSpot, resolveMove, resolveResize, resolveBox };
+  const api = { STEP_MM, MIN_SIZE, MAX_PAGES, MARGINS, DEFAULT_MARGIN, FORMATS, ORIENTATIONS, pageSizeMm, gridOf, overlaps, fits, isFree, clampSize, findFreeSpot, resolveMove, resolvePush, resolveResize, resolveBox };
   if (typeof module !== `undefined` && module.exports) module.exports = api;
   else root.exportTdbLayout = api;
 })(typeof window !== `undefined` ? window : globalThis);

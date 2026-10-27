@@ -141,6 +141,28 @@ test(`dragging a block moves it and it never overlaps another block`, async () =
   assert.deepEqual(w.errors, []);
 });
 
+test(`a block dragged onto another pushes it away, and the blocks that will move are outlined while dragging`, async () => {
+  const saved = { model: { version: 1, page: { format: `a4`, orientation: `portrait`, margin: 10 }, pages: 1, blocks: [
+    { id: `tab1`, type: `text`, title: `Table`, page: 0, x: 0, y: 0, w: 30, h: 8 },
+    { id: `tit1`, type: `text`, title: `Title`, page: 0, x: 0, y: 10, w: 30, h: 3 }
+  ] } };
+  const w = await openBoard({ savedOptions: saved });
+  await edit(w);
+  const table = await box(w.page, `.block[data-id="tab1"]`);
+  const title = await box(w.page, `.block[data-id="tit1"]`);
+  await w.page.mouse.move(title.x + 20, title.y + 10);
+  await w.page.mouse.down();
+  await w.page.mouse.move(table.x + 20, table.y + 10, { steps: 8 });
+  assert.equal(await w.page.locator(`.block[data-id="tab1"].pushed`).count(), 1);
+  await w.page.mouse.up();
+  const after = await model(w.page);
+  const moved = after.blocks.find((b) => b.id === `tit1`);
+  const pushed = after.blocks.find((b) => b.id === `tab1`);
+  assert.deepEqual([moved.y, pushed.y], [0, 3]);
+  assert.equal(await w.page.locator(`.block.pushed`).count(), 0);
+  assert.deepEqual(w.errors, []);
+});
+
 test(`a simple click selects a block without moving it`, async () => {
   const w = await openBoard({ savedOptions: SAVED });
   await edit(w);
@@ -496,6 +518,7 @@ test(`the debug button copies the report with what Grist gave and a description 
   assert.match(report, /attachment token/);
   assert.match(report, /5\. Loading times\nSites: \d+ rows/);
   assert.match(report, /tables measured: OK/);
+  assert.match(report, /9\. Exchanges with Grist since the page was opened\n[\d.]+ s received: 2 block\(s\)/);
   assert.match(report, /8\. Dashboard/);
   assert.match(report, /Blocks: 2 \(text p1, table p1\)/);
   assert.ok(!/__export_tdb_test__|write with/.test(report));

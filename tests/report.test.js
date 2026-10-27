@@ -48,3 +48,11 @@ test(`the loading line says whether the manual order column came with the table`
   assert.match(text, /Rooms: 6 rows, 9 columns, 7 ms, manual order column absent/);
   assert.match(text, /Old: 1 rows, 1 columns, 1 ms\n/);
 });
+
+test(`the report lists what was exchanged with Grist, or says none`, () => {
+  const board = { format: `screen`, orientation: `landscape`, margin: 10, pages: 1, numbers: false, footer: ``, blocks: [], values: 0, bytes: 10, editing: false, locked: false };
+  const none = buildReport({ ...base, dashboard: board });
+  assert.ok(none.includes(`9. Exchanges with Grist since the page was opened\nnone`));
+  const some = buildReport({ ...base, dashboard: { ...board, exchanges: [`0.1 s received: 5 block(s)`, `3.0 s saved: 6 block(s)`] } });
+  assert.ok(some.includes(`9. Exchanges with Grist since the page was opened\n0.1 s received: 5 block(s)\n3.0 s saved: 6 block(s)`));
+});
