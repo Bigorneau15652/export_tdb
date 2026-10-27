@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.22.0
+
+- Moving a block now pushes the others: the block goes exactly where it is dropped and the blocks that it covers are pushed away from it, in the direction opposite to its move (it goes up: they go down; it goes down: they go up; it goes to the right: they go to the left; it goes to the left: they go to the right), by just the room needed. The blocks that they cover in turn are pushed the same way. A block pushed out of the bottom of a page goes to the top of the next page (a page is added when needed), and one pushed out of the top goes to the bottom of the previous page. While the block is dragged, the blocks that will move are outlined. When the blocks cannot all be pushed (no room at the side of the page, nothing above the first page), the block goes to the closest free place as before. The arrow keys push the same way. Resizing is unchanged: the block still stops against its neighbour.
+- Diagnostic: the report has a new section, "9. Exchanges with Grist since the page was opened", that lists the options received from Grist (with the number of blocks of the model) and the saves made. It helps to explain a dashboard that seems to have disappeared after an update.
+- Help text of the edit button: it says that a moved block pushes the blocks that it covers.
+- Tests: the push (free place, a title moved up, a chain of blocks, a block pushed to the next page, no room at the side, random moves on several pages that never overlap blocks or leave the page), the move in the model and the new section of the report.
+
 ## 0.21.3
 
 Corrections found by the finalisation audit of version 0.21.2.

@@ -1240,7 +1240,7 @@
     const summary = {
       format: model.page.format, orientation: model.page.orientation, margin: model.page.margin, pages: model.pages,
       numbers: model.page.numbers, footer: model.page.footer, blocks: model.blocks.map((block) => ({ type: block.type, page: block.page })),
-      values: model.values.length, bytes: JSON.stringify(model).length, editing, locked
+      values: model.values.length, bytes: JSON.stringify(model).length, editing, locked, exchanges: access.exchanges()
     };
     let text;
     try {
@@ -1945,6 +1945,17 @@
     drag.ghost.style.marginTop = `${margin * mmPx}px`;
   }
 
+  // Outlines the blocks that the move in progress pushes (the others lose their outline).
+  function markPushed(ids) {
+    for (const node of el.canvas.querySelectorAll(`.block.pushed`)) {
+      if (!ids.includes(node.dataset.id)) node.classList.remove(`pushed`);
+    }
+    for (const id of ids) {
+      const node = el.canvas.querySelector(`.block[data-id="${id}"]`);
+      if (node) node.classList.add(`pushed`);
+    }
+  }
+
   // Follows the pointer while a block is moved or resized.
   function onPointerMove(event) {
     if (!drag) return;
@@ -1959,9 +1970,12 @@
       const pageNode = pageAt(event);
       const point = gridPoint(pageNode, event);
       const wanted = { page: Number(pageNode.dataset.page), x: point.x - drag.grabX, y: point.y - drag.grabY };
-      const spot = Layout.resolveMove(model.blocks, block, wanted, grid);
+      // The block pushes the blocks in its way; when they cannot all be pushed it goes to the closest free place.
+      const push = Layout.resolvePush(model.blocks, block, wanted, grid);
+      const spot = push ? push.spot : Layout.resolveMove(model.blocks, block, wanted, grid);
       drag.last = spot ? { wanted } : null;
       if (spot) showGhost(pageNode, { ...spot, w: block.w, h: block.h });
+      markPushed(push ? push.shifted.map((item) => item.id) : []);
     } else {
       const dx = Math.round((event.clientX - drag.startX) / (STEP_MM * mmPx));
       const dy = Math.round((event.clientY - drag.startY) / (STEP_MM * mmPx));
@@ -2019,6 +2033,7 @@
     window.removeEventListener(`keydown`, onDragKey);
     if (drag && drag.ghost && drag.ghost.parentNode) drag.ghost.parentNode.removeChild(drag.ghost);
     if (drag) drag.node.classList.remove(`dragging`);
+    markPushed([]);
     const finished = drag;
     drag = null;
     return finished;

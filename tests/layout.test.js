@@ -127,3 +127,91 @@ test(`pulling the edges of a block moves them, never out of the page, under the 
   const otherPage = block(`d`, 0, 0, 10, 6, 1);
   assert.deepEqual(L.resolveBox([a, otherPage], a, { left: -4 }, GRID), { x: 0, y: 2, w: 8, h: 3 });
 });
+
+test(`a move to a free place pushes nothing`, () => {
+  const a = block(`a`, 0, 0, 4, 3);
+  const b = block(`b`, 6, 0, 4, 3);
+  assert.deepEqual(L.resolvePush([a, b], a, { page: 0, x: 1, y: 3 }, GRID), { spot: { page: 0, x: 1, y: 3 }, shifted: [] });
+});
+
+test(`a block moved up onto another pushes it down by its own height`, () => {
+  const table = block(`table`, 0, 0, 10, 3);
+  const title = block(`title`, 0, 4, 10, 2);
+  const push = L.resolvePush([table, title], title, { page: 0, x: 0, y: 0 }, GRID);
+  assert.deepEqual(push, { spot: { page: 0, x: 0, y: 0 }, shifted: [{ id: `table`, page: 0, x: 0, y: 2 }] });
+});
+
+test(`the blocks that a pushed block covers are pushed in turn, and the blocks beside are left alone`, () => {
+  const a = block(`a`, 0, 0, 10, 2);
+  const b = block(`b`, 0, 2, 10, 2);
+  const x = block(`x`, 0, 4, 10, 2);
+  assert.deepEqual(L.resolvePush([a, b, x], x, { page: 0, x: 0, y: 0 }, GRID).shifted, [{ id: `a`, page: 0, x: 0, y: 2 }, { id: `b`, page: 0, x: 0, y: 4 }]);
+  const left = block(`left`, 0, 0, 5, 2);
+  const right = block(`right`, 5, 0, 5, 2);
+  const mover = block(`mover`, 0, 4, 5, 2);
+  assert.deepEqual(L.resolvePush([left, right, mover], mover, { page: 0, x: 0, y: 0 }, GRID).shifted, [{ id: `left`, page: 0, x: 0, y: 2 }]);
+});
+
+test(`a block moved down pushes the blocks up, and sideways the blocks go the other way`, () => {
+  const top = block(`top`, 0, 2, 10, 2);
+  const mover = block(`mover`, 0, 0, 10, 2);
+  assert.deepEqual(L.resolvePush([top, mover], mover, { page: 0, x: 0, y: 3 }, GRID).shifted, [{ id: `top`, page: 0, x: 0, y: 1 }]);
+  const wide = block(`wide`, 4, 0, 6, 2);
+  const slider = block(`slider`, 0, 4, 2, 2);
+  assert.deepEqual(L.resolvePush([wide, slider], slider, { page: 0, x: 8, y: 1 }, GRID).shifted, [{ id: `wide`, page: 0, x: 2, y: 0 }]);
+  const mid = block(`mid`, 4, 0, 4, 2);
+  const mover2 = block(`mover2`, 0, 4, 2, 2);
+  assert.deepEqual(L.resolvePush([mid, mover2], mover2, { page: 0, x: 6, y: 1 }, GRID).shifted, [{ id: `mid`, page: 0, x: 2, y: 0 }]);
+  const moveLeft = L.resolvePush([block(`m`, 2, 0, 4, 2), block(`s`, 8, 4, 2, 2)], block(`s`, 8, 4, 2, 2), { page: 0, x: 4, y: 1 }, GRID);
+  assert.deepEqual(moveLeft.shifted, [{ id: `m`, page: 0, x: 6, y: 0 }]);
+});
+
+test(`a block pushed out of the bottom of a page goes to the top of the next page`, () => {
+  const a = block(`a`, 0, 0, 10, 3);
+  const b = block(`b`, 0, 3, 10, 3);
+  const x = block(`x`, 0, 0, 10, 2, 1);
+  const push = L.resolvePush([a, b, x], x, { page: 0, x: 0, y: 0 }, GRID);
+  assert.deepEqual(push.shifted, [{ id: `a`, page: 0, x: 0, y: 2 }, { id: `b`, page: 1, x: 0, y: 0 }]);
+});
+
+test(`a push that has no room gives null`, () => {
+  const wall = block(`wall`, 0, 0, 2, 2);
+  const wide = block(`wide`, 2, 0, 8, 2);
+  const x = block(`x`, 0, 4, 2, 2);
+  assert.equal(L.resolvePush([wall, wide, x], x, { page: 0, x: 8, y: 0 }, GRID), null);
+  const first = block(`first`, 0, 0, 10, 2);
+  const low = block(`low`, 0, 2, 10, 2);
+  assert.equal(L.resolvePush([first, low], first, { page: 0, x: 0, y: 1 }, GRID), null);
+  assert.equal(L.resolvePush([first], first, { page: L.MAX_PAGES, x: 0, y: 0 }, GRID), null);
+});
+
+test(`random pushes keep every block inside its page, never overlapping, with its size`, () => {
+  for (let seed = 1; seed <= 300; seed += 1) {
+    const next = random(seed);
+    const grid = { cols: 12 + Math.floor(next() * 40), rows: 8 + Math.floor(next() * 30), margin: 10 };
+    let blocks = [];
+    for (let i = 0; i < 9; i += 1) {
+      const size = { w: 2 + Math.floor(next() * 10), h: 2 + Math.floor(next() * 8) };
+      const spot = L.findFreeSpot(blocks, size, 3, grid);
+      if (spot) blocks.push({ id: `b${i}`, ...spot, ...L.clampSize(size, grid) });
+    }
+    const sizes = new Map(blocks.map((item) => [item.id, `${item.w}x${item.h}`]));
+    for (let step = 0; step < 40 && blocks.length; step += 1) {
+      const current = blocks[Math.floor(next() * blocks.length)];
+      const wanted = { page: Math.floor(next() * 4), x: Math.floor(next() * grid.cols) - 3, y: Math.floor(next() * grid.rows) - 3 };
+      const push = L.resolvePush(blocks, current, wanted, grid);
+      if (!push) continue;
+      const moves = new Map(push.shifted.map((item) => [item.id, item]));
+      blocks = blocks.map((item) => (item.id === current.id ? { ...item, ...push.spot } : moves.has(item.id) ? { ...item, ...moves.get(item.id) } : item));
+      assert.equal(blocks.length, sizes.size);
+      blocks.forEach((item) => {
+        assert.equal(`${item.w}x${item.h}`, sizes.get(item.id), `seed ${seed} step ${step}: size changed`);
+        assert.ok(L.fits(item, grid), `seed ${seed} step ${step}: block outside`);
+        assert.ok(item.page >= 0 && item.page < L.MAX_PAGES, `seed ${seed} step ${step}: bad page`);
+        blocks.forEach((other) => {
+          if (other.id !== item.id) assert.equal(L.overlaps(item, other), false, `seed ${seed} step ${step}: overlap`);
+        });
+      });
+    }
+  }
+});

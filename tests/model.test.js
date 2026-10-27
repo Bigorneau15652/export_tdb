@@ -402,3 +402,19 @@ test(`a record block no longer keeps a number of columns, and the label of the t
   assert.equal(M.cleanConfig(`table`, { totalLabel: `x`.repeat(200) }).totalLabel.length, 60);
   assert.equal(M.cleanConfig(`table`, { totalLabel: 5 }).totalLabel, ``);
 });
+
+test(`a block moved onto another pushes it, and a pushed block can go to the next page`, () => {
+  const make = (blocks) => M.validateModel({ version: 1, page: { format: `screen`, orientation: `landscape`, margin: 10 }, pages: 1, blocks }).model;
+  const item = (id, y, h) => ({ id, type: `text`, title: id, page: 0, x: 0, y, w: 55, h });
+  let model = make([item(`table`, 0, 10), item(`title`, 12, 3)]);
+  model = M.moveBlock(model, `title`, { page: 0, x: 0, y: 0 });
+  assertValid(model);
+  assert.deepEqual([M.findBlock(model, `title`).y, M.findBlock(model, `table`).y], [0, 3]);
+  const spread = M.validateModel({ version: 1, page: { format: `screen`, orientation: `landscape`, margin: 10 }, pages: 2, blocks: [{ ...item(`a`, 0, 14) }, { ...item(`b`, 14, 15) }, { ...item(`c`, 0, 3), page: 1 }] }).model;
+  assert.equal(spread.pages, 2);
+  const pushed = M.moveBlock(spread, `c`, { page: 0, x: 0, y: 0 });
+  assertValid(pushed);
+  assert.deepEqual([M.findBlock(pushed, `c`).page, M.findBlock(pushed, `c`).y], [0, 0]);
+  assert.deepEqual([M.findBlock(pushed, `a`).page, M.findBlock(pushed, `a`).y], [0, 3]);
+  assert.deepEqual([M.findBlock(pushed, `b`).page, M.findBlock(pushed, `b`).y], [1, 0]);
+});

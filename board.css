@@ -36,6 +36,7 @@ input[type="number"]:focus-visible, input[type="text"]:focus-visible { outline: 
 .block.selected { border-color: #1c5d8c; outline: 3px solid #1c5d8c; outline-offset: 0; z-index: 2; }
 .block:focus-visible { outline: 3px solid #f2b705; outline-offset: 1px; }
 .block.dragging { opacity: 0.45; }
+.block.pushed { outline: 2px dashed #1c5d8c; outline-offset: -2px; }
 .ghost { position: absolute; z-index: 3; border: 2px dashed #1c5d8c; background: rgba(28, 93, 140, 0.18); pointer-events: none; }
 .cross, .handle { display: none; }
 .block .cross { z-index: 3; }
