@@ -18,6 +18,8 @@
   // A scatter chart draws at most this many points and this many series (one colour each).
   const MAX_POINTS = 2000;
   const MAX_SERIES = 10;
+  // Written in place of a zero when the table asks for it (the lines of the table, never its total lines).
+  const DASH = `\u2014`;
   const NO_VALUE = new Set([`empty`, `notEmpty`, `true`, `false`]);
 
   // Key of a chain of steps going down from a table: `Table.Column>Table.Column`.
@@ -198,8 +200,9 @@
   }
 
   // A number as a text with the chosen decimals (counts never have decimals); null gives an empty text.
-  function numberText(value, fn, decimals) {
+  function numberText(value, fn, decimals, dash) {
     if (typeof value !== `number` || !Number.isFinite(value)) return ``;
+    if (dash && value === 0) return DASH;
     if (fn === `count` || fn === `distinct`) return format.formatNumber(value, 0);
     return format.formatNumber(value, decimals >= 0 ? decimals : undefined);
   }
@@ -303,7 +306,8 @@
     }
     const label = labelReader(dataset, config, words);
     const shown = order.slice(0, MAX_ROWS);
-    const body = shown.map((row) => resolved.map((one, index) => fields.formatValue(one.column, dataset.valueAt(one, row), dataset, words, decimalsOf(columns[index], config))));
+    const isNumber = (one) => one.column.base === `Numeric` || one.column.base === `Int`;
+    const body = shown.map((row) => resolved.map((one, index) => (config.dashZero && isNumber(one) && values.toNumber(dataset.valueAt(one, row)) === 0 ? DASH : fields.formatValue(one.column, dataset.valueAt(one, row), dataset, words, decimalsOf(columns[index], config)))));
     const headers = columns.map((column, index) => ({ text: column.label || pathLabel(dataset, config.table, column.path), numeric: resolved[index].column.base === `Numeric` || resolved[index].column.base === `Int` }));
     let total = null;
     const totalValues = [];
@@ -321,7 +325,7 @@
       const used = columns.map((column, index) => index).filter((index) => fn === `count` || fn === `distinct` || [`Numeric`, `Int`, `Any`].includes(resolved[index].column.base));
       const read = (row, index) => (fn === `distinct` ? dataset.textAt(resolved[index], row) : values.toNumber(dataset.valueAt(resolved[index], row)));
       headers.push({ text: words.total, numeric: true });
-      shown.forEach((row, at) => body[at].push(numberText(combine(used.map((index) => read(row, index)), fn), fn, rightDecimals(config))));
+      shown.forEach((row, at) => body[at].push(numberText(combine(used.map((index) => read(row, index)), fn), fn, rightDecimals(config), config.dashZero)));
       if (total) total.push(numberText(combine(used.map((index) => totalValues[index]), fn), fn, rightDecimals(config)));
     }
     if (label.read) {
@@ -435,8 +439,8 @@
       const headers = [{ text: pathLabel(dataset, config.table, rowPath), numeric: false }, ...slice.colKeys.map((key) => ({ text: key, numeric: true }))];
       if (right) headers.push({ text: words.total, numeric: true });
       const body = shownKeys.map((key, at) => {
-        const line = [key, ...slice.cells[at].map((value) => numberText(value, measure.fn, decimals))];
-        if (right) line.push(numberText(combine(slice.cells[at], fn), fn, rightDecimals(config)));
+        const line = [key, ...slice.cells[at].map((value) => numberText(value, measure.fn, decimals, config.dashZero))];
+        if (right) line.push(numberText(combine(slice.cells[at], fn), fn, rightDecimals(config), config.dashZero));
         return line;
       });
       let total = null;
@@ -507,12 +511,12 @@
       ]);
       headers.splice(1, 1);
     }
-    const body = lines.map((line) => [...line.keys, ...line.values.map((value, index) => numberText(value, measures[index].fn, measures[index].decimals))]);
+    const body = lines.map((line) => [...line.keys, ...line.values.map((value, index) => numberText(value, measures[index].fn, measures[index].decimals, config.dashZero))]);
     const total = config.total ? [totalWord(config, words), ...(nested ? [] : groupBy.slice(1).map(() => ``)), ...result.totals.map((value, index) => numberText(value, measures[index].fn, measures[index].decimals))] : null;
     if (config.totalRight && rightTotalPossible(config)) {
       const fn = config.totalRightFn;
       headers.push({ text: words.total, numeric: true });
-      lines.forEach((line, at) => body[at].push(numberText(combine(line.values, fn), fn, rightDecimals(config))));
+      lines.forEach((line, at) => body[at].push(numberText(combine(line.values, fn), fn, rightDecimals(config), config.dashZero)));
       if (total) total.push(numberText(combine(result.totals, fn), fn, rightDecimals(config)));
     }
     const chart = {

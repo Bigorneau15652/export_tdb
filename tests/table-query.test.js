@@ -464,3 +464,22 @@ test(`the second item of a nested table can have a composed label of its own`, (
   assert.deepEqual(alone.labelProblems, []);
   assert.ok(Q.tablesFor(schema, `Sites`, config({ ...base, labelTemplate2: `{Building.Name}` })).includes(`Buildings`));
 });
+
+test(`a dash can stand in place of the zeros of the lines, in a list, a grouped table and a cross table, and never in a total line`, () => {
+  const list = { table: `Rooms`, link: `Rooms.Site`, total: true, columns: [{ path: `Number` }, { path: `Seats`, fn: `sum` }] };
+  const withZero = run(`Sites`, 1, list);
+  const zeroAt = withZero.rows.findIndex((row) => row[1] === `0`);
+  assert.ok(zeroAt >= 0, `the demo has a room with no seat`);
+  const dashed = run(`Sites`, 1, { ...list, dashZero: true });
+  assert.equal(dashed.rows[zeroAt][1], `—`);
+  assert.equal(dashed.rows[zeroAt][0], withZero.rows[zeroAt][0]);
+  assert.deepEqual(dashed.total, withZero.total);
+  const group = { mode: `group`, table: `Rooms`, link: `Rooms.Site`, total: true, totalRight: true, groupBy: [`Number`], columns: [{ path: `Seats`, fn: `sum` }, { fn: `count` }] };
+  const plain = run(`Sites`, 1, group);
+  const dashedGroup = run(`Sites`, 1, { ...group, dashZero: true });
+  plain.rows.forEach((row, at) => row.forEach((text, col) => assert.equal(dashedGroup.rows[at][col], col > 0 && text === `0` ? `—` : text)));
+  assert.deepEqual(dashedGroup.total, plain.total);
+  assert.ok(dashedGroup.rows.flat().includes(`—`));
+  const cross = run(`Sites`, 1, { ...CROSS, columns: [{ path: `Seats`, fn: `sum` }], dashZero: true });
+  assert.ok(cross.rows.flat().every((text) => text !== `0`));
+});

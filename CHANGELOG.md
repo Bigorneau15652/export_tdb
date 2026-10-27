@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.21.1
+
+- Tables: a new setting, "Dash in place of zeros", writes a dash in the cells whose value is zero (lists, grouped tables, cross tables and the total on the right of each line). The total lines keep their zero. It is off by default, so that the tables already built do not change.
+- Tests: the dash in a list, a grouped table and a cross table, the total lines that keep their zero, and in the page the tick box and the drawing. The test of the course window closes the window with a script click, which no longer fails now and then.
+
 ## 0.21.0
 
 - Blocks can be resized from every side: new handles on the left, the top, the top left corner and the bottom left corner join the ones on the right, the bottom and the bottom right corner. Pulling the left or the top edge moves the block. The block stays in the page, keeps the minimum size and never covers another block: the movement stops where the next block is. Shift keeps the proportions only with the handles of the right, the bottom and the bottom right corner, as before. The top right corner has no handle, because the cross that deletes the block is there.

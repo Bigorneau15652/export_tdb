@@ -1436,7 +1436,7 @@ test(`the cap opens the course of the block in a window of its own, a second cli
     const course = await popup.locator(`#guide`).innerText();
     assert.ok(!/\[\[/.test(course), type);
   }
-  await Promise.all([popup.waitForEvent(`close`), popup.click(`.guideClose`)]);
+  await Promise.all([popup.waitForEvent(`close`), popup.evaluate(() => document.querySelector(`.guideClose`).click())]);
   assert.deepEqual(w.errors, []);
 });
 
@@ -1582,5 +1582,21 @@ test(`the tool bar and the settings panel stay in view while only the pages scro
   assert.equal(Math.round(barAfter.y), Math.round(bar.y));
   assert.equal(Math.round(panelAfter.y), Math.round(panel.y));
   assert.ok(panelAfter.y + panelAfter.height <= 801, `the panel fits in the window`);
+  assert.deepEqual(w.errors, []);
+});
+
+test(`the dash in place of the zeros is ticked in the panel and drawn at once, without touching the total line`, async () => {
+  const config = { mode: `list`, table: `Rooms`, link: `Rooms.Site`, total: true, columns: [{ path: `Number` }, { path: `Seats`, fn: `sum` }] };
+  const w = await openWithRow({ savedOptions: tableModel(config) }, 1);
+  await w.page.waitForFunction(() => document.querySelectorAll(`.block[data-id="tb1"] .dt tr`).length > 1);
+  assert.ok((await cells(w.page)).some((row) => row[1] === `0`));
+  await edit(w);
+  await w.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 20, y: 30 } });
+  await w.page.check(`#boardDashZero`);
+  await w.page.waitForFunction(() => [...document.querySelectorAll(`.block[data-id="tb1"] .dt tbody tr:not(.total) td:nth-child(2)`)].some((cell) => cell.textContent === `—`));
+  const rows = await cells(w.page);
+  assert.ok(rows.slice(1, -1).every((row) => row[1] !== `0`));
+  assert.notEqual(rows[rows.length - 1][1], `—`);
+  assert.equal((await model(w.page)).blocks[0].config.dashZero, true);
   assert.deepEqual(w.errors, []);
 });

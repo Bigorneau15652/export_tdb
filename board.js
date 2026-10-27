@@ -71,7 +71,7 @@
     groupRow: $(`boardGroupRow`), group1: $(`boardGroup1`), merge: $(`boardMerge`),
     group2Row: $(`boardGroup2Row`), group2: $(`boardGroup2`), subtotalBox: $(`boardSubtotalBox`), subtotals: $(`boardSubtotals`),
     columnRows: $(`boardColumnRows`), addColumn: $(`boardAddColumn`), sortBy: $(`boardSortBy`), sortColumn: $(`boardSortColumn`),
-    sortDir: $(`boardSortDir`), labelRow: $(`boardLabelRow`), labelTemplate: $(`boardLabelTemplate`), labelField: $(`boardLabelField`), labelRow2: $(`boardLabelRow2`), labelTemplate2: $(`boardLabelTemplate2`), labelField2: $(`boardLabelField2`), total: $(`boardTotal`), totalLabel: $(`boardTotalLabel`), totalLabelRow: $(`boardTotalLabelRow`), tableInfo: $(`boardTableInfo`),
+    sortDir: $(`boardSortDir`), dashZero: $(`boardDashZero`), labelRow: $(`boardLabelRow`), labelTemplate: $(`boardLabelTemplate`), labelField: $(`boardLabelField`), labelRow2: $(`boardLabelRow2`), labelTemplate2: $(`boardLabelTemplate2`), labelField2: $(`boardLabelField2`), total: $(`boardTotal`), totalLabel: $(`boardTotalLabel`), totalLabelRow: $(`boardTotalLabelRow`), tableInfo: $(`boardTableInfo`),
     filterToggle: $(`boardFilterToggle`), filterBody: $(`boardFilterBody`), sortToggle: $(`boardSortToggle`), sortBody: $(`boardSortBody`), sortOrderBox: $(`boardSortOrderBox`), sortOrder: $(`boardSortOrder`)
   };
   const filterBoxes = [$(`boardFilter1`), $(`boardFilter2`), $(`boardFilter3`)];
@@ -1803,6 +1803,7 @@
     setToggle(el.filterToggle, el.filterBody, filtersOpen);
     setToggle(el.sortToggle, el.sortBody, sortOpen);
     el.total.checked = config.total;
+    el.dashZero.checked = config.dashZero;
     el.totalLabelRow.hidden = !config.total;
     setValue(el.totalLabel, config.totalLabel);
     const rightOn = Query.rightTotalPossible(config);
@@ -2330,6 +2331,7 @@
   el.sortBy.addEventListener(`change`, changeSort);
   el.sortColumn.addEventListener(`change`, changeSort);
   el.sortDir.addEventListener(`change`, changeSort);
+  el.dashZero.addEventListener(`change`, () => changeConfig({ dashZero: el.dashZero.checked }));
   el.total.addEventListener(`change`, () => changeConfig({ total: el.total.checked }));
   // The composed label of an item: the model is typed in `input` and a column chosen in `select` is inserted at the cursor.
   const bindLabel = (input, select, key) => {
