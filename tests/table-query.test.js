@@ -90,7 +90,7 @@ test(`a list shows the rooms of the selected site with texts written the French 
   assert.equal(result.ok, true);
   assert.deepEqual(result.headers.map((h) => h.text), [`Number`, `Building`, `Area`, `Seats`]);
   assert.deepEqual(result.headers.map((h) => h.numeric), [false, false, true, true]);
-  assert.deepEqual(result.rows, [[`A-001`, `Building A`, `20,5`, `4`], [`A-002`, `Building A`, `35`, `10`], [`B-001`, `Building B`, `12`, `0`], [`B-002`, `Building B`, `8,25`, `1`]]);
+  assert.deepEqual(result.rows, [[`A-001`, `Building A`, `20,5`, `4`], [`A-002`, `Building A`, `35`, `10`], [`B-001`, `Building B`, `12`, `\u2014`], [`B-002`, `Building B`, `8,25`, `1`]]);
   assert.equal(result.total, null);
   assert.equal(result.kept, 4);
 });
@@ -465,21 +465,24 @@ test(`the second item of a nested table can have a composed label of its own`, (
   assert.ok(Q.tablesFor(schema, `Sites`, config({ ...base, labelTemplate2: `{Building.Name}` })).includes(`Buildings`));
 });
 
-test(`a dash can stand in place of the zeros of the lines, in a list, a grouped table and a cross table, and never in a total line`, () => {
+test(`a dash stands in place of the zeros of the lines, in a list, a grouped table and a cross table, and never in a total line`, () => {
   const list = { table: `Rooms`, link: `Rooms.Site`, total: true, columns: [{ path: `Number` }, { path: `Seats`, fn: `sum` }] };
-  const withZero = run(`Sites`, 1, list);
-  const zeroAt = withZero.rows.findIndex((row) => row[1] === `0`);
-  assert.ok(zeroAt >= 0, `the demo has a room with no seat`);
-  const dashed = run(`Sites`, 1, { ...list, dashZero: true });
-  assert.equal(dashed.rows[zeroAt][1], `—`);
-  assert.equal(dashed.rows[zeroAt][0], withZero.rows[zeroAt][0]);
-  assert.deepEqual(dashed.total, withZero.total);
+  const result = run(`Sites`, 1, list);
+  const dashAt = result.rows.findIndex((row) => row[1] === `\u2014`);
+  assert.ok(dashAt >= 0, `the demo has a room with no seat`);
+  assert.ok(result.rows.every((row) => row[1] !== `0`));
+  assert.equal(result.total[1], `15`);
   const group = { mode: `group`, table: `Rooms`, link: `Rooms.Site`, total: true, totalRight: true, groupBy: [`Number`], columns: [{ path: `Seats`, fn: `sum` }, { fn: `count` }] };
-  const plain = run(`Sites`, 1, group);
-  const dashedGroup = run(`Sites`, 1, { ...group, dashZero: true });
-  plain.rows.forEach((row, at) => row.forEach((text, col) => assert.equal(dashedGroup.rows[at][col], col > 0 && text === `0` ? `—` : text)));
-  assert.deepEqual(dashedGroup.total, plain.total);
-  assert.ok(dashedGroup.rows.flat().includes(`—`));
-  const cross = run(`Sites`, 1, { ...CROSS, columns: [{ path: `Seats`, fn: `sum` }], dashZero: true });
+  const grouped = run(`Sites`, 1, group);
+  assert.ok(grouped.rows.flat().includes(`\u2014`));
+  assert.ok(grouped.rows.every((row) => row.slice(1).every((text) => text !== `0`)));
+  assert.equal(grouped.total[1], `15`);
+  const cross = run(`Sites`, 1, { ...CROSS, columns: [{ path: `Seats`, fn: `sum` }] });
   assert.ok(cross.rows.flat().every((text) => text !== `0`));
+});
+
+test(`the dash leaves the text columns alone and only replaces the zeros of the number columns`, () => {
+  const result = run(`Sites`, 1, { table: `Rooms`, link: `Rooms.Site`, decimals: 0, columns: [{ path: `Number` }, { path: `Area` }] });
+  assert.deepEqual(result.rows.map((row) => row[0]), [`A-001`, `A-002`, `B-001`, `B-002`]);
+  assert.ok(result.rows.every((row) => row[1] !== `0`));
 });

@@ -1585,18 +1585,14 @@ test(`the tool bar and the settings panel stay in view while only the pages scro
   assert.deepEqual(w.errors, []);
 });
 
-test(`the dash in place of the zeros is ticked in the panel and drawn at once, without touching the total line`, async () => {
+test(`the zeros of the lines are written as a dash by every table, without any setting, and the total line keeps its figure`, async () => {
   const config = { mode: `list`, table: `Rooms`, link: `Rooms.Site`, total: true, columns: [{ path: `Number` }, { path: `Seats`, fn: `sum` }] };
   const w = await openWithRow({ savedOptions: tableModel(config) }, 1);
   await w.page.waitForFunction(() => document.querySelectorAll(`.block[data-id="tb1"] .dt tr`).length > 1);
-  assert.ok((await cells(w.page)).some((row) => row[1] === `0`));
-  await edit(w);
-  await w.page.dblclick(`.block[data-id="tb1"]`, { position: { x: 20, y: 30 } });
-  await w.page.check(`#boardDashZero`);
-  await w.page.waitForFunction(() => [...document.querySelectorAll(`.block[data-id="tb1"] .dt tbody tr:not(.total) td:nth-child(2)`)].some((cell) => cell.textContent === `—`));
   const rows = await cells(w.page);
+  assert.ok(rows.slice(1, -1).some((row) => row[1] === `\u2014`));
   assert.ok(rows.slice(1, -1).every((row) => row[1] !== `0`));
-  assert.notEqual(rows[rows.length - 1][1], `—`);
-  assert.equal((await model(w.page)).blocks[0].config.dashZero, true);
+  assert.equal(rows[rows.length - 1][1], `15`);
+  assert.equal(await w.page.locator(`#boardDashZero`).count(), 0);
   assert.deepEqual(w.errors, []);
 });

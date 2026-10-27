@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.21.2
+
+- Tables: the zeros of the lines are now always written as a dash, in lists, grouped tables, cross tables and the total on the right of each line. The setting "Dash in place of zeros" of version 0.21.1 is gone: there is nothing to tick. A value that is shown as zero after rounding in a number column also gets the dash, and a text column is never changed, even when it holds the text 0. The total lines keep their figure, zero included.
+- Tests: the dash without any setting, the total lines that keep their figure, and the text columns left alone.
+
 ## 0.21.1
 
 - Tables: a new setting, "Dash in place of zeros", writes a dash in the cells whose value is zero (lists, grouped tables, cross tables and the total on the right of each line). The total lines keep their zero. It is off by default, so that the tables already built do not change.
