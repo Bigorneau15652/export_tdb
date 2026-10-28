@@ -64,20 +64,9 @@ test(`groups are sorted by label, by value or in an imposed order`, () => {
   assert.deepEqual(labels({ order: [`Office`, `Classroom`] }), [`Office`, `Classroom`, `(none)`]);
 });
 
-test(`the best groups are kept and the others are merged`, () => {
-  const result = groupRows(dataset, `Rooms`, rooms, by(`Usage`, { sort: { by: `value`, dir: `desc` }, top: { count: 1, otherLabel: `Others` }, emptyLabel: `(none)` }));
-  assert.deepEqual(result.rows.map((r) => [r.keys[0], r.values[0], r.count]), [[`Classroom`, 75, 2], [`Others`, 45.75, 4]]);
-  const all = groupRows(dataset, `Rooms`, rooms, by(`Usage`, { top: { count: 5 } }));
-  assert.equal(all.rows.length, 3);
-});
-
-test(`rows can be grouped by two keys and by the year or the month of a date`, () => {
+test(`rows can be grouped by two keys`, () => {
   const two = groupRows(dataset, `Rooms`, rooms, { groupBy: [{ path: `Building.Site.Name` }, { path: `Usage` }], measures: [{ fn: `count` }] });
   assert.deepEqual(two.rows.map((r) => r.keys.join(`|`)), [`North campus|`, `North campus|Classroom`, `North campus|Office`, `South campus|Classroom`]);
-  const years = groupRows(dataset, `Buildings`, [0, 1, 2, 3], { groupBy: [{ path: `Inspected`, bucket: `year` }], measures: [{ fn: `count` }], emptyLabel: `unknown` });
-  assert.deepEqual(years.rows.map((r) => [r.keys[0], r.values[0]]), [[`2024`, 1], [`2025`, 2], [`unknown`, 1]]);
-  const months = groupRows(dataset, `Buildings`, [0, 1], { groupBy: [{ path: `Inspected`, bucket: `month` }], measures: [{ fn: `count` }] });
-  assert.deepEqual(months.rows.map((r) => r.keys[0]), [`2024-01`, `2025-01`]);
 });
 
 test(`two rows that have the same label stay two groups`, () => {

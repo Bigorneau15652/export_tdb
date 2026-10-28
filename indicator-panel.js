@@ -3,29 +3,9 @@
 // once; the rules are rebuilt only when their number changes, so that typing a limit is never interrupted.
 (function () {
   const { t } = window.exportTdbI18n;
+  const { setOptions, setText } = window.exportTdbDom;
   const Indicator = window.exportTdbIndicator;
   const COLOR_KEYS = { none: `indColorNone`, green: `indColorGreen`, orange: `indColorOrange`, red: `indColorRed`, blue: `indColorBlue`, grey: `indColorGrey` };
-
-  // Fills a select element with [value, label] pairs, only when the items changed, then sets its value.
-  function setOptions(select, items, value) {
-    const signature = JSON.stringify(items);
-    if (select.dataset.signature !== signature) {
-      select.textContent = ``;
-      for (const [optionValue, label] of items) {
-        const option = document.createElement(`option`);
-        option.value = String(optionValue);
-        option.textContent = label;
-        select.appendChild(option);
-      }
-      select.dataset.signature = signature;
-    }
-    if (select.value !== String(value)) select.value = String(value);
-  }
-
-  // Sets the text of an input, unless the user is typing in it.
-  function setText(input, value) {
-    if (document.activeElement !== input && input.value !== value) input.value = value;
-  }
 
   // The number typed in a field (a comma or a point for the decimals), or null when it is not a number.
   function parseLimit(text) {
@@ -141,5 +121,5 @@
     return { render };
   }
 
-  window.exportTdbIndicatorPanel = { create, parseLimit };
+  window.exportTdbIndicatorPanel = { create };
 })();

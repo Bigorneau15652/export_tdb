@@ -70,7 +70,7 @@
     return { chunks, leftover: heights.length - at };
   }
 
-  const api = { MIN_BAND, freeBands, roomBelow, regionsAfter, splitRows };
+  const api = { freeBands, roomBelow, regionsAfter, splitRows };
   if (typeof module !== `undefined` && module.exports) module.exports = api;
   else root.exportTdbFlow = api;
 })(typeof window !== `undefined` ? window : globalThis);

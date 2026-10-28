@@ -29,26 +29,17 @@
   }
 
   // Key of a row for a grouping: { id, label }. The text of the column is its label; a reference is
-  // told apart by the number of its row, so that two rows with the same label stay two groups. A date
-  // can be reduced to its year or its month.
+  // told apart by the number of its row, so that two rows with the same label stay two groups.
   // With `merge` true the rows that have the same label make one group even when they are different rows.
   // With `labelOf` the label shown is the one it gives for the row, the groups staying those of the column.
-  function keyOf(dataset, resolved, row, bucket, merge, labelOf) {
-    const key = plainKeyOf(dataset, resolved, row, bucket, merge);
+  function keyOf(dataset, resolved, row, merge, labelOf) {
+    const key = plainKeyOf(dataset, resolved, row, merge);
     if (typeof labelOf !== `function`) return key;
     return { id: key.id, label: labelOf(row) || key.label };
   }
 
   // The key of a row for a grouping, written from the column alone (see keyOf).
-  function plainKeyOf(dataset, resolved, row, bucket, merge) {
-    if (bucket === `year` || bucket === `month`) {
-      const seconds = values.toSeconds(dataset.valueAt(resolved, row));
-      if (seconds === null) return { id: ``, label: `` };
-      const date = new Date(seconds * 1000);
-      const year = String(date.getUTCFullYear());
-      const label = bucket === `year` ? year : `${year}-${String(date.getUTCMonth() + 1).padStart(2, `0`)}`;
-      return { id: label, label };
-    }
+  function plainKeyOf(dataset, resolved, row, merge) {
     const label = dataset.textAt(resolved, row);
     if (resolved.column.kind === `ref` && !merge) {
       const raw = dataset.valueAt(resolved, row);
@@ -95,12 +86,11 @@
   }
 
   // Groups rows by one or two keys and computes the measures of each group.
-  //   spec.groupBy: [{ path, bucket, merge, labelOf }]  (bucket: year or month for a date; merge: one group for equal labels;
+  //   spec.groupBy: [{ path, merge, labelOf }]  (merge: one group for equal labels;
   //   labelOf: (row) => text that replaces the label of the group, the groups themselves being those of the column)
   //   spec.measures: [{ fn, path }]      (fn: sum, avg, min, max, count, distinct)
   //   spec.sort: { by: `key` | `value` | `ref`, measure: 0, dir: `asc` | `desc`, order: [labels...], rankOf: (row) => number | null }
   //   (`ref` sorts the groups by the smallest rank that `rankOf` gives to their rows)
-  //   spec.top: { count, otherLabel }    (keeps the best groups, the others become one group)
   //   spec.emptyLabel: label of the group of rows with an empty key
   // Returns { rows: [{ keys, values, count }], totals: [value per measure over all rows], count } or { error }.
   function groupRows(dataset, tableId, rows, spec) {
@@ -111,7 +101,7 @@
     const buckets = new Map();
     for (const row of rows) {
       const parts = groups.list.map((resolved, i) => {
-        const key = keyOf(dataset, resolved, row, spec.groupBy[i].bucket, spec.groupBy[i].merge, spec.groupBy[i].labelOf);
+        const key = keyOf(dataset, resolved, row, spec.groupBy[i].merge, spec.groupBy[i].labelOf);
         return { id: key.id, label: key.label || (spec.emptyLabel || ``) };
       });
       const id = JSON.stringify(parts.map((p) => p.id));
@@ -130,7 +120,6 @@
       values: (spec.measures || []).map((m, i) => measureRows(dataset, measures.list[i], m, bucket.rows))
     }));
     result = sortGroups(result, spec.sort);
-    if (spec.top && spec.top.count > 0 && result.length > spec.top.count) result = keepTop(dataset, rows, result, spec, groups, measures);
     const totals = (spec.measures || []).map((m, i) => measureRows(dataset, measures.list[i], m, rows));
     return { rows: result, totals, count: rows.length };
   }
@@ -159,23 +148,6 @@
     return out.sort((a, b) => sign * compareLabels(a.keys.join(` `), b.keys.join(` `)));
   }
 
-  // Keeps the first `top.count` groups and merges the others into one group named `otherLabel`.
-  function keepTop(dataset, rows, groups, spec, resolvedGroups, resolvedMeasures) {
-    const kept = groups.slice(0, spec.top.count);
-    const keptIds = new Set(kept.map((g) => g.id));
-    const others = rows.filter((row) => {
-      const id = JSON.stringify(resolvedGroups.list.map((r, i) => keyOf(dataset, r, row, spec.groupBy[i].bucket, spec.groupBy[i].merge).id));
-      return !keptIds.has(id);
-    });
-    if (!others.length) return kept;
-    const label = spec.top.otherLabel || `Other`;
-    kept.push({
-      id: `others`, keys: spec.groupBy.map((_, i) => (i === 0 ? label : ``)), count: others.length,
-      values: spec.measures.map((m, i) => measureRows(dataset, resolvedMeasures.list[i], m, others))
-    });
-    return kept;
-  }
-
   // Cross table: the keys of `rowPath` down the side, the keys of `colPath` along the top, one
   // measure in each cell. Returns { rowKeys, colKeys, cells, rowTotals, colTotals, grandTotal } where
   // totals are the measure applied to all the rows of a line, of a column and of the table.
@@ -193,8 +165,8 @@
       map.get(id).rows.push(row);
     };
     for (const row of rows) {
-      const rowKey = keyOf(dataset, resolved.list[0], row, spec.rowBucket, spec.rowMerge, spec.rowLabelOf);
-      const colKey = keyOf(dataset, resolved.list[1], row, spec.colBucket, spec.colMerge);
+      const rowKey = keyOf(dataset, resolved.list[0], row, spec.rowMerge, spec.rowLabelOf);
+      const colKey = keyOf(dataset, resolved.list[1], row, spec.colMerge);
       push(cellRows, JSON.stringify([rowKey.id, colKey.id]), ``, row);
       push(rowRows, rowKey.id, rowKey.label || empty, row);
       push(colRows, colKey.id, colKey.label || empty, row);

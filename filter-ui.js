@@ -1,8 +1,9 @@
-// The controls of one filter (column, comparison, value) shared by the query lab and the table blocks.
+// The controls of one filter (column, comparison, value) shared by the table blocks and the named values.
 // A filter is read as { path, op, value } where value is { kind: `const`, value }, { kind: `field`, path }
 // or { kind: `id` }, the form that rowset.js applies.
 (function () {
   const { t } = window.exportTdbI18n;
+  const { fillSelect } = window.exportTdbDom;
   const Help = window.exportTdbHelp;
 
   const OPERATORS = [
@@ -10,17 +11,6 @@
     [`contains`, `opContains`], [`empty`, `opEmpty`], [`notEmpty`, `opNotEmpty`], [`true`, `opTrue`], [`false`, `opFalse`]
   ];
   const NO_VALUE = new Set([`empty`, `notEmpty`, `true`, `false`]);
-
-  // Fills a select element with [value, label] pairs.
-  function fillSelect(select, items) {
-    select.textContent = ``;
-    for (const [value, label] of items) {
-      const option = document.createElement(`option`);
-      option.value = value;
-      option.textContent = label;
-      select.appendChild(option);
-    }
-  }
 
   // Builds the controls of one filter in `box` (a fieldset). `choices` and `startChoices` are lists of
   // { path, label }: the columns of the table and the columns of the starting row. `initial` is a filter

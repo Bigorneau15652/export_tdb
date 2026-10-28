@@ -150,7 +150,7 @@
     return blocks;
   }
 
-  const api = { MAX_TEXT, safeUrl, parseInline, parseMarkdown };
+  const api = { safeUrl, parseInline, parseMarkdown };
   if (typeof module !== `undefined` && module.exports) module.exports = api;
   else root.exportTdbMarkdown = api;
 })(typeof window !== `undefined` ? window : globalThis);

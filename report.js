@@ -2,14 +2,13 @@
 // tests of the Grist API answered. The report is meant to be copied and sent to the developer.
 // This file has no access to the page or to Grist: it is pure logic, tested with Node.
 (function (root) {
-  // Report text. `data` is { version, reveal, linked, record, tables, descendants, shapes, tests, events } and, when the
+  // Report text. `data` is { version, linked, record, tables, descendants, shapes, tests, events } and, when the
   // dashboard is described, `dashboard`: { format, orientation, margin, pages, numbers, footer, blocks: [{ type, page }],
   // values, bytes, editing, locked, exchanges (lines that tell what was received from Grist and saved) }.
   function buildReport(data) {
     const lines = [];
     const add = (text = ``) => lines.push(text);
     add(`export_tdb report ${data.version}`);
-    add(`Values shown: ${data.reveal ? `yes` : `no (shapes only)`}`);
     add();
     add(`1. Linked table`);
     add(`Table: ${data.linked || `unknown`}`);

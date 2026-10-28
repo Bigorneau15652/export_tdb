@@ -7,7 +7,7 @@
   const { describeColumn, describeValue } = window.exportTdbShape;
   const { buildReport } = window.exportTdbReport;
 
-  const VERSION = `0.22.0`;
+  const VERSION = `0.23.0`;
   // At most this many descendant tables are loaded by the diagnostic to measure them and to look at their values.
   const MAX_MEASURED_TABLES = 12;
   const IMAGE_WAIT_MS = 10000;
@@ -46,14 +46,14 @@
   function recordShapes() {
     const table = state.schema && state.schema.tables.get(state.linked);
     if (!table || !state.record) return [];
-    return table.columns.map((column) => ({ column: column.id, type: column.type, shape: describeValue(state.record[column.id], false) }));
+    return table.columns.map((column) => ({ column: column.id, type: column.type, shape: describeValue(state.record[column.id]) }));
   }
 
   // The text of the report from what was found. `dashboard` (optional) describes the dashboard: see buildReport.
   function reportText(dashboard) {
     const schema = state.schema;
     return buildReport({
-      version: VERSION, reveal: false, linked: state.linked,
+      version: VERSION, linked: state.linked,
       record: state.record ? state.record.id : null, events: state.rowsSeen.size,
       tables: schema ? schema.order.map((id) => schema.tables.get(id)) : [], descendants: state.descendants,
       shapes: state.shapes, timings: state.timings, tests: [...state.tests.values()],
@@ -78,7 +78,7 @@
     const rows = (data.id || []).length;
     state.timings.push({ table: table.id, rows, columns: table.columns.length, ms, manualSort: data.manualSort !== undefined });
     for (const column of table.columns) {
-      const described = describeColumn(data[column.id], false);
+      const described = describeColumn(data[column.id]);
       state.shapes.push({ table: table.id, column: column.id, type: column.type, shape: described.shape, filled: described.filled, empty: described.empty });
     }
   }
