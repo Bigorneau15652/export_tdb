@@ -30,9 +30,9 @@
     table: {
       title: `guide_table_title`,
       intro: `guide_table_intro`,
-      steps: [`guide_table_step1`, `guide_table_step2`, `guide_table_step3`, `guide_table_step4`, `guide_table_step5`, `guide_table_step6`, `guide_table_step7`],
+      steps: [`guide_table_step1`, `guide_table_step2`, `guide_table_step3`, `guide_table_step4`, `guide_table_step5`, `guide_table_step6`, `guide_table_step7`, `guide_table_step8`],
       menus: [
-        [`boardKind`, `tipBoardKind`], [`boardTableLabel`, `tipBoardTable`], [`boardRows`, `tipBoardRows`], [`boardItem`, `tipBoardItem`], [`boardLabelTemplate`, `tipBoardLabel`], [`boardMerge`, `tipMerge`],
+        [`boardKind`, `tipBoardKind`], [`boardTableLabel`, `tipBoardTable`], [`boardRows`, `tipBoardRows`], [`boardItem`, `tipBoardItem`], [`boardItem2`, `tipBoardItem2`], [`boardSubtotals`, `tipSubtotals`], [`boardLabelTemplate`, `tipBoardLabel`], [`boardMerge`, `tipMerge`],
         [`boardColItem`, `tipBoardColItem`], [`boardSlice`, `tipBoardSlice`], [`boardColumns`, `tipBoardColumns`], [`boardTotalBelow`, `tipBoardTotal`], [`boardTotalLabel`, `tipBoardTotalLabel`],
         [`boardTotalRight`, `tipBoardTotalRight`], [`labFilters`, `tipFilter`], [`labSort`, `tipSort`]
       ],
@@ -44,7 +44,7 @@
         },
         {
           title: `guide_table_ex2_title`, settings: [`guide_table_ex2_a`, `guide_table_ex2_b`, `guide_table_ex2_c`],
-          sample: { kind: `table`, headers: [`@guideWordFloor`, `@guideSumArea`], rows: [[`@guideGround`, `120,5`], [`@guideFloor1`, `47`]], total: [`@guideWordTotal`, `167,5`] }
+          sample: { kind: `table`, headers: [`@guideWordFloor`, `@guideWordArea`], rows: [[`@guideGround`, `120,5`], [`@guideFloor1`, `47`]], total: [`@guideWordTotal`, `167,5`] }
         },
         {
           title: `guide_table_ex3_title`, settings: [`guide_table_ex3_a`, `guide_table_ex3_b`, `guide_table_ex3_c`],
@@ -53,9 +53,13 @@
         {
           title: `guide_table_ex4_title`, settings: [`guide_table_ex4_a`, `guide_table_ex4_b`],
           sample: { kind: `table`, headers: [``, `@guideWordArea`], rows: [[`@guideRoomOffice`, `20,5`], [`@guideRoomClass`, `35`]] }
+        },
+        {
+          title: `guide_table_ex5_title`, settings: [`guide_table_ex5_a`, `guide_table_ex5_b`],
+          sample: { kind: `table`, headers: [``, `@guideWordArea`], rows: [[`@guideSiteNorth`, `167,5`], [`@guideBuildingA`, `120,5`], [`@guideBuildingB`, `47`]] }
         }
       ],
-      notes: [`guide_table_note1`, `guide_table_note2`, `guide_table_note3`]
+      notes: [`guide_table_note1`, `guide_table_note2`, `guide_table_note3`, `guide_table_note4`, `guide_table_note5`]
     },
     record: {
       title: `guide_record_title`,

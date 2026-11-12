@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.23.1
+
+Documentation and course. No change in the behaviour of the widget.
+
+- Course of the Table block brought up to date: the second item with the subtotals and the folding of the groups (new step and new example), the dash that is written in place of a zero, and the title of the columns (a sum is named by its column alone). The introduction no longer calls a cross table "two items". The example of the sum by floor now shows the title that the widget really writes (it showed "Sum (Area)").
+- README (English and French): the widget has nothing to map in the right-hand panel of Grist, a diagnostic button exists, a new section "Known limits" (2,000 lines per table, 18 tables in memory, tables loaded once with a refresh button, pop-up print window, light look only, layout saved in the document, pictures from links) and a more exact sentence about third parties: the host of a picture link sees that the dashboard is open.
+- Tests: the new texts of the course exist in both languages and name real menus (the existing course tests).
+
 ## 0.23.0
 
 Clean-up found by the finalisation audit of version 0.21.2. Nothing changes on the screen.

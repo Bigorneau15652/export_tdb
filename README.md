@@ -13,6 +13,7 @@ export_tdb is a custom widget for [Grist](https://www.getgrist.com) that compose
 - Long tables continue on the following pages with their headings repeated.
 - Page numbers and a footer, undo (Ctrl+Z), and printing or PDF with the same pages as the preview.
 - A course for each block, opened with the student cap of the settings panel, with examples.
+- Nothing is mapped in the right-hand panel of Grist: the table, the columns and the links are chosen in the widget, from the structure of your document. A diagnostic button (edit mode) copies a report that helps to find a problem.
 
 ### Install
 
@@ -29,9 +30,17 @@ If your Grist server is not `grist.numerique.gouv.fr`, edit two places in `index
 2. Choose the table, then what makes a line (the item) and the columns with their calculation. The question marks in the panel explain each setting, and the student cap opens the course of the block.
 3. Click the print button to print or save as PDF.
 
+### Known limits
+
+- A table block shows at most 2,000 lines, and the widget keeps at most 18 tables of the document in memory. A table cut at 2,000 lines is announced in the settings panel only.
+- The tables are loaded once. Grist does not tell a widget when another table changes: use the refresh button of the tool bar (edit mode) to load them again.
+- The print window is a pop-up: allow it in the browser.
+- The look is light only, whatever the theme of the system. The layout, the named values and the settings are saved in the options of the widget, so in the document: everyone who opens it sees the same dashboard.
+- Pictures from links (Nextcloud, Google Drive, kDrive) must be readable without a password. OneDrive links cannot be shown in another page.
+
 ### Security
 
-Scripts come from this site and from the Grist plugin API only, and the page opens no network connection (`connect-src 'none'`). Images from links and attachments are loaded by the browser as images, and user data is inserted into the page as text only, never as HTML. Nothing is sent to a third party.
+Scripts come from this site and from the Grist plugin API only, and the page opens no network connection (`connect-src 'none'`). Images from links and attachments are loaded by the browser as images, and user data is inserted into the page as text only, never as HTML. No data of the document is sent to a third party. The browser loads each picture of an image block from its own address (a Grist attachment, or a link written in a cell): the host of such a link therefore sees that the dashboard is open.
 
 ### Development and tests
 
@@ -54,6 +63,7 @@ export_tdb est un widget personnalisé pour [Grist](https://www.getgrist.com) qu
 - Les tableaux longs continuent sur les pages suivantes avec leurs intitulés répétés.
 - Numéros de page et pied de page, annulation (Ctrl+Z), impression ou PDF avec les mêmes pages que l'aperçu.
 - Un cours pour chaque bloc, ouvert avec le chapeau d'étudiant du panneau de réglages, avec des exemples.
+- Rien n'est associé dans le panneau de droite de Grist : la table, les colonnes et les liens se choisissent dans le widget, à partir de la structure de votre document. Un bouton de diagnostic (mode Modifier) copie un rapport qui aide à trouver un problème.
 
 ### Installation
 
@@ -70,9 +80,17 @@ Si votre serveur Grist n'est pas `grist.numerique.gouv.fr`, modifiez deux endroi
 2. Choisissez la table, puis ce qui fait une ligne (l'item) et les colonnes avec leur calcul. Les points d'interrogation du panneau expliquent chaque réglage. Le chapeau d'étudiant ouvre le cours du bloc.
 3. Cliquez sur le bouton d'impression pour imprimer ou enregistrer en PDF.
 
+### Limites connues
+
+- Un bloc Tableau affiche au plus 2 000 lignes. Le widget garde au plus 18 tables du document en mémoire. Un tableau coupé à 2 000 lignes n'est signalé que dans le panneau de réglages.
+- Les tables sont chargées une seule fois. Grist ne prévient pas un widget quand une autre table change : utilisez le bouton d'actualisation de la barre d'outils (mode Modifier) pour les charger de nouveau.
+- La fenêtre d'impression est une fenêtre contextuelle : autorisez-la dans le navigateur.
+- L'apparence est claire seulement, quel que soit le thème du système. La mise en page, les valeurs nommées et les réglages sont enregistrés dans les options du widget, donc dans le document : toute personne qui l'ouvre voit le même tableau de bord.
+- Les images venues de liens (Nextcloud, Google Drive, kDrive) doivent être lisibles sans mot de passe. Les liens OneDrive ne peuvent pas être affichés dans une autre page.
+
 ### Sécurité
 
-Les scripts viennent de ce site et de l'API des widgets Grist uniquement. La page n'ouvre aucune connexion réseau (`connect-src 'none'`). Les images des liens et des pièces jointes sont chargées par le navigateur comme des images. Les données de l'utilisateur sont insérées dans la page comme du texte, jamais comme du HTML. Rien n'est envoyé à un tiers.
+Les scripts viennent de ce site et de l'API des widgets Grist uniquement. La page n'ouvre aucune connexion réseau (`connect-src 'none'`). Les images des liens et des pièces jointes sont chargées par le navigateur comme des images. Les données de l'utilisateur sont insérées dans la page comme du texte, jamais comme du HTML. Aucune donnée du document n'est envoyée à un tiers. Le navigateur charge chaque image d'un bloc Image depuis son adresse (une pièce jointe Grist ou un lien écrit dans une cellule) : l'hôte d'un tel lien voit donc que le tableau de bord est ouvert.
 
 ### Développement et tests
 
