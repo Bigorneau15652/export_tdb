@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.23.2
+
+Documents of the project brought up to date. No change in the widget.
+
+- CLAUDE.md: six block types (the sheet block was missing), the decisions taken since version 0.11 (blocks that push each other, model saved in the options of the widget, dash for zeros), and a status paragraph in place of the old plan.
+- Specification (French): the list of the filter operators and of their sources now matches the widget, the grouping of the dates and the best N groups are noted as removed in version 0.23.0, the tool bar and the settings panel are described as they are, the export and import of the model are noted as never built, and the versions 0.12 to 0.23 are summed up.
+
 ## 0.23.1
 
 Documentation and course. No change in the behaviour of the widget.

@@ -54,9 +54,9 @@ Schéma. À partir de _grist_Tables et _grist_Tables_column, construire pour cha
 
 Chemins de colonnes. Une colonne peut être désignée par un chemin pointé qui traverse des références (par exemple la colonne d'une table atteinte par la référence d'un local). Le module résout ces chemins avec des index construits une seule fois.
 
-Filtres. Un filtre compare un chemin de colonne à une valeur avec les opérateurs égal, différent, supérieur, inférieur, compris dans une liste, contient, est vide, est vrai. La valeur peut être une constante, le champ d'un enregistrement sélectionné ou l'identifiant de l'enregistrement sélectionné. Les filtres se combinent avec ET (et un groupe OU simple en version ultérieure).
+Filtres. Un filtre compare un chemin de colonne à une valeur avec les opérateurs égal, différent, supérieur, supérieur ou égal, inférieur, inférieur ou égal, contient, est vide, n'est pas vide, est vrai, est faux. La valeur peut être une constante, le champ de la ligne de départ ou le numéro de la ligne de départ. Un bloc a jusqu'à trois filtres, combinés avec ET. Le groupe OU n'a pas été réalisé.
 
-Agrégats. Somme, moyenne, minimum, maximum, nombre de lignes et nombre de valeurs distinctes. Regroupement sur un ou deux chemins de colonnes, avec regroupement des dates par année ou par mois, tri (par libellé, par valeur ou par ordre imposé), N premiers avec ligne « Autres », libellés remplacés (par exemple une valeur brute affichée sous un libellé plus explicite). Tableau croisé : lignes, colonnes, mesure, découpage en tranches de N colonnes. Totaux par ligne et par colonne, sous-totaux par groupe.
+Agrégats. Somme, moyenne, minimum, maximum, nombre de lignes et nombre de valeurs distinctes. Regroupement sur un ou deux chemins de colonnes, tri (par libellé, par valeur, par une colonne, selon l'ordre de la table de référence ou selon une liste manuelle), libellés composés avec des champs entre accolades. Le regroupement des dates par année ou par mois et les N premiers avec ligne « Autres » avaient été prévus puis retirés en version 0.23.0, car aucun menu ne les atteignait. Tableau croisé : lignes, colonnes, mesure, découpage en tranches de N colonnes. Totaux par ligne et par colonne, sous-totaux par groupe.
 
 Expressions. Les ratios et valeurs calculées s'écrivent avec un petit évaluateur écrit pour le widget : nombres, valeurs nommées entre accolades, les quatre opérations, les parenthèses et le moins unaire. Une division par zéro affiche un tiret. Aucun eval : un analyseur syntaxique propre, testé par des centaines de cas aléatoires.
 
@@ -86,7 +86,7 @@ Indicateur (retenu par Olivier). Une carte avec un libellé, une valeur en gras 
 
 10. Interface d'édition
 
-Un mode édition et un mode lecture. En édition : une barre d'outils (ajout de bloc, format de page, zoom, export et import du modèle, actualiser les données, imprimer) et le canevas. Le panneau de paramètres d'un bloc s'ouvre sur le côté en largeur normale et en feuille en bas quand le panneau Grist est étroit (environ 340 pixels). Les listes de tables et de colonnes viennent du schéma ; les colonnes sont présentées avec leur libellé et leur type. Toutes les erreurs sont affichées avec un message actionnable : quelle colonne vérifier et quelques exemples de lignes, jamais un simple compte. Les couleurs sont explicites sur chaque élément et le widget reste lisible en mode sombre et à 340 pixels de large. Pas de bouton plein écran dans le widget : Grist en fournit déjà un.
+Un mode édition et un mode lecture. En édition : une barre d'outils (ajout de bloc, palette, format, orientation, marges, pied de page, numéros de page, actualiser les données, valeurs nommées, diagnostic, imprimer) et le canevas. La barre d'outils reste en haut et le panneau de réglages reste à droite : seule la zone des pages défile. Le modèle est enregistré dans les options du widget ; il n'y a pas d'export ni d'import de fichier. Les listes de tables et de colonnes viennent du schéma ; les colonnes sont présentées avec leur libellé et leur type. Toutes les erreurs sont affichées avec un message actionnable : quelle colonne vérifier et quelques exemples de lignes, jamais un simple compte. Les couleurs sont explicites sur chaque élément et le widget reste lisible en mode sombre et à 340 pixels de large. Pas de bouton plein écran dans le widget : Grist en fournit déjà un.
 
 11. Impression et PDF
 
@@ -120,11 +120,11 @@ Version 0.8, bloc image.
 
 Version 0.9, impression et PDF dans la fenêtre dédiée, pagination.
 
-Version 0.10, export et import du modèle, aide intégrée, textes français et anglais, README complet.
+Version 0.10, aide intégrée, textes français et anglais, README complet. L'export et l'import du modèle, prévus ici, n'ont pas été réalisés.
 
 Version 0.11, recette : reproduire des fiches de référence, avec Olivier, pas à pas, à partir de ses tables réelles (la description de la recette reste privée).
 
-Ensuite : finalisation avec audit de sécurité et de performance, nettoyage du code, commentaires, README final, puis variantes en trois dimensions si elles sont retenues et présentation à la communauté.
+Ensuite : finalisation avec audit de sécurité et de performance, nettoyage du code, commentaires, README final, puis variantes en trois dimensions si elles sont retenues et présentation à la communauté. Les versions 0.12 à 0.23 ont ajouté le panneau de réglages compact, les palettes, les cours, le bloc Fiche, les libellés composés, les deux items avec sous-totaux et repli, le redimensionnement par tous les côtés, le déplacement qui pousse les blocs, puis l'audit de finalisation et son nettoyage (le détail est dans CHANGELOG.md).
 
 15. Tests
 
