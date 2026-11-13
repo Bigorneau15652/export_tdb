@@ -31,12 +31,15 @@ export_tdb is a Grist custom widget: a dashboard composer. It reads the table it
 ## Decisions of the maintainer
 
 - Charts: a custom build of Apache ECharts (Apache-2.0, SVG renderer) copied into the repository. Two dimensions first; three dimensional variants come after the final acceptance test.
-- Five block types: text, table, chart, image and indicator, with named values reusable in texts and indicators.
+- Six block types: text, table, sheet (type `record`, the information of the selected row as small labelled cells), chart, image and indicator, with named values reusable in texts and indicators.
+- Blocks never overlap. A block that is moved pushes the blocks it covers away from it (opposite to its move) and a resize stops against the neighbour.
+- The layout and the named values are the model saved in the options of the widget (no export or import file).
+- The zeros of the lines of a table are always written as a dash (no setting); the total lines keep their zero.
 - Long tables are fluid: they continue on the following pages with their headings repeated.
 - A text block takes its text either from a fixed text kept in the widget or from a column of the selected row (written back to the cell). Fields such as `{Column}` can be used in both.
 - Defaults: screen format with a 16 to 9 ratio, square format of 210 by 210 mm, widget linked to a table with "Select by", printing in a dedicated window opened by a click.
 - Grist server by default: `grist.numerique.gouv.fr`.
 
-## Plan
+## Status
 
-Version 0.1 explorer (proves the Grist API assumptions), 0.2 data engine and query lab, 0.3 canvas and layout, 0.4 text block, 0.5 table block, 0.6 indicators and named values, 0.7 chart block, 0.8 image block, 0.9 printing and PDF, 0.10 templates export and import, help and README, 0.11 final acceptance test with the maintainer. Then the finalisation audit (security, performance, cleaning, comments).
+Versions 0.1 to 0.11 followed the first plan (explorer, data engine, canvas, text, table, indicators and named values, charts, images, printing and PDF, help, acceptance test with the maintainer). The export and import of the model planned for 0.10 was never built: the model lives in the options of the widget. Versions 0.12 to 0.23 added the compact settings panel, the palettes, the courses, the sheet block, composed labels, two items with subtotals and folding, resizing from every side, the pushing of blocks, a first finalisation audit and its clean-up. Still open: three dimensional charts, only if the maintainer wants them, and the presentation to the Grist Gouv community.
